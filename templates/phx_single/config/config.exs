@@ -31,7 +31,7 @@ config :<%= @app_name %>, <%= @endpoint_module %>,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :<%= @app_name %>, <%= @app_module %>.Mailer, adapter: Swoosh.Adapters.Local<% end %><%= if @javascript do %>
+config :<%= @app_name %>, <%= @app_module %>.Mailer, adapter: Swoosh.Adapters.Local<% end %>
 
 # Configure esbuild (the version is required)
 config :esbuild,
@@ -41,19 +41,7 @@ config :esbuild,
       ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
     cd: Path.expand("..<%= if @in_umbrella, do: "/apps/#{@app_name}" %>/assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ]<% end %><%= if @css do %>
-
-# Configure tailwind (the version is required)
-config :tailwind,
-  version: "3.4.0",
-  <%= @app_name %>: [
-    args: ~w(
-      --config=tailwind.config.js
-      --input=css/app.css
-      --output=../priv/static/assets/app.css
-    ),
-    cd: Path.expand("..<%= if @in_umbrella, do: "/apps/#{@app_name}" %>/assets", __DIR__),
-  ]<% end %>
+  ]
 
 # Configures Elixir's Logger
 config :logger, :console,

@@ -67,7 +67,7 @@ defmodule <%= @app_module %>.MixProject do
   #     $ mix setup
   #
   # See the documentation for `Mix` for more info on aliases.
-  defp aliases do
+  defp aliases do<% asset_builders = Enum.reject(@asset_builders, & &1 == :tailwind) %>
     [
       setup: ["deps.get"<%= if @ecto do %>, "ecto.setup"<% end %><%= if @asset_builders != [] do %>, "assets.setup", "assets.build"<% end %>]<%= if @ecto do %>,
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],

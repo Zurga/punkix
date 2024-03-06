@@ -14,10 +14,9 @@ config :<%= @app_name %>, <%= @endpoint_module %>,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "<%= @secret_key_base_dev %>",
-  watchers: <%= if @javascript or @css do %>[<%= if @javascript do %>
-    esbuild: {Esbuild, :install_and_run, [:<%= @app_name %>, ~w(--sourcemap=inline --watch)]}<%= if @css, do: "," %><% end %><%= if @css do %>
-    tailwind: {Tailwind, :install_and_run, [:<%= @app_name %>, ~w(--watch)]}<% end %>
-  ]<% else %>[]<% end %>
+  watchers: [
+    esbuild: {Esbuild, :install_and_run, [:<%= @app_name %>, ~w(--sourcemap=inline --watch)]}
+  ]
 
 # ## SSL Support
 #
