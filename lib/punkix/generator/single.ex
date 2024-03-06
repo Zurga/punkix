@@ -9,6 +9,16 @@ defmodule Punkix.Generator.Single do
      "phx_single/config/prod.exs": "config/prod.exs",
      "phx_single/config/runtime.exs": "config/runtime.exs",
      "phx_single/config/test.exs": "config/test.exs"},
+    {:text, :project,
+     for file <- Path.wildcard("priv/templates/**/*.ex") do
+       {String.to_atom(Path.absname(file, "../")), file}
+     end
+     |> Keyword.new()},
+    {:text, :project,
+     for file <- Path.wildcard("priv/templates/**/*.exs") do
+       {String.to_atom(Path.absname(file, "../")), file}
+     end
+     |> Keyword.new()},
     {:eex, :web,
      "phx_single/lib/app_name/application.ex": "lib/:app/application.ex",
      "phx_single/lib/app_name.ex": "lib/:app.ex",
@@ -45,22 +55,25 @@ defmodule Punkix.Generator.Single do
   ])
 
   template(:html, [
-    {:eex, :web,
-     "phx_web/controllers/error_html.ex": "lib/:lib_web_name/controllers/error_html.ex",
-     "phx_test/controllers/error_html_test.exs":
-       "test/:lib_web_name/controllers/error_html_test.exs",
-     # "phx_web/components/core_components.ex": "lib/:lib_web_name/components/core_components.ex",
-     # "phx_web/controllers/page_controller.ex": "lib/:lib_web_name/controllers/page_controller.ex",
-     # "phx_web/controllers/page_html.ex": "lib/:lib_web_name/controllers/page_html.ex",
-     # "phx_web/controllers/page_html/home.html.heex":
-     #   "lib/:lib_web_name/controllers/page_html/home.html.heex",
-     # "phx_test/controllers/page_controller_test.exs":
-     #   "test/:lib_web_name/controllers/page_controller_test.exs",
-     "phx_web/components/layouts/root.html.heex":
-       "lib/:lib_web_name/components/layouts/root.html.heex",
-     "phx_web/components/layouts/app.html.heex":
-       "lib/:lib_web_name/components/layouts/app.html.heex",
-     "phx_web/components/layouts.ex": "lib/:lib_web_name/components/layouts.ex"},
+    {
+      :eex,
+      :web,
+      # "phx_web/components/core_components.ex": "lib/:lib_web_name/components/core_components.ex",
+      # "phx_web/controllers/page_controller.ex": "lib/:lib_web_name/controllers/page_controller.ex",
+      # "phx_web/controllers/page_html.ex": "lib/:lib_web_name/controllers/page_html.ex",
+      # "phx_web/controllers/page_html/home.html.heex":
+      #   "lib/:lib_web_name/controllers/page_html/home.html.heex",
+      # "phx_test/controllers/page_controller_test.exs":
+      #   "test/:lib_web_name/controllers/page_controller_test.exs",
+      "phx_web/controllers/error_html.ex": "lib/:lib_web_name/controllers/error_html.ex",
+      "phx_test/controllers/error_html_test.exs":
+        "test/:lib_web_name/controllers/error_html_test.exs",
+      "phx_web/components/layouts/root.html.heex":
+        "lib/:lib_web_name/components/layouts/root.html.heex",
+      "phx_web/components/layouts/app.html.heex":
+        "lib/:lib_web_name/components/layouts/app.html.heex",
+      "phx_web/components/layouts.ex": "lib/:lib_web_name/components/layouts.ex"
+    },
     {:eex, :web, "phx_assets/logo.svg": "priv/static/images/logo.svg"}
   ])
 
@@ -74,9 +87,12 @@ defmodule Punkix.Generator.Single do
   ])
 
   template(:css, [
-    {:eex, :web,
-     "phx_assets/app.css": "assets/css/app.css",
-     # "phx_assets/tailwind.config.js": "assets/tailwind.config.js"}
+    {
+      :eex,
+      :web,
+      "phx_assets/app.css": "assets/css/app.css"
+      # "phx_assets/tailwind.config.js": "assets/tailwind.config.js"}
+    }
   ])
 
   template(:js, [
