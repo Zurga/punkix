@@ -19,4 +19,29 @@ defmodule Punkix.ContextTest do
       assert Context.context_fun_spec(schema) == ":food | :nonfood"
     end
   end
+
+  describe "args_to_params/2" do
+    test "returns the correct params" do
+      schema =
+        Gen.Schema.build(~w/Shop.Article articles name:string/, [])
+
+      assert Context.args_to_params(schema, :create) == "\"some name\""
+    end
+
+    test "without nullable" do
+      schema =
+        Gen.Schema.build(~w/Shop.Article articles category:enum:food:nonfood/, [])
+
+      assert Context.args_to_params(schema, :create) == ":food"
+    end
+  end
+
+  describe "invalid_args_to_params/2" do
+    test "returns the correct params" do
+      schema =
+        Gen.Schema.build(~w/Shop.Article articles name:string/, [])
+
+      assert Context.invalid_args_to_params(schema, :create) == "nil"
+    end
+  end
 end

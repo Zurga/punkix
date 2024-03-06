@@ -29,13 +29,13 @@
       <%= schema.singular %> = <%= schema.singular %>_fixture()
       update_attrs = <%= Mix.Phoenix.to_text schema.params.update%>
 
-      assert {:ok, %<%= inspect schema.alias %>{} = <%= schema.singular %>} = <%= inspect context.alias %>.update_<%= schema.singular %>(<%= schema.singular %>, update_attrs)<%= for {field, value} <- schema.params.update do %>
+      assert {:ok, %<%= inspect schema.alias %>{} = <%= schema.singular %>} = <%= inspect context.alias %>.update_<%= schema.singular %>(<%= schema.singular %>.id, <%= Punkix.Context.args_to_params(schema, :update) %>)<%= for {field, value} <- schema.params.update do %>
       assert <%= schema.singular %>.<%= field %> == <%= Mix.Phoenix.Schema.value(schema, field, value) %><% end %>
     end
 
     test "update_<%= schema.singular %>/2 with invalid data returns error changeset" do
       <%= schema.singular %> = <%= schema.singular %>_fixture()
-      assert {:error, %Ecto.Changeset{}} = <%= inspect context.alias %>.update_<%= schema.singular %>(<%= schema.singular %>, @invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} = <%= inspect context.alias %>.update_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.invalid_args_to_params(schema, :update) %>)
       assert <%= schema.singular %> == <%= inspect context.alias %>.get_<%= schema.singular %>!(<%= schema.singular %>.id)
     end
 
