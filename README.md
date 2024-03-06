@@ -20,27 +20,27 @@ and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/punkix>.
 
 TODO Installer
-[-] set correct deps
-[ ] use Punkix.Repo
-[ ] remove all Tailwind
+- [x] set correct deps
+- [ ] use Punkix.Repo
+- [ ] remove all Tailwind
 
 TODO WEB
-[ ] Change inputs
-[ ] Add FormComponent abstraction
-[ ] Add changeset validation in FormComponent
-[ ] Make index/show pages subscribe to PubSub events
+- [ ] Change inputs
+- [ ] Add FormComponent abstraction
+- [ ] Add changeset validation in FormComponent
+- [ ] Make index/show pages subscribe to PubSub events
 
 TODO Context
-[ ] VBT style core functions for modifying data
-[ ] Optional pubsub hook
-[ ] 
-
+- [ ] VBT style core functions for modifying data
+- [ ] Optional pubsub hook
+- [x] remove changeset from schema
+ 
 TODO Generators
-[ ] phx.gen.auth
-[ ] phx.gen.context
-[ ] phx.gen.html
-[ ] phx.gen.live
-[ ] phx.gen.schema
-[ ] phx.gen.embedded
-[ ] phx.gen.notifier
-[ ] phx.gen.socket
+- [ ] phx.gen.auth
+- [ ] phx.gen.context
+- [ ] phx.gen.html
+- [ ] phx.gen.live
+- [ ] phx.gen.schema
+- [ ] phx.gen.embedded
+- [ ] phx.gen.notifier
+- [ ] phx.gen.socket
