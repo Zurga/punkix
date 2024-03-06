@@ -22,7 +22,7 @@ defmodule <%= @web_namespace %>.ConnCase do
       # The default endpoint for testing
       @endpoint <%= @endpoint_module %>
 
-      use <%= @web_namespace %>, :verified_routes
+      <%= @web_namespace %>.verified_routes()
 
       # Import conveniences for testing with connections
       import Plug.Conn
