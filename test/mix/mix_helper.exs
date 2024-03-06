@@ -11,18 +11,24 @@ defmodule MixHelper do
   end
 
   defp random_string(len) do
-    len |> :crypto.strong_rand_bytes() |> Base.encode64() |> binary_part(0, len)
+    len |> :crypto.strong_rand_bytes() |> Base.encode32() |> binary_part(0, len)
   end
 
   def in_tmp(which, function) do
-    path = Path.join([tmp_path(), random_string(10) <> to_string(which)])
+    project_name = to_string(which) <> random_string(10)
+
+    path =
+      Path.join([tmp_path(), project_name])
 
     try do
       File.rm_rf!(path)
       File.mkdir_p!(path)
-      File.cd!(path, function)
+
+      File.cd!(path, fn ->
+        function.(project_name)
+      end)
     after
-      File.rm_rf!(path)
+      # File.rm_rf!(path)
     end
   end
 
@@ -49,7 +55,7 @@ defmodule MixHelper do
         function.()
       end)
     after
-      # File.rm_rf!(path)
+      File.rm_rf!(path)
       Application.put_env(:phoenix, :generators, conf_before)
     end
   end
@@ -166,4 +172,7 @@ defmodule MixHelper do
       0 -> :ok
     end
   end
+
+  def mix_cmd(cmd, args \\ []),
+    do: System.cmd("mix", List.wrap(cmd) ++ args, env: [{"MIX_ENV", "test"}])
 end

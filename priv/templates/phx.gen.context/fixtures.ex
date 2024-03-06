@@ -5,7 +5,7 @@
 <% end %>  @doc """
   Generate a <%= schema.singular %>.
   """
-  def <%= schema.singular %>_fixture(attrs \\ %{}) do
+  def <%= schema.singular %>_fixture(_attrs \\ %{}) do
     {:ok, <%= schema.singular %>} = <%= inspect context.module %>.create_<%= schema.singular %>(<%= Punkix.Context.args_to_params(schema, :create) %>)
 
     <%= schema.singular %>

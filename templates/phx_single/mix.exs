@@ -9,7 +9,7 @@ defmodule <%= @app_module %>.MixProject do
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
       lockfile: "../../mix.lock",<% end %>
-      elixir: "> 1.14",
+      elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -41,7 +41,7 @@ defmodule <%= @app_module %>.MixProject do
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.10"},
       {<%= inspect @adapter_app %>, ">= 0.0.0"},<% end %>
-      {:phoenix_html, "~> 4.0"},
+      {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.20.2"},
       {:floki, ">= 0.30.0", only: :test},<%= if @dashboard do %>
@@ -57,7 +57,7 @@ defmodule <%= @app_module %>.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {<%= inspect @web_adapter_app %>, "<%= @web_adapter_vsn %>"},
       {:surface, "~> 0.11.2"},
-      {:punkix, "~> 0.0.1"}
+      {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>}
     ]
   end
 
@@ -72,11 +72,11 @@ defmodule <%= @app_module %>.MixProject do
       setup: ["deps.get"<%= if @ecto do %>, "ecto.setup"<% end %><%= if @asset_builders != [] do %>, "assets.setup", "assets.build"<% end %>]<%= if @ecto do %>,
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]<% end %><%= if @asset_builders != [] do %>,
-      "assets.setup": <%= inspect Enum.map(@asset_builders, &"#{&1}.install --if-missing") %>,
-      "assets.build": <%= inspect Enum.map(@asset_builders, &"#{&1} #{@app_name}") %>,
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]<% end %><%= if asset_builders != [] do %>,
+      "assets.setup": <%= inspect Enum.map(asset_builders, &"#{&1}.install --if-missing") %>,
+      "assets.build": <%= inspect Enum.map(asset_builders, &"#{&1} #{@app_name}") %>,
       "assets.deploy": [
-<%= Enum.map(@asset_builders, &"        \"#{&1} #{@app_name} --minify\",\n") ++ ["        \"phx.digest\""] %>
+<%= Enum.map(asset_builders, &"        \"#{&1} #{@app_name} --minify\",\n") ++ ["        \"phx.digest\""] %>
       ]<% end %>
     ]
   end

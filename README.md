@@ -21,8 +21,9 @@ be found at <https://hexdocs.pm/punkix>.
 
 TODO Installer
 - [x] set correct deps
-- [ ] use Punkix.Repo
-- [ ] remove all Tailwind
+- [x] use Punkix.Repo
+- [x] remove all Tailwind
+- [x] create end-to-end Test
 
 TODO WEB
 - [ ] Change inputs

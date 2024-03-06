@@ -1,0 +1,12 @@
+{application,punkix,
+             [{optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger,phoenix,phx_new,
+                             typed_ecto_schema]},
+              {description,"punkix"},
+              {modules,['Elixir.Mix.Tasks.Punkix',
+                        'Elixir.Mix.Tasks.Punkix.Gen.Context','Elixir.Punkix',
+                        'Elixir.Punkix.Context','Elixir.Punkix.Generator',
+                        'Elixir.Punkix.Generator.Single',
+                        'Elixir.Punkix.Repo']},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.
