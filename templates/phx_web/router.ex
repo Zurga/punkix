@@ -22,7 +22,7 @@ defmodule <%= @web_namespace %>.Router do
   scope "/", <%= @web_namespace %> do
     pipe_through :browser
 
-    get "/", PageController, :home
+    # TODO add your routes here
   end
 
   # Other scopes may use custom stacks.
