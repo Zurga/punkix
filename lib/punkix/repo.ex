@@ -5,6 +5,13 @@ defmodule Punkix.Repo do
     quote do
       use Ecto.Repo, unquote(opts)
 
+      def fetch_one(schema, id) do
+        case get(schema, id) do
+          nil -> {:error, :not_found}
+          record -> {:ok, record}
+        end
+      end
+
       def validate(true, _), do: :ok
       def validate(false, reason), do: {:error, reason}
 
