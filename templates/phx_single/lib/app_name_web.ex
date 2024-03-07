@@ -2,6 +2,7 @@ defmodule <%= @web_namespace %> do
   @moduledoc """
   Contains the helper functions that will be used in other modules that define the different parts of the web subsystem.
   """
+  use Boundary, deps: [<%= @app_module %>], exports: [<%= @web_namespace %>.Endpoint]
 
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 

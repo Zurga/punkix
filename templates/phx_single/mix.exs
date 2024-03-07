@@ -14,7 +14,7 @@ defmodule <%= @app_module %>.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      compilers: Mix.compilers() ++ [:surface]
+      compilers: Mix.compilers() ++ [:surface, :boundary]
     ]
   end
 
@@ -57,7 +57,8 @@ defmodule <%= @app_module %>.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {<%= inspect @web_adapter_app %>, "<%= @web_adapter_vsn %>"},
       {:surface, "~> 0.11.2"},
-      {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>}
+      {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
+      {:boundary, "~> 0.10.0"}
     ]
   end
 
