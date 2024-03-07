@@ -29,9 +29,7 @@ defmodule <%= @web_namespace %>.Router do
   # scope "/api", <%= @web_namespace %> do
   #   pipe_through :api
   # end
-
   <%= if @dashboard || @mailer do %>
-
   # Enable <%= [@dashboard && "LiveDashboard", @mailer && "Swoosh mailbox preview"] |> Enum.filter(&(&1)) |> Enum.join(" and ") %> in development
   if Application.compile_env(:<%= @web_app_name %>, :dev_routes) do<%= if @dashboard do %>
     # If you want to use the LiveDashboard in production, you should put

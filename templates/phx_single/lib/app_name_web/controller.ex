@@ -12,4 +12,3 @@ defmodule <%= @web_namespace %>.Controller do
     end
   end
 end
-

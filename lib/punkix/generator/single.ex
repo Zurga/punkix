@@ -131,6 +131,7 @@ defmodule Punkix.Generator.Single do
     if Project.gettext?(project), do: gen_gettext(project)
 
     gen_assets(project)
+
     project
   end
 
