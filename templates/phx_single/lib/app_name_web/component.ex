@@ -1,7 +1,7 @@
 defmodule <%= @web_namespace %>.Component do
-  defmacro __using__(_) do
+  defmacro __using__(opts) do
     quote do
-      use Surface.Component
+      use Surface.Component, unquote(opts)
 
       # Import convenience functions from controllers
       import Phoenix.Controller,

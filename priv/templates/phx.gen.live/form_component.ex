@@ -1,29 +1,35 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.FormComponent do
   use <%= inspect context.web_module %>.FormComponent
 
-  alias Surface.Form
   alias <%= inspect context.module %>
+  <%= Mix.Tasks.Punkix.Gen.Live.input_aliases(schema) %>
+  @input_schema [<%= for {key, type} <- schema.attrs, type != :map and is_atom(type) == true do %>
+    <%= key %>: [<%= inspect(type) %>],<% end %>
+  ]
+
+  prop title, :string
+  prop <%= schema.singular %>, :any
+  prop action, :atom, default: :new
+  data changeset, :changeset
 
   @impl true
   def render(assigns) do
     ~F"""
     <div>
-      <.header>
-        <%%= @title %>
-        <:subtitle>Use this form to manage <%= schema.singular %> records in your database.</:subtitle>
-      </.header>
+      <header>
+        {@title}
+        <p>Use this form to manage <%= schema.singular %> records in your database.</p>
+      </header>
 
       <Form
-        for={@form}
+        for={@changeset}
         id="<%= schema.singular %>-form"
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
       >
 <%= Mix.Tasks.Phx.Gen.Html.indent_inputs(inputs, 8) %>
-        <:actions>
-          <.button phx-disable-with="Saving...">Save <%= schema.human_singular %></.button>
-        </:actions>
+        <button phx-disable-with="Saving...">Save <%= schema.human_singular %></button>
       </Form>
     </div>
     """
@@ -31,7 +37,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def update(%{<%= schema.singular %>: <%= schema.singular %>} = assigns, socket) do
-    changeset = <%= inspect context.alias %>.change_<%= schema.singular %>(<%= schema.singular %>)
+    changeset = if assigns.action == :new do
+      <%= inspect context.alias %>.change_<%= schema.singular %>(<%= schema.singular %>)
+    end
 
     {:ok,
      socket

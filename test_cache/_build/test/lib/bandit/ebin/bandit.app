@@ -69,5 +69,5 @@
                         'Elixir.Bandit.WebSocket.Socket.ThousandIsland.Socket',
                         'Elixir.Bandit.WebSocket.UpgradeValidation']},
               {registered,[]},
-              {vsn,"1.2.3"},
+              {vsn,"1.3.0"},
               {mod,{'Elixir.Bandit.Application',[]}}]}.

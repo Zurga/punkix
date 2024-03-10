@@ -1,8 +1,12 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.Index do
   use <%= inspect context.web_module %>.LiveView
 
+  alias <%= inspect context.web_module %>.Components.{Table, Modal}
+  alias <%= inspect context.web_module %>.Components.Table.Column
+
   alias <%= inspect context.module %>
   alias <%= inspect schema.module %>
+  alias Surface.Components.Link
 
   @impl true
   def mount(_params, _session, socket) do

@@ -5,14 +5,20 @@ defmodule <%= @web_namespace %> do
   use Boundary, deps: [<%= @app_module %>], exports: [<%= @web_namespace %>.Endpoint]
 
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  defmacro sigil_a(expr, _modifiers) do
+    socket = Macro.var(:socket, nil)
+
+    quote bind_quoted: [socket: socket, expr: expr] do
+      Map.get(socket.assigns, String.to_existing_atom(expr))
+    end
+  end
 
   def html_helpers do
     quote do
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components and translation
-      # import <%= @web_namespace %>.CoreComponents<%= if @gettext do %>
-      import <%= @web_namespace %>.Gettext<% end %>
+      <%= if @gettext do %>import <%= @web_namespace %>.Gettext<% end %>
+      import <%= @web_namespace %>, only: [sigil_a: 2]
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

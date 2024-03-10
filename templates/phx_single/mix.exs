@@ -1,6 +1,5 @@
 defmodule <%= @app_module %>.MixProject do
   use Mix.Project
-
   def project do
     [
       app: :<%= @app_name %>,
@@ -58,7 +57,9 @@ defmodule <%= @app_module %>.MixProject do
       {<%= inspect @web_adapter_app %>, "<%= @web_adapter_vsn %>"},
       {:surface, "~> 0.11.2"},
       {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
-      {:boundary, "~> 0.10.0"}
+      {:boundary, "~> 0.10.0"},
+      {:typed_ecto_schema, "~> 0.4.1"},
+      {:skipper, "~> 0.2.2"}
     ]
   end
 

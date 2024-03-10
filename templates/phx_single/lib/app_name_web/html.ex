@@ -1,7 +1,7 @@
 defmodule <%= @web_namespace %>.HTML do
   defmacro __using__(_) do
     quote do
-      use Surface.Component
+      use Phoenix.Component
 
       # Import convenience functions from controllers
       import Phoenix.Controller,
