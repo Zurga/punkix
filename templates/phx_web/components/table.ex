@@ -14,13 +14,6 @@ defmodule <%= @web_namespace %>.Components.Table do
   @doc "The CSS class for the wrapping `<div>` element"
   prop class, :css_class
 
-  @doc """
-  A function that returns a class for the item's underlying `<tr>`
-  element. The function receives the item and index related to
-  the row.
-  """
-  prop row_class, :fun
-
   @doc "The columns of the table"
   slot cols, generator_prop: :data, required: true
 
@@ -48,7 +41,4 @@ defmodule <%= @web_namespace %>.Components.Table do
     </div>
     """
   end
-
-  defp row_class_fun(nil), do: fn _, _ -> "" end
-  defp row_class_fun(row_class), do: row_class
 end

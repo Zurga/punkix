@@ -10,8 +10,6 @@ defmodule <%= @web_namespace %>.FormComponent do
     end
   end
 
-  import Ecto.Changeset
-
 #   def autosave(%{assigns: %{action: :new}} = socket, params) do
 #     changeset = do_change(params, socket)
 
