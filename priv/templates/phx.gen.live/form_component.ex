@@ -3,9 +3,22 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   alias <%= inspect context.module %>
   <%= Mix.Tasks.Punkix.Gen.Live.input_aliases(schema) %>
-  @input_schema [<%= for {key, type} <- schema.attrs, type != :map and is_atom(type) == true do %>
-    <%= key %>: [<%= inspect(type) %>],<% end %>
-  ]
+
+  defmodule <%= schema.alias %>.Form do
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    embedded_schema do
+      <%= for {key, type} <- schema.attrs, type != :map and is_atom(type) == true do %>
+      field <%= inspect(key) %>, <%= inspect(type) %><% end %>
+    end
+
+    def changeset(<%= schema.singular %>_or_changeset, attrs \\ %{}) do
+      <%= schema.singular %>_or_changeset
+      |> cast(attrs, [<%= Enum.map_join(schema.attrs, ", ", &elem(&1, 0) |> inspect()) %>])
+      |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])
+    end
+  end
 
   prop title, :string
   prop <%= schema.singular %>, :any
@@ -23,12 +36,12 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
       <Form
         for={@changeset}
-        id="<%= schema.singular %>-form"
-        phx-target={@myself}
-        phx-change="validate"
-        phx-submit="save"
+        id={"<%= schema.singular %>-form"}
+        change="validate"
+        submit="save"
+        opts={"phx-target": @myself}
       >
-<%= Mix.Tasks.Phx.Gen.Html.indent_inputs(inputs, 8) %>
+<%= Mix.Tasks.Phx.Gen.Html.indent_inputs(inputs, 4) %>
         <button phx-disable-with="Saving...">Save <%= schema.human_singular %></button>
       </Form>
     </div>
@@ -37,9 +50,8 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def update(%{<%= schema.singular %>: <%= schema.singular %>} = assigns, socket) do
-    changeset = if assigns.action == :new do
-      <%= inspect context.alias %>.change_<%= schema.singular %>(<%= schema.singular %>)
-    end
+    # changeset = <%= schema.alias %>.Form.changeset(%<%= schema.alias %>.Form{}, (assigns.action == :new && %{}) || <%= schema.singular %>)
+    changeset = <%= schema.alias %>.Form.changeset(<%= schema.singular %>)
 
     {:ok,
      socket
@@ -49,50 +61,50 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def handle_event("validate", %{"<%= schema.singular %>" => <%= schema.singular %>_params}, socket) do
-    changeset =
-      socket.assigns.<%= schema.singular %>
-      |> <%= inspect context.alias %>.change_<%= schema.singular %>(<%= schema.singular %>_params)
+    changeset = <%= schema.alias %>.Form.changeset(~a[<%= schema.singular %>], <%= schema.singular %>_params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
   end
 
   def handle_event("save", %{"<%= schema.singular %>" => <%= schema.singular %>_params}, socket) do
-    save_<%= schema.singular %>(socket, socket.assigns.action, <%= schema.singular %>_params)
+    {:noreply, save_<%= schema.singular %>(socket, socket.assigns.action, <%= schema.singular %>_params)}
   end
 
   defp save_<%= schema.singular %>(socket, :edit, <%= schema.singular %>_params) do
-    case <%= inspect context.alias %>.update_<%= schema.singular %>(socket.assigns.<%= schema.singular %>, <%= schema.singular %>_params) do
-      {:ok, <%= schema.singular %>} ->
+    with {:ok, <%= schema.singular %>} <-
+      prepare_for_insert(~a[changeset], <%= schema.singular %>_params, ~a[action]), 
+      {:ok, <%= schema.singular %>} <-
+          <%= context.name %>.update_<%= schema.singular %>(<%= Punkix.Context.args_as_attributes("~a[#{schema.singular}]", schema.singular, schema) %>) do
         notify_parent({:saved, <%= schema.singular %>})
 
-        {:noreply,
          socket
          |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
+         |> push_patch(to: socket.assigns.patch)
+    else
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+        assign_form(socket, changeset)
     end
   end
 
   defp save_<%= schema.singular %>(socket, :new, <%= schema.singular %>_params) do
-    case <%= inspect context.alias %>.create_<%= schema.singular %>(<%= schema.singular %>_params) do
-      {:ok, <%= schema.singular %>} ->
+    with {:ok, <%= schema.singular %>} <-
+      prepare_for_insert(~a[changeset], <%= schema.singular %>_params, ~a[action]), 
+      {:ok, <%= schema.singular %>} <-
+          <%= context.name %>.create_<%= schema.singular %>(<%= Punkix.Context.args_as_attributes(schema.singular, schema) %>) do
         notify_parent({:saved, <%= schema.singular %>})
 
-        {:noreply,
          socket
-         |> put_flash(:info, "<%= schema.human_singular %> created successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
+         |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
+         |> push_patch(to: socket.assigns.patch)
+    else
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+        assign_form(socket, changeset)
     end
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
-    assign(socket, :form, to_form(changeset))
+    assign(socket, :changeset, changeset)
   end
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})

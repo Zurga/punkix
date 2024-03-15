@@ -24,6 +24,31 @@ defmodule Punkix.GenLiveTest do
       # assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article/index.ex"))
       refute_file(Path.join(project_path, "lib/#{project_name}_web/core_components.ex"))
 
+      router_path = Path.join([project_path, "lib", "#{project_name}_web", "router.ex"])
+
+      router_file =
+        File.read!(router_path)
+        |> String.split("\n")
+        |> Enum.reduce("", fn line, acc ->
+          line =
+            if String.contains?(line, "# TODO add your routes here") do
+              """
+                live("/articles", ArticleLive.Index, :index)
+                live("/articles/new", ArticleLive.Index, :new)
+                live("/articles/:id/edit", ArticleLive.Index, :edit)
+
+                live("/articles/:id", ArticleLive.Show, :show)
+                live("/articles/:id/show/edit", ArticleLive.Show, :edit)
+              """
+            else
+              line
+            end
+
+          acc <> "\n " <> line
+        end)
+
+      File.write(router_path, router_file)
+
       assert {_, 0} = mix_cmd(project_path, "test")
     end)
   end

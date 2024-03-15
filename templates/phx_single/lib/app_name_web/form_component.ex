@@ -4,6 +4,7 @@ defmodule <%= @web_namespace %>.FormComponent do
       use Surface.LiveComponent
       alias Surface.Components.Form
       alias Surface.Components.Form.{Field}
+      import unquote(__MODULE__)
 
       unquote(<%= @web_namespace %>.html_helpers())
     end
@@ -19,6 +20,11 @@ defmodule <%= @web_namespace %>.FormComponent do
     acceptance: {&validate_acceptance/3, ~w/message/a},
     exclude: {&validate_exclusion/3, ~w/message/a},
   ]
+
+  def prepare_for_insert(changeset, params, action) do
+    apply(changeset.__struct__, :changeset, [changeset, params])
+    |> apply_action(action)
+  end
    
   def normalize_input(params, input_schema) do
     types = input_schema |> Enum.map(fn {k, [type | _]} -> {k, type} end) |> Enum.into(%{})
@@ -29,11 +35,11 @@ defmodule <%= @web_namespace %>.FormComponent do
     |> then(&Enum.reduce(validations, &1, fn validation, acc ->
       validation.(acc)
     end))
-    |> apply_action(:insert)
-    |> case do
-      {:ok, normalized_input} -> normalized_input
-      error -> error
-    end
+    # |> apply_action(:validate)
+    # |> case do
+    #   {:ok, normalized_input} -> normalized_input
+    #   error -> error
+    # end
   end
 
     defp schema_validations(schema) do

@@ -28,9 +28,14 @@ defmodule Punkix.Context do
     |> maybe_prepend(argument)
   end
 
-  def args_to_params(schema, fun) do
-    args_to_params("", schema, fun)
+  def args_as_attributes(struct, schema), do: args_as_attributes("", struct, schema)
+
+  def args_as_attributes(argument, struct, schema) do
+    Enum.map_join(schema.attrs, ", ", &"#{struct}.#{elem(&1, 0)}")
+    |> maybe_prepend(argument)
   end
+
+  def args_to_params(schema, fun), do: args_to_params("", schema, fun)
 
   def args_to_params(argument, schema, fun) do
     params = schema.params[fun]

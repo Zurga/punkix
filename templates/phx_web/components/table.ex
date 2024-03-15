@@ -37,8 +37,7 @@ defmodule <%= @web_namespace %>.Components.Table do
         </thead>
         <tbody>
           <tr
-            :for={{item, index} <- Enum.with_index(@data)}
-            class={row_class_fun(@row_class).(item, index)}
+            :for={item <- @data}
           >
             <td :for={col <- @cols}>
               <span><#slot {col} generator_value={item} /></span>

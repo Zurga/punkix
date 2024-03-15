@@ -12,10 +12,12 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def handle_params(%{"id" => id}, _, socket) do
+    {:ok, <%= schema.singular %>} = <%= inspect context.alias %>.get_<%= schema.singular %>(id)    
+
     {:noreply,
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
-     |> assign(:<%= schema.singular %>, <%= inspect context.alias %>.get_<%= schema.singular %>!(id))}
+     |> assign(:<%= schema.singular %>, <%= schema.singular %>)}
   end
 
   defp page_title(:show), do: "Show <%= schema.human_singular %>"
