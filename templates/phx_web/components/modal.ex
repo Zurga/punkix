@@ -4,7 +4,9 @@ defmodule <%= @web_namespace %>.Components.Modal do
   slot default
   def render(assigns) do
     ~F"""
-      <#slot />
+      <div class="modal">
+        <#slot />
+      </div>
     """
   end
 end

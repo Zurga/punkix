@@ -49,7 +49,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
       end)
     end)
     |> Enum.uniq()
-    |> Enum.concat(~w[Field Label]a)
+    |> Enum.concat(~w[Field Label ErrorTag]a)
     |> Enum.sort()
     |> Enum.join(", ")
     |> case do
@@ -99,6 +99,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
         <Field name={#{inspect(key)}}>
           <Label>#{label(key)}</Label>
           <#{input} />
+          <ErrorTag />
         </Field>
         """
     end)
