@@ -73,7 +73,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   def handle_event("save", %{"<%= schema.singular %>" => <%= schema.singular %>_params}, socket) do
-    {:noreply, save_<%= schema.singular %>(socket, socket.assigns.action, <%= schema.singular %>_params)}
+    {:noreply, save_<%= schema.singular %>(socket, ~a[action], <%= schema.singular %>_params)}
   end
 
   defp save_<%= schema.singular %>(socket, :edit, <%= schema.singular %>_params) do
@@ -98,7 +98,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         notify_parent({:saved, <%= schema.singular %>})
 
          socket
-         |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
+         |> put_flash(:info, "<%= schema.human_singular %> created successfully")
          |> push_patch(to: ~a[patch])
     else
       {:error, %Ecto.Changeset{} = changeset} ->

@@ -30,6 +30,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       |> change_form("#<%= schema.singular %>-form", <%= schema.singular %>: @invalid_attrs)
       |> assert_visible("<%= Mix.Phoenix.Schema.failed_render_change_message(schema) %>")
       |> submit_form("#<%= schema.singular %>-form", <%= schema.singular %>: @create_attrs)
+      |> rerender()
       |> assert_visible("<%= schema.human_singular %> created successfully")<%= if schema.string_attr do %>
       |> assert_visible("some <%= schema.string_attr %>")<% end %>
     end
