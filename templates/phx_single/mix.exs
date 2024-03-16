@@ -59,7 +59,7 @@ defmodule <%= @app_module %>.MixProject do
       {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
       {:boundary, "~> 0.10.0"},
       {:typed_ecto_schema, "~> 0.4.1"},
-      {:skipper, "~> 0.2.2", only: :test},
+      {:skipper, github: "Zurga/skipper", only: :test},
     ]
   end
 
