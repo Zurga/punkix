@@ -8,7 +8,6 @@
 </header>
 
 <Table
-  id="<%= schema.plural %>"
   data={{id, <%= schema.singular %>} <- @streams.<%= schema.collection %>}
 ><%= for {k, _} <- schema.attrs do %>
   <Column label="<%= Phoenix.Naming.humanize(Atom.to_string(k)) %>">{ <%= schema.singular %>.<%= k %> }</Column><% end %>
