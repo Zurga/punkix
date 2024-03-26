@@ -15,7 +15,8 @@ config :<%= @app_name %>, <%= @endpoint_module %>,
   debug_errors: true,
   secret_key_base: "<%= @secret_key_base_dev %>",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:<%= @app_name %>, ~w(--sourcemap=inline --watch)]}
+    esbuild: {Esbuild, :install_and_run, [:<%= @app_name %>, ~w(--sourcemap=inline --watch)]},
+    esbuild: {Esbuild, :install_and_run, [:catalogue, ~w(--sourcemap=inline --watch)]}
   ]
 
 # ## SSL Support
@@ -48,7 +49,8 @@ config :<%= @app_name %>, <%= @endpoint_module %>,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",<%= if @gettext do %>
       ~r"priv/gettext/.*(po)$",<% end %>
-      ~r"lib/<%= @lib_web_name %>/(controllers|live|components)/.*(ex|heex|sface|js)$"
+      ~r"lib/<%= @lib_web_name %>/(controllers|live|components)/.*(ex|heex|sface|js)$",
+      ~r"priv/catalogue/.*(ex)$"
     ]
   ]<% end %>
 

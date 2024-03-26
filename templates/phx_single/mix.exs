@@ -29,6 +29,7 @@ defmodule <%= @app_module %>.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:dev), do: ["lib"] ++ catalogues()
   defp elixirc_paths(_), do: ["lib"]
 
   # Specifies your project dependencies.
@@ -56,10 +57,21 @@ defmodule <%= @app_module %>.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {<%= inspect @web_adapter_app %>, "<%= @web_adapter_vsn %>"},
       {:surface, "~> 0.11.2"},
+      {:surface_catalogue, "~> 0.6.2"},
       {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
       {:boundary, "~> 0.10.0"},
       {:typed_ecto_schema, "~> 0.4.1"},
-      {:skipper, github: "Zurga/skipper", only: :test},
+      {:skipper, "~> 0.3.0", only: :test},
+      {:credo, "~> 1.7", only: [:dev, :test]}
+    ]
+  end
+
+  def catalogues do
+    [
+      # Local catalogue
+      "priv/catalogue",
+      # Dependencies catalogues
+      "deps/surface/priv/catalogue",
     ]
   end
 

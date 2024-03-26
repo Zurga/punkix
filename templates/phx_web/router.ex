@@ -5,6 +5,7 @@ defmodule <%= @web_namespace %>.Router do
   import Plug.Conn
   import Phoenix.Controller
   import Phoenix.LiveView.Router
+  import Surface.Catalogue.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -23,6 +24,13 @@ defmodule <%= @web_namespace %>.Router do
     pipe_through :browser
 
     # TODO add your routes here
+  end
+
+  if Mix.env() == :dev do
+    scope "/" do
+      pipe_through :browser
+      surface_catalogue "/catalogue"
+    end
   end
 
   # Other scopes may use custom stacks.

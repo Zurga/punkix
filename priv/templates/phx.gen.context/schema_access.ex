@@ -64,8 +64,8 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec update_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec("#{inspect schema.alias}.id()", schema) %>) :: 
-    {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  # @spec update_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec("#{inspect schema.alias}.id()", schema) %>) :: 
+  # {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def update_<%= schema.singular %>(<%= Punkix.Context.context_fun_args("#{schema.singular}_id", schema) %>) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
       store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.context_fun_args(schema) %>)
@@ -84,8 +84,8 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec delete_<%= schema.singular %>(<%= inspect schema.alias %>.id()) :: 
-    {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  # @spec delete_<%= schema.singular %>(<%= inspect schema.alias %>.id()) :: 
+    # {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def delete_<%= schema.singular %>(<%= schema.singular %>_id) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
       Repo.delete(<%= schema.singular %>)
@@ -95,7 +95,7 @@
   @doc false
   defp store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema.singular, schema) %>) do
     <%= schema.singular %>
-    |> change(<%= Enum.map_join(schema.attrs, ", ", &"#{elem(&1, 0)}: #{elem(&1, 0)}") %>)
+    |> change(<%= Punkix.Context.context_fun_args(schema) %>)
     |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])
 <%= for k <- schema.uniques do %>    |> unique_constraint(<%= inspect k %>)
 <% end %>    |> Repo.insert_or_update()
