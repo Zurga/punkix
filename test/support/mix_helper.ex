@@ -174,7 +174,7 @@ defmodule MixHelper do
 
   def mix_cmd(path, cmd, args \\ []),
     do:
-      System.cmd("mix", List.wrap(cmd) ++ args,
+      System.shell("yes | mix #{cmd} #{args}",
         env: [{"MIX_ENV", "test"}],
         cd: path,
         into: IO.stream()

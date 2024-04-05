@@ -1,3 +1,11 @@
+# 0.10.3
+
+- Fixed false positives introduced in 0.10.2 (https://github.com/sasa1977/boundary/issues/64)
+
+# 0.10.2
+
+- Ignore implicitly defined modules, such as protocol impls added via `@derive`.
+
 # 0.10.1
 
 - Improved compiler performance. On a large project (7k+ files, 480k LOC), the running time is reduced from about 50 seconds to about 1 second.

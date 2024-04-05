@@ -2,14 +2,9 @@ defmodule Mix.Tasks.Punkix.Gen.Context do
   use Mix.Task
 
   use Punkix.Patcher
+  use Punkix.Patches.Schema
 
-  wrap(Mix.Tasks.Phx.Gen.Context, :build, 1, :patch_context)
+  patch(Mix.Tasks.Phx.Gen.Context)
 
-  def patch_context({context, schema}) do
-    context = %{context | dir: nil}
-
-    {context, schema}
-  end
-
-  defdelegate run(args), to: Mix.Tasks.Phx.Gen.Context
+  def run(args), do: patched(Mix.Tasks.Phx.Gen.Context).run(args)
 end

@@ -21,7 +21,19 @@ defmodule Punkix.GenLiveTest do
                  ~w"Shop Article articles name:string description:string --context schemas"
                )
 
-      # assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article/index.ex"))
+      assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/index.ex"))
+
+      assert_file(
+        Path.join(project_path, "lib/#{project_name}_web/live/article_live/index.sface")
+      )
+
+      assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/show.ex"))
+      assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/show.sface"))
+
+      assert_file(
+        Path.join(project_path, "lib/#{project_name}_web/live/article/form_component.ex")
+      )
+
       refute_file(Path.join(project_path, "lib/#{project_name}_web/core_components.ex"))
 
       router_path = Path.join([project_path, "lib", "#{project_name}_web", "router.ex"])

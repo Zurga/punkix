@@ -16,4 +16,4 @@
                         'Elixir.Mix.Tasks.Boundary.Visualize.Mods',
                         'Elixir.Mix.Tasks.Compile.Boundary']},
               {registered,[]},
-              {vsn,"0.10.1"}]}.
+              {vsn,"0.10.3"}]}.

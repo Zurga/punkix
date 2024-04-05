@@ -1,4 +1,4 @@
--file("/nix/store/99wrvgwjfvg89q3m6n49n14shhkw3by7-erlang-25.3.2.7/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 0).
+-file("/nix/store/4sbrc947wbj81v9cnal310vhydzw8pjs-erlang-25.3.2.7/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 0).
 %% The source of this file is part of leex distribution, as such it
 %% has the same Copyright as the other files in the leex
 %% distribution. The Copyright is defined in the accompanying file
@@ -27,7 +27,7 @@ unescape_inside_class_name(Chars) ->
 unescape_inside_id_name(Chars) ->
   lists:flatten(string:replace(Chars, "\\.", ".", all)).
 
--file("/nix/store/99wrvgwjfvg89q3m6n49n14shhkw3by7-erlang-25.3.2.7/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 14).
+-file("/nix/store/4sbrc947wbj81v9cnal310vhydzw8pjs-erlang-25.3.2.7/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 14).
 
 format_error({illegal,S}) -> ["illegal characters ",io_lib:write_string(S)];
 format_error({user,S}) -> S.
@@ -1272,4 +1272,4 @@ yyaction_25(TokenLine) ->
 yyaction_26(TokenChars, TokenLine) ->
      { token, { unknown, TokenLine, TokenChars } } .
 
--file("/nix/store/99wrvgwjfvg89q3m6n49n14shhkw3by7-erlang-25.3.2.7/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 313).
+-file("/nix/store/4sbrc947wbj81v9cnal310vhydzw8pjs-erlang-25.3.2.7/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 313).

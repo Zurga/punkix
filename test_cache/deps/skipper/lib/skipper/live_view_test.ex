@@ -38,6 +38,10 @@ defmodule Skipper.LiveViewTest do
         {conn, {:ok, view, html}}
       end
 
+      defp handle_redirects(_, _, {:ok, %Plug.Conn{} = conn}) do
+        {conn, live(conn)}
+      end
+
       defp handle_redirects(conn, _view, redirect) do
         result = follow_redirect(redirect, conn)
         handle_redirects(conn, nil, result)

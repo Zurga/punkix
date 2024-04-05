@@ -18,10 +18,17 @@ defmodule Punkix.InstallerTest do
         refute content =~ "tailwind"
       end)
 
+      # Custom files
+      for file <- ~w/schema/ do
+        assert_file(Path.join(project_path, "lib/#{project_name}/#{file}.ex"))
+      end
+
+      # Phx.Gen templates
       for file <- Path.wildcard("../../priv/templates/**/*") do
         assert_file(file)
       end
 
+      # Web files
       for file <- ~w/component channel live_component live_view controller/ do
         assert_file(Path.join(project_path, "lib/#{project_name}_web/#{file}.ex"))
       end

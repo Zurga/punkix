@@ -20,8 +20,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     end
 
     def change(struct, attrs, action) do
-      changeset(struct, attrs)
-      |> apply_action(action)
+      {:ok, changeset(struct, attrs)
+      |> apply_action!(action)
+      |> Map.take([<%= Enum.map_join(schema.attrs, ", ", &inspect(elem(&1, 0))) %>])}
     end
   end
 
@@ -47,7 +48,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         submit="save"
         opts={"phx-target": @myself}
       >
-<%= Mix.Tasks.Phx.Gen.Html.indent_inputs(inputs, 4) %>
+<%= Mix.Tasks.Phx.Gen.Html.indent_inputs(inputs, 8) %>
         <button phx-disable-with="Saving...">Save <%= schema.human_singular %></button>
       </Form>
     </div>
@@ -77,9 +78,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp save_<%= schema.singular %>(socket, :edit, <%= schema.singular %>_params) do
-    with {:ok, <%= schema.singular %>} <- <%= schema.alias %>.Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
+    with {:ok, <%= schema.singular %>_params} <- <%= schema.alias %>.Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
       {:ok, <%= schema.singular %>} <-
-          <%= context.name %>.update_<%= schema.singular %>(<%= Punkix.Context.args_as_attributes("~a[#{schema.singular}].id", schema.singular, schema) %>) do
+          <%= context.name %>.update_<%= schema.singular %>(~a[<%= schema.singular %>].id, <%= schema.singular %>_params) do
         notify_parent({:saved, <%= schema.singular %>})
 
          socket
@@ -92,9 +93,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp save_<%= schema.singular %>(socket, :new, <%= schema.singular %>_params) do
-    with {:ok, <%= schema.singular %>} <- <%= schema.alias %>.Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
+    with {:ok, <%= schema.singular %>_params} <- <%= schema.alias %>.Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
       {:ok, <%= schema.singular %>} <-
-          <%= context.name %>.create_<%= schema.singular %>(<%= Punkix.Context.args_as_attributes(schema.singular, schema) %>) do
+          <%= context.name %>.create_<%= schema.singular %>(<%= schema.singular %>_params) do
         notify_parent({:saved, <%= schema.singular %>})
 
          socket

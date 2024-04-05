@@ -7,4 +7,4 @@
                         'Elixir.WebSockAdapter.UpgradeError',
                         'Elixir.WebSockAdapter.UpgradeValidation']},
               {registered,[]},
-              {vsn,"0.5.5"}]}.
+              {vsn,"0.5.6"}]}.

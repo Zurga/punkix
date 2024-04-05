@@ -64,8 +64,8 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  # @spec update_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec("#{inspect schema.alias}.id()", schema) %>) :: 
-  # {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  @spec update_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec("#{inspect schema.alias}.id()", schema) %>) :: 
+    {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def update_<%= schema.singular %>(<%= Punkix.Context.context_fun_args("#{schema.singular}_id", schema) %>) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
       store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.context_fun_args(schema) %>)
@@ -84,8 +84,8 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  # @spec delete_<%= schema.singular %>(<%= inspect schema.alias %>.id()) :: 
-    # {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  @spec delete_<%= schema.singular %>(<%= inspect schema.alias %>.id()) :: 
+    {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def delete_<%= schema.singular %>(<%= schema.singular %>_id) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
       Repo.delete(<%= schema.singular %>)

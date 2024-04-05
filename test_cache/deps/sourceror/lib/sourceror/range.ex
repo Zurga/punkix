@@ -91,7 +91,16 @@ defmodule Sourceror.Range do
       if meta[:delimiter] in [~S/"""/, ~S/'''/] do
         meta[:column] + String.length(meta[:delimiter])
       else
-        count = meta[:column] + String.length(last_line) + String.length(meta[:delimiter])
+        delimiter_count =
+          if String.contains?(string, meta[:delimiter]) do
+            ~r/#{meta[:delimiter]}/ |> Regex.scan(string) |> length()
+          else
+            0
+          end
+
+        count =
+          meta[:column] + String.length(last_line) + String.length(meta[:delimiter]) +
+            delimiter_count
 
         if end_line == meta[:line] do
           count + 1
@@ -463,11 +472,16 @@ defmodule Sourceror.Range do
     end_position = Sourceror.get_end_position(quoted)
 
     end_position =
-      if Keyword.has_key?(meta, :end) do
-        Keyword.update!(end_position, :column, &(&1 + 3))
-      else
-        # If it doesn't have an end token, then it has either a ), a ] or a }
-        Keyword.update!(end_position, :column, &(&1 + 1))
+      cond do
+        Keyword.has_key?(meta, :end_of_expression) ->
+          Keyword.update!(end_position, :column, &(&1 + 1))
+
+        Keyword.has_key?(meta, :end) ->
+          Keyword.update!(end_position, :column, &(&1 + 3))
+
+        true ->
+          # If it doesn't have an end token, then it has either a ), a ] or a }
+          Keyword.update!(end_position, :column, &(&1 + 1))
       end
 
     %{start: start_position, end: end_position}

@@ -9,21 +9,21 @@ defmodule Punkix.Generator.Single do
      "phx_single/config/prod.exs": "config/prod.exs",
      "phx_single/config/runtime.exs": "config/runtime.exs",
      "phx_single/config/test.exs": "config/test.exs"},
-    {:text, :project,
-     for file <- Path.wildcard("priv/templates/**/*.ex") do
-       {String.to_atom(Path.absname(file, "../")), file}
-     end
-     |> Keyword.new()},
-    {:text, :project,
-     for file <- Path.wildcard("priv/templates/**/*.exs") do
-       {String.to_atom(Path.absname(file, "../")), file}
-     end
-     |> Keyword.new()},
-    {:text, :project,
-     for file <- Path.wildcard("priv/templates/**/*.sface") do
-       {String.to_atom(Path.absname(file, "../")), file}
-     end
-     |> Keyword.new()},
+    # {:text, :project,
+    #  for file <- Path.wildcard("priv/templates/**/*.ex") do
+    #    {String.to_atom(Path.absname(file, "../")), file}
+    #  end
+    #  |> Keyword.new()},
+    # {:text, :project,
+    #  for file <- Path.wildcard("priv/templates/**/*.exs") do
+    #    {String.to_atom(Path.absname(file, "../")), file}
+    #  end
+    #  |> Keyword.new()},
+    # {:text, :project,
+    #  for file <- Path.wildcard("priv/templates/**/*.sface") do
+    #    {String.to_atom(Path.absname(file, "../")), file}
+    #  end
+    #  |> Keyword.new()},
     {:eex, :web,
      "phx_single/lib/app_name/application.ex": "lib/:app/application.ex",
      "phx_single/lib/app_name.ex": "lib/:app.ex",
@@ -88,6 +88,7 @@ defmodule Punkix.Generator.Single do
   template(:ecto, [
     {:eex, :app,
      "phx_ecto/repo.ex": "lib/:app/repo.ex",
+     "phx_ecto/schema.ex": "lib/:app/schema.ex",
      "phx_ecto/formatter.exs": "priv/repo/migrations/.formatter.exs",
      "phx_ecto/seeds.exs": "priv/repo/seeds.exs",
      "phx_ecto/data_case.ex": "test/support/data_case.ex"},

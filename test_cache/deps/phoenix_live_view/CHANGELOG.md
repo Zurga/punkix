@@ -1,6 +1,22 @@
 # Changelog
 
+## 0.20.14 (2024-03-13)
+
+### Bug fixes
+  * Fix warning caused by optional Floki dependency
+
+## 0.20.13 (2024-03-12)
+
+### Bug fixes
+  * Fix LiveComponent rendering bug causing elements to disappear when a LiveComponent child is removed and added back by the server
+
+### Enhancements
+  * Warn when accessing the socket in a function passed to assign_async / start_async
+
 ## 0.20.12 (2024-03-04)
+
+### Enhancements
+  * Phoenix LiveView requires Elixir v1.13+
 
 ### Bug fixes
   * Do not send Telemetry metadata as Logger event, this avoids the metadata from being accidentally copied to other processes
@@ -46,7 +62,6 @@
   * Fix phx-skip containers leaking into DOM on first patch in some cases (#3117)
   * Fix phx-feedback-for failing to be properly updated in some cases (#3122)
 
-
 ## 0.20.6 (2024-02-14)
 
 ### Bug fixes
@@ -86,6 +101,7 @@
   * Fix click-away being called incorrectly on form submits
   * Fix inconsistencies between LiveViewTest and browser stream implementations
   * Fix phx-feedback-for being reapplied when there are multiple inputs with the same name
+  * Ensure phx-update="ignore" behaves consistently: updates from the server to the element's content and attributes are ignored, *except for data attributes*
 
 ### Enhancements
   * Add `JS.toggle_class`

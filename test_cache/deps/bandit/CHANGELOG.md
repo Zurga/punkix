@@ -1,3 +1,82 @@
+## 1.4.2 (2 Apr 2024)
+
+### Enhancements
+
+* Support top-level :inet and :inet6 options for Plug.Cowboy compatibility (#337)
+
+## 1.4.1 (27 Mar 2024)
+
+### Changes
+
+* **BREAKING CHANGE** Move `log_protocol_errors` configuration option into
+  shared `http_options` top-level config (and apply it to HTTP/2 errors as well)
+* **BREAKING CHANGE** Remove `origin_telemetry_span_context` from WebSocket
+  telemetry events
+* **BREAKING CHANGE** Remove `stream_id` from HTTP/2 telemetry events
+* Add `conn` to the metadata of telemetry start events for HTTP requests
+* Stop sending WebSocket upgrade failure reasons to the client (they're still
+  logged)
+
+### Fixes
+
+* Return HTTP semantic errors to HTTP/2 clients as protocol errors instead of
+  internal errors
+
+## 1.4.0 (26 Mar 2024)
+
+> [!WARNING]
+> **IMPORTANT** Phoenix users MUST upgrade to WebSockAdapter `0.5.6` or newer when
+> upgrading to Bandit `1.4.0` or newer as some internal module names have changed
+
+### Enhancements
+
+* Complete refactor of HTTP/2. Improved process model is MUCH easier to
+  understand and yields about a 10% performance boost to HTTP/2 requests (#286 /
+  #307)
+* Substantial refactor of the HTTP/1 and HTTP/2 stacks to share a common code
+  path for much of their implementations, with the protocol-specific parts being
+  factored out to a minimal `Bandit.HTTPTransport` protocol internally, which
+  allows each protocol to define its own implementation for the minimal set of
+  things that are different between the two stacks (#297 / #329)
+
+### Changes
+
+* **BREAKING CHANGE** Move configuration options that are common between HTTP/1
+  and HTTP/2 stacks into a shared `http_options` top-level config
+* **BREAKING CHANGE** The HTTP/2 header size limit options have been deprecated,
+  and have been replaced with a single `max_header_block_size` option. The setting
+  defaults to 50k bytes, and refers to the size of the compressed header block
+  as sent on the wire (including any continuation frames)
+* **BREAKING CHANGE** Remove `req_line_bytes`, `req_header_bytes`, `resp_line_bytes` and
+  `resp_header_bytes` from HTTP/1 request telemetry measurements
+* **BREAKING CHANGE** Remove `status`, `method` and `request_target` from
+  telemetry metadata. All of this information can be obtained from the `conn`
+  struct attached to most telemetry events
+* **BREAKING CHANGE** Re-reading a body that has already been read returns `{:ok,
+  "", conn}` instead of raising a `Bandit.BodyAlreadyReadError`
+* **BREAKING CHANGE** Remove `Bandit.BodyAlreadyReadError`
+* **BREAKING CHANGE** Remove h2c support via Upgrade header. This was deprecated
+  in RFC9113 and never in widespread use. We continue to support h2c via prior
+  knowledge, which remains the only supported mechanism for h2c in RFC9113
+* Treat trailing bytes beyond the indicated content-length on HTTP/1 requests as
+  an error
+* Surface request body read timeouts on HTTP/1 requests as `{:more...}` tuples
+  and not errors
+* Socket sending errors are no longer surfaced on chunk sends in HTTP/1
+* We no longer log if processes that are linked to an HTTP/2 stream process
+  terminate unexpectedly. This has always been unspecified behaviour so is not
+  considered a breaking change
+* Calls of `Plug.Conn` functions for an HTTP/2 connection must now come from the
+  stream process; any other process will raise an error. Again, this has always
+  been unspecified behaviour
+* We now send an empty DATA frame for explicitly zero byte bodies instead of
+  optimizing to a HEADERS frame with end_stream set (we still do so for cases
+  such as 204/304 and HEAD requests)
+* We now send RST_STREAM frames if we complete a stream and the remote end is
+  still open. This optimizes cases where the client may still be sending a body
+  that we never consumed and don't care about
+* We no longer explicitly close the connection when we receive a GOAWAY frame
+
 ## 1.3.0 (8 Mar 2024)
 
 ### Enhancements

@@ -9,14 +9,14 @@ defmodule Punkix.ContextTest do
       schema =
         Gen.Schema.build(~w/Shop.Article articles name:string/, [])
 
-      assert Context.context_fun_spec(schema) == "String.t() | nil"
+      assert Context.context_fun_spec(schema) == "%{optional(:name) => String.t() | nil}"
     end
 
     test "without nullable" do
       schema =
         Gen.Schema.build(~w/Shop.Article articles category:enum:food:nonfood/, [])
 
-      assert Context.context_fun_spec(schema) == ":food | :nonfood"
+      assert Context.context_fun_spec(schema) == "%{optional(:category) => :food | :nonfood}"
     end
   end
 
@@ -25,14 +25,14 @@ defmodule Punkix.ContextTest do
       schema =
         Gen.Schema.build(~w/Shop.Article articles name:string/, [])
 
-      assert Context.args_to_params(schema, :create) == "\"some name\""
+      assert Context.args_to_params(schema, :create) == "%{name: \"some name\"}"
     end
 
     test "without nullable" do
       schema =
         Gen.Schema.build(~w/Shop.Article articles category:enum:food:nonfood/, [])
 
-      assert Context.args_to_params(schema, :create) == ":food"
+      assert Context.args_to_params(schema, :create) == "%{category: :food}"
     end
   end
 
@@ -41,7 +41,7 @@ defmodule Punkix.ContextTest do
       schema =
         Gen.Schema.build(~w/Shop.Article articles name:string/, [])
 
-      assert Context.invalid_args_to_params(schema, :create) == "nil"
+      assert Context.invalid_args_to_params(schema, :create) == "name: nil"
     end
   end
 end

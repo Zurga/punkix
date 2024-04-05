@@ -36,6 +36,12 @@ defmodule Bandit do
       * `:any` for all interfaces (ie: `0.0.0.0`)
       * `{:local, "/path/to/socket"}` for a Unix domain socket. If this option is used, the `port`
         option *must* be set to `0`
+  * `inet`: Only bind to IPv4 interfaces. This option is offered as a convenience and actually sets the
+    option of the same name within `thousand_island_options.transport_options`. Must be specified
+    as a bare atom `:inet`
+  * `inet6`: Only bind to IPv6 interfaces. This option is offered as a convenience and actually sets the
+    option of the same name within `thousand_island_options.transport_options`. Must be specified
+    as a bare atom `:inet6`
   * `keyfile`: The path to a file containing the SSL key to use for this server. This option is
     offered as a convenience and actually sets the option of the same name within
     `thousand_island_options.transport_options`. If a relative path is used here, you will also
@@ -58,6 +64,8 @@ defmodule Bandit do
     default values in this list based on your top-level configuration; these values will be
     overridden by values appearing here. A complete list can be found at
     `t:ThousandIsland.options/0`
+  * `http_options`: A list of options to configure the shared aspects of Bandit's HTTP stack. A
+    complete list can be found at `t:http_options/0`
   * `http_1_options`: A list of options to configure Bandit's HTTP/1 stack. A complete list can
     be found at `t:http_1_options/0`
   * `http_2_options`: A list of options to configure Bandit's HTTP/2 stack. A complete list can
@@ -66,20 +74,40 @@ defmodule Bandit do
     be found at `t:websocket_options/0`
   """
   @type options :: [
-          plug: module() | {module(), Plug.opts()},
-          scheme: :http | :https,
-          port: :inet.port_number(),
-          ip: :inet.socket_address(),
-          keyfile: binary(),
-          certfile: binary(),
-          otp_app: Application.app(),
-          cipher_suite: :strong | :compatible,
-          display_plug: module(),
-          startup_log: Logger.level() | false,
-          thousand_island_options: ThousandIsland.options(),
-          http_1_options: http_1_options(),
-          http_2_options: http_2_options(),
-          websocket_options: websocket_options()
+          {:plug, module() | {module(), Plug.opts()}}
+          | {:scheme, :http | :https}
+          | {:port, :inet.port_number()}
+          | {:ip, :inet.socket_address()}
+          | :inet
+          | :inet6
+          | {:keyfile, binary()}
+          | {:certfile, binary()}
+          | {:otp_app, Application.app()}
+          | {:cipher_suite, :strong | :compatible}
+          | {:display_plug, module()}
+          | {:startup_log, Logger.level() | false}
+          | {:thousand_island_options, ThousandIsland.options()}
+          | {:http_options, http_options()}
+          | {:http_1_options, http_1_options()}
+          | {:http_2_options, http_2_options()}
+          | {:websocket_options, websocket_options()}
+        ]
+
+  @typedoc """
+  Options to configure shared aspects of the HTTP stack in Bandit
+
+  * `compress`: Whether or not to attempt compression of responses via content-encoding
+    negotiation as described in
+    [RFC9110§8.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.4). Defaults to true
+  * `deflate_options`: A keyword list of options to set on the deflate library. A complete list can
+    be found at `t:deflate_options/0`
+  * `log_protocol_errors`: Whether or not to log protocol errors such as malformed requests.
+    Defaults to `true`
+  """
+  @type http_options :: [
+          {:compress, boolean()}
+          | {:deflate_opions, deflate_options()}
+          | {:log_protocol_errors, boolean()}
         ]
 
   @typedoc """
@@ -99,56 +127,34 @@ defmodule Bandit do
     every 5 requests). This option is currently experimental, and may change at any time
   * `log_unknown_messages`: Whether or not to log unknown messages sent to the handler process.
     Defaults to `false`
-  * `log_protocol_errors`: Whether or not to log protocol errors such as malformed requests.
-    Defaults to `true`
-  * `compress`: Whether or not to attempt compression of responses via content-encoding
-    negotiation as described in
-    [RFC9110§8.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.4). Defaults to true
-  * `deflate_options`: A keyword list of options to set on the deflate library. A complete list can
-    be found at `t:deflate_options/0`
   """
   @type http_1_options :: [
-          enabled: boolean(),
-          max_request_line_length: pos_integer(),
-          max_header_length: pos_integer(),
-          max_header_count: pos_integer(),
-          max_requests: pos_integer(),
-          gc_every_n_keepalive_requests: pos_integer(),
-          log_unknown_messages: boolean(),
-          log_protocol_errors: boolean(),
-          compress: boolean(),
-          deflate_opions: deflate_options()
+          {:enabled, boolean()}
+          | {:max_request_line_length, pos_integer()}
+          | {:max_header_length, pos_integer()}
+          | {:max_header_count, pos_integer()}
+          | {:max_requests, pos_integer()}
+          | {:gc_every_n_keepalive_requests, pos_integer()}
+          | {:log_unknown_messages, boolean()}
         ]
 
   @typedoc """
   Options to configure the HTTP/2 stack in Bandit
 
   * `enabled`: Whether or not to serve HTTP/2 requests. Defaults to true
-  * `max_header_key_length`: The maximum permitted length of any single header key
-    (expressed as the number of decompressed bytes) in an HTTP/2 request. Defaults to 10_000 bytes
-  * `max_header_value_length`: The maximum permitted length of any single header value
-    (expressed as the number of decompressed bytes) in an HTTP/2 request. Defaults to 10_000 bytes
-  * `max_header_count`: The maximum permitted number of headers in an HTTP/2 request.
-    Defaults to 50 headers
+  * `max_header_block_size`: The maximum permitted length of a field block of an HTTP/2 request
+    (expressed as the number of compressed bytes). Includes any concatenated block fragments from
+    continuation frames. Defaults to 50_000 bytes
   * `max_requests`: The maximum number of requests to serve in a single
     HTTP/2 connection before closing the connection. Defaults to 0 (no limit)
   * `default_local_settings`: Options to override the default values for local HTTP/2
     settings. Values provided here will override the defaults specified in RFC9113§6.5.2
-  * `compress`: Whether or not to attempt compression of responses via content-encoding
-    negotiation as described in
-    [RFC9110§8.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.4). Defaults to true
-  * `deflate_options`: A keyword list of options to set on the deflate library. A complete list can
-    be found at `t:deflate_options/0`
   """
   @type http_2_options :: [
-          enabled: boolean(),
-          max_header_key_length: pos_integer(),
-          max_header_value_length: pos_integer(),
-          max_header_count: pos_integer(),
-          max_requests: pos_integer(),
-          default_local_settings: Bandit.HTTP2.Settings.t(),
-          compress: boolean(),
-          deflate_options: deflate_options()
+          {:enabled, boolean()}
+          | {:max_header_block_size, pos_integer()}
+          | {:max_requests, pos_integer()}
+          | {:default_local_settings, Bandit.HTTP2.Settings.t()}
         ]
 
   @typedoc """
@@ -166,20 +172,20 @@ defmodule Bandit do
     for details). Defaults to `true`
   """
   @type websocket_options :: [
-          enabled: boolean(),
-          max_frame_size: pos_integer(),
-          validate_text_frames: boolean(),
-          compress: boolean()
+          {:enabled, boolean()}
+          | {:max_frame_size, pos_integer()}
+          | {:validate_text_frames, boolean()}
+          | {:compress, boolean()}
         ]
 
   @typedoc """
   Options to configure the deflate library used for HTTP compression
   """
   @type deflate_options :: [
-          level: :zlib.zlevel(),
-          window_bits: :zlib.zwindowbits(),
-          memory_level: :zlib.zmemlevel(),
-          strategy: :zlib.zstrategy()
+          {:level, :zlib.zlevel()}
+          | {:window_bits, :zlib.zwindowbits()}
+          | {:memory_level, :zlib.zmemlevel()}
+          | {:strategy, :zlib.zstrategy()}
         ]
 
   @typep scheme :: :http | :https
@@ -197,9 +203,10 @@ defmodule Bandit do
     }
   end
 
-  @top_level_keys ~w(plug scheme port ip keyfile certfile otp_app cipher_suite display_plug startup_log thousand_island_options http_1_options http_2_options websocket_options)a
-  @http_1_keys ~w(enabled max_request_line_length max_header_length max_header_count max_requests gc_every_n_keepalive_requests log_unknown_messages log_protocol_errors compress deflate_options)a
-  @http_2_keys ~w(enabled max_header_key_length max_header_value_length max_header_count max_requests default_local_settings compress deflate_options)a
+  @top_level_keys ~w(plug scheme port ip keyfile certfile otp_app cipher_suite display_plug startup_log thousand_island_options http_options http_1_options http_2_options websocket_options)a
+  @http_keys ~w(compress deflate_options log_protocol_errors)a
+  @http_1_keys ~w(enabled max_request_line_length max_header_length max_header_count max_requests gc_every_n_keepalive_requests log_unknown_messages)a
+  @http_2_keys ~w(enabled max_header_block_size max_requests default_local_settings)a
   @websocket_keys ~w(enabled max_frame_size validate_text_frames compress)a
   @thousand_island_keys ThousandIsland.ServerConfig.__struct__()
                         |> Map.from_struct()
@@ -211,11 +218,16 @@ defmodule Bandit do
   """
   @spec start_link(options()) :: Supervisor.on_start()
   def start_link(arg) do
-    arg = validate_options(arg, @top_level_keys, "top level")
+    # Special case top-level `:inet` and `:inet6` options so we can use keyword logic everywhere else
+    arg = arg |> special_case_inet_options() |> validate_options(@top_level_keys, "top level")
 
     thousand_island_options =
       Keyword.get(arg, :thousand_island_options, [])
       |> validate_options(@thousand_island_keys, :thousand_island_options)
+
+    http_options =
+      Keyword.get(arg, :http_options, [])
+      |> validate_options(@http_keys, :http_options)
 
     http_1_options =
       Keyword.get(arg, :http_1_options, [])
@@ -235,15 +247,18 @@ defmodule Bandit do
 
     {http_1_enabled, http_1_options} = Keyword.pop(http_1_options, :enabled, true)
     {http_2_enabled, http_2_options} = Keyword.pop(http_2_options, :enabled, true)
-    {websocket_enabled, websocket_options} = Keyword.pop(websocket_options, :enabled, true)
 
     handler_options = %{
       plug: plug,
       handler_module: Bandit.InitialHandler,
-      opts: %{http_1: http_1_options, http_2: http_2_options, websocket: websocket_options},
+      opts: %{
+        http: http_options,
+        http_1: http_1_options,
+        http_2: http_2_options,
+        websocket: websocket_options
+      },
       http_1_enabled: http_1_enabled,
-      http_2_enabled: http_2_enabled,
-      websocket_enabled: websocket_enabled
+      http_2_enabled: http_2_enabled
     }
 
     scheme = Keyword.get(arg, :scheme, :http)
@@ -296,6 +311,24 @@ defmodule Bandit do
 
       {:error, _} = error ->
         error
+    end
+  end
+
+  @spec special_case_inet_options(options()) :: options()
+  defp special_case_inet_options(opts) do
+    {inet_opts, opts} = Enum.split_with(opts, &(&1 in [:inet, :inet6]))
+
+    if inet_opts == [] do
+      opts
+    else
+      Keyword.update(
+        opts,
+        :thousand_island_options,
+        [transport_options: inet_opts],
+        fn thousand_island_opts ->
+          Keyword.update(thousand_island_opts, :transport_options, inet_opts, &(&1 ++ inet_opts))
+        end
+      )
     end
   end
 

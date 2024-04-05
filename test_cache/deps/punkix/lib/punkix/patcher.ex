@@ -1,9 +1,14 @@
 defmodule Punkix.Patcher do
+  alias Punkix.Patcher.Abstract
+
   defmacro __using__(_) do
     quote do
       import unquote(__MODULE__)
       Module.register_attribute(__MODULE__, :wrappers, accumulate: true)
       Module.register_attribute(__MODULE__, :replacers, accumulate: true)
+      Module.register_attribute(__MODULE__, :exports, accumulate: true)
+      Module.register_attribute(__MODULE__, :module_patches, accumulate: true)
+
       @before_compile unquote(__MODULE__)
     end
   end
@@ -11,44 +16,75 @@ defmodule Punkix.Patcher do
   defmacro __before_compile__(env) do
     wrappers = Module.get_attribute(env.module, :wrappers)
     replacers = Module.get_attribute(env.module, :replacers)
+    exports = Module.get_attribute(env.module, :exports)
+    module_patches = Module.get_attribute(env.module, :module_patches)
 
-    affected_modules =
-      [wrappers, replacers]
+    modules_and_modifications =
+      [wrappers, replacers, exports]
       |> Enum.flat_map(fn rule -> Enum.map(rule, &elem(&1, 0)) end)
       |> Enum.uniq()
-
-    module_map =
-      Enum.reduce(affected_modules, %{}, fn module, acc ->
+      |> Enum.map(fn module ->
         wrappers = Enum.filter(wrappers, &(elem(&1, 0) == module))
         replacers = Enum.filter(replacers, &(elem(&1, 0) == module))
-        Map.put(acc, module, %{wrap: wrappers, replace: replacers})
-      end)
 
-    for {module, modifications} <- module_map do
-      abstract_code(module)
-      |> wrap_function(modifications[:wrap], env.module)
-      |> replace_function(modifications[:replace], env.module)
-      |> compile()
+        exports =
+          Enum.filter(exports, &(elem(&1, 0) == module))
+          |> Enum.map(fn {_, func, arity} -> {func, arity} end)
+
+        {module, %{wrap: wrappers, replace: replacers, export: exports}}
+      end)
+      |> Enum.into(Map.from_keys(module_patches, %{}))
+
+    namespaced_modules =
+      for {module, _} <- modules_and_modifications, into: %{} do
+        {module, namespace(module, env.module)}
+      end
+
+    modules_and_binary =
+      for {module, modifications} <- modules_and_modifications, into: %{} do
+        {module,
+         abstract_code(module)
+         |> wrap_function(modifications[:wrap], env.module)
+         |> replace_function(modifications[:replace], env.module)
+         |> export_functions(modifications[:export])
+         |> Abstract.rewrite(&Map.get(namespaced_modules, &1, &1))
+         |> compile()}
+      end
+
+    [
+      quote do
+        def patched(module) do
+          for {module, binary} <-
+                unquote(Macro.escape(modules_and_binary)) do
+            modname = Punkix.Patcher.namespace(module, unquote(env.module))
+
+            unless Code.ensure_loaded?(modname) do
+              {:module, _loaded_module} = :code.load_binary(modname, [], binary)
+            end
+          end
+
+          Punkix.Patcher.namespace(module, unquote(env.module))
+        end
+      end
+    ] ++ wrappers(modules_and_modifications)
+  end
+
+  defmacro patch(module) do
+    quote do
+      @module_patches unquote(module)
     end
+  end
 
-    for {_module, %{wrap: modifications}} <- module_map do
-      Enum.map(modifications, fn
-        {_, function, arity, wrapper} ->
-          quote do
-            def wrap({unquote(function), unquote(arity)}, fun) do
-              result = unquote(wrapper)(fun.())
-              result
-            end
-          end
+  defmacro export(module, function, arity) do
+    quote do
+      @exports {unquote(module), unquote(function), unquote(arity)}
+    end
+  end
 
-        {_, function, wrapper} ->
-          quote do
-            def wrap({unquote(function)}, fun) do
-              result = unquote(wrapper)(fun.())
-              result
-            end
-          end
-      end)
+  defmacro replace(module, function, arity, replacement_function) do
+    quote do
+      @replacers {unquote(module), unquote(function), unquote(arity),
+                  unquote(replacement_function)}
     end
   end
 
@@ -64,14 +100,12 @@ defmodule Punkix.Patcher do
     end
   end
 
-  defmacro replace(module, function, arity, replacement_function) do
-    quote do
-      @replacers {unquote(module), unquote(function), unquote(arity),
-                  unquote(replacement_function)}
-    end
+  @doc false
+  def namespace(module, suffix) do
+    Module.concat(module, suffix)
   end
 
-  def abstract_code(module) do
+  defp abstract_code(module) do
     {_, beam, _} = :code.get_object_code(module)
 
     {:ok, {_, [{:abstract_code, {:raw_abstract_v1, code}}]}} =
@@ -80,9 +114,9 @@ defmodule Punkix.Patcher do
     code
   end
 
-  def export_functions(nil), do: nil
+  defp export_functions(code, nil), do: code
 
-  def export_functions(code, functions) do
+  defp export_functions(code, functions) do
     {:attribute, line, :export, exports} = List.keyfind(code, :export, 2)
 
     attr = {:attribute, line, :export, exports ++ functions}
@@ -90,12 +124,12 @@ defmodule Punkix.Patcher do
     List.keyreplace(code, :export, 2, attr)
   end
 
-  def replace_function(code, [], _), do: code
+  defp replace_function(code, nothing, _) when is_nil(nothing) or nothing == [], do: code
 
-  def replace_function(code, replacers, wrapping_module) when is_list(replacers),
+  defp replace_function(code, replacers, wrapping_module) when is_list(replacers),
     do: Enum.reduce(replacers, code, &replace_function(&2, &1, wrapping_module))
 
-  def replace_function(code, {_module, function, arity, remote_function}, wrapping_module) do
+  defp replace_function(code, {_module, function, arity, remote_function}, wrapping_module) do
     modify_function(
       code,
       function,
@@ -104,17 +138,17 @@ defmodule Punkix.Patcher do
     )
   end
 
-  def wrap_function(code, nil, _), do: code
+  defp wrap_function(code, nothing, _) when is_nil(nothing) or nothing == [], do: code
 
-  def wrap_function(code, mfws, wrapping_module) when is_list(mfws) do
+  defp wrap_function(code, mfws, wrapping_module) when is_list(mfws) do
     Enum.reduce(mfws, code, &wrap_function(&2, &1, wrapping_module))
   end
 
-  def wrap_function(code, {_module, function, _}, wrapping_module) do
+  defp wrap_function(code, {_module, function, _}, wrapping_module) do
     do_wrap_function(code, function, nil, wrapping_module)
   end
 
-  def wrap_function(code, {_module, function, arity, _}, wrapping_module) do
+  defp wrap_function(code, {_module, function, arity, _}, wrapping_module) do
     do_wrap_function(code, function, arity, wrapping_module)
   end
 
@@ -143,7 +177,6 @@ defmodule Punkix.Patcher do
       {:call, line, {:remote, line, {:atom, line, wrapping_module}, {:atom, line, :wrap}},
        [
          {:tuple, line, [{:atom, line, function}, {:integer, line, arity}]},
-         # {:tuple, line, args |> IO.inspect()},
          {:fun, line, {:clauses, [{:clause, line, [], [], body}]}}
        ]}
     ]
@@ -151,7 +184,7 @@ defmodule Punkix.Patcher do
     {:function, line, function, arity, [{:clause, clause_line, args, guards, body}]}
   end
 
-  def replace_body(function_tuple, remote_module, remote_function) do
+  defp replace_body(function_tuple, remote_module, remote_function) do
     {:function, line, function, arity, [{:clause, clause_line, args, guards, _body}]} =
       function_tuple
 
@@ -164,7 +197,29 @@ defmodule Punkix.Patcher do
   end
 
   defp compile(code) do
-    {:ok, modname, binary} = :compile.forms(code)
-    :code.load_binary(modname, [], binary)
+    {:ok, _modname, binary} = :compile.forms(code)
+    binary
+  end
+
+  defp wrappers(module_map) do
+    for {_module, %{wrap: modifications}} <- module_map do
+      Enum.map(modifications, fn
+        {_, function, arity, wrapper} ->
+          quote do
+            def wrap({unquote(function), unquote(arity)}, fun) do
+              result = unquote(wrapper)(fun.())
+              result
+            end
+          end
+
+        {_, function, wrapper} ->
+          quote do
+            def wrap({unquote(function)}, fun) do
+              result = unquote(wrapper)(fun.())
+              result
+            end
+          end
+      end)
+    end
   end
 end

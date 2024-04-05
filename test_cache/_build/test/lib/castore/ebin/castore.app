@@ -4,4 +4,4 @@
               {description,"Up-to-date CA certificate store."},
               {modules,['Elixir.CAStore']},
               {registered,[]},
-              {vsn,"1.0.5"}]}.
+              {vsn,"1.0.6"}]}.

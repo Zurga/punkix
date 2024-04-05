@@ -4,7 +4,9 @@ defmodule Punkix.Context do
   def context_fun_args(schema), do: context_fun_args("", schema)
 
   def context_fun_args(argument, schema) do
-    Enum.map_join(schema.attrs, ", ", &elem(&1, 0))
+    # Enum.map_join(schema.attrs, ", ", &elem(&1, 0))
+    # |> maybe_prepend(argument)
+    "#{schema.singular}_attrs"
     |> maybe_prepend(argument)
   end
 
@@ -16,34 +18,49 @@ defmodule Punkix.Context do
     Enum.map_join(
       schema.types,
       ", ",
-      fn
-        {_name, {:enum, [values: values]}} ->
-          Enum.map_join(values, " | ", &inspect(&1))
+      fn {name, _} = type ->
+        spec_type =
+          case type do
+            {_name, {:enum, [values: values]}} ->
+              Enum.map_join(values, " | ", &inspect(&1))
 
-        {name, type} ->
-          EctoTypeMapper.type_for(type, nil, nil, null: name in required_fields)
-          |> Macro.to_string()
+            {name, type} ->
+              EctoTypeMapper.type_for(type, nil, nil, null: name in required_fields)
+              |> Macro.to_string()
+          end
+
+        "optional(:#{name}) => #{spec_type}"
       end
     )
+    |> then(&"%{#{&1}}")
     |> maybe_prepend(argument)
   end
 
-  def args_to_params(schema, fun) do
-    args_to_params("", schema, fun)
+  def args_as_attributes(struct, schema), do: args_as_attributes("", struct, schema)
+
+  def args_as_attributes(argument, struct, schema) do
+    Enum.map_join(schema.attrs, ", ", &"#{struct}.#{elem(&1, 0)}")
+    |> maybe_prepend(argument)
   end
+
+  def args_to_params(schema, fun), do: args_to_params("", schema, fun)
 
   def args_to_params(argument, schema, fun) do
     params = schema.params[fun]
 
-    schema.attrs
-    |> Enum.map_join(", ", &inspect(Map.get(params, elem(&1, 0))))
-    |> maybe_prepend(argument)
+    params =
+      schema.attrs
+      |> Enum.map_join(", ", &"#{elem(&1, 0)}: #{inspect(Map.get(params, elem(&1, 0)))}")
+      |> maybe_prepend(argument)
+
+    "%{#{params}}"
   end
 
   def invalid_args_to_params(schema, fun), do: invalid_args_to_params("", schema, fun)
 
   def invalid_args_to_params(argument, schema, _fun) do
-    Enum.map_join(schema.attrs, ", ", fn _ -> "nil" end)
+    schema.attrs
+    |> Enum.map_join(", ", &"#{elem(&1, 0)}: nil")
     |> maybe_prepend(argument)
   end
 

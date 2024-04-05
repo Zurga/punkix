@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.16.3
+
+### ✨ Features
+
+- Mailbox Preview: more space for the HTML preview @justincy (#882)
+
+### 🐛 Bug Fixes
+
+- Fix Mailgun adapter incompatibility with Finch @AndrewDryga (#883)
+
+## 1.16.2
+
+### 🐛 Bug Fixes
+
+- Update `MixProject` `xref` exclusions [`MultiPart.Part`] @jbcaprell (#880)
+
+## 1.16.1
+
+With #877 Mailgun adapter now supports API Clients other than Hackney.
+
+## 🐛 Bug Fixes
+
+- Rewrite multipart functionality to use a encoding builder @krainboltgreene (#877)
+- Fix Req header handling @wojtekmach (#879)
+
+## 1.16.0
+
+### ✨ Features
+
+Thank you @ruslandoga very much for throwing in this gem.
+
+- Add Swoosh.Adapters.Mua, an alternative SMTP adapter @ruslandoga (#870)
+
 ## 1.15.3
 
 ### ✨ Features

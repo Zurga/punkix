@@ -100,6 +100,26 @@ defmodule Phoenix.LiveView do
          |> assign_async([:profile, :rank], fn -> {:ok, %{profile: ..., rank: ...}} end)}
       end
 
+  > ### Warning {: .warning}
+  >
+  > When using async operations it is important to not pass the socket into the function
+  > as it will copy the whole socket struct to the Task process, which can be very expensive.
+  >
+  > Instead of:
+  >
+  > ```elixir
+  > assign_async(:org, fn -> {:ok, %{org: fetch_org(socket.assigns.slug)}} end)
+  > ```
+  >
+  > We should do:
+  >
+  > ```elixir
+  > slug = socket.assigns.slug
+  > assign_async(:org, fn -> {:ok, %{org: fetch_org(slug)}} end)
+  > ```
+  >
+  > See: https://hexdocs.pm/elixir/process-anti-patterns.html#sending-unnecessary-data
+
   The state of the async operation is stored in the socket assigns within an
   `Phoenix.LiveView.AsyncResult`. It carries the loading and failed states, as
   well as the result. For example, if we wanted to show the loading states in
@@ -317,7 +337,7 @@ defmodule Phoenix.LiveView do
 
       use Phoenix.LiveView,
         container: {:tr, class: "colorized"},
-        layout: {MyAppWeb.LayoutView, :app},
+        layout: {MyAppWeb.Layouts, :app},
         log: :info
 
   ## Options
@@ -1409,7 +1429,8 @@ defmodule Phoenix.LiveView do
   lifecycle stages: `:handle_params`, `:handle_event`, `:handle_info`, `:handle_async`, and
   `:after_render`. To attach a hook to the `:mount` stage, use `on_mount/1`.
 
-  > Note: only `:after_render` hooks are currently supported in LiveComponents.
+  > Note: only `:after_render` and `:handle_event` hooks are currently supported in
+  > LiveComponents.
 
   ## Return Values
 
@@ -1908,10 +1929,8 @@ defmodule Phoenix.LiveView do
         send_update(parent, Component, data)
       end)
   """
-  def assign_async(%Socket{} = socket, key_or_keys, func, opts \\ [])
-      when (is_atom(key_or_keys) or is_list(key_or_keys)) and
-             is_function(func, 0) do
-    Async.assign_async(socket, key_or_keys, func, opts)
+  defmacro assign_async(socket, key_or_keys, func, opts \\ []) do
+    Async.assign_async(socket, key_or_keys, func, opts, __CALLER__)
   end
 
   @doc """
@@ -1923,6 +1942,10 @@ defmodule Phoenix.LiveView do
   of the caller LiveView or LiveComponent.
 
   The task is only started when the socket is connected.
+
+  ## Options
+
+    * `:supervisor` - allows you to specify a `Task.Supervisor` to supervise the task.
 
   ## Examples
 
@@ -1945,8 +1968,8 @@ defmodule Phoenix.LiveView do
 
   See the moduledoc for more information.
   """
-  def start_async(%Socket{} = socket, name, func) when is_function(func, 0) do
-    Async.start_async(socket, name, func)
+  defmacro start_async(socket, name, func, opts \\ []) do
+    Async.start_async(socket, name, func, opts, __CALLER__)
   end
 
   @doc """

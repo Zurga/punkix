@@ -21,6 +21,9 @@ defmodule Bandit.Telemetry do
       * `telemetry_span_context`: A unique identifier for this span
       * `connection_telemetry_span_context`: The span context of the Thousand Island `:connection`
         span which contains this request
+      * `conn`: The `Plug.Conn` representing this connection. Not present in cases where `error`
+        is also set and the nature of error is such that Bandit was unable to successfully build
+        the conn
 
   This span is ended by the following event:
 
@@ -35,17 +38,9 @@ defmodule Bandit.Telemetry do
       * `req_header_end_time`: The time that header reading completed, in `:native` units
       * `req_body_start_time`: The time that request body reading started, in `:native` units.
       * `req_body_end_time`: The time that request body reading completed, in `:native` units
-      * `req_line_bytes`: The length of the request line, in octets. Includes all line breaks.
-        Not included for HTTP/2 requests
-      * `req_header_bytes`: The length of the request headers, in octets. Includes all line
-        breaks. Not included for HTTP/2 requests
       * `req_body_bytes`: The length of the request body, in octets
       * `resp_start_time`: The time that the response started, in `:native` units
       * `resp_end_time`: The time that the response completed, in `:native` units
-      * `resp_line_bytes`: The length of the response line, in octets. Includes all line breaks.
-        Not included for HTTP/2 requests
-      * `resp_header_bytes`: The length of the response headers, in octets. Includes all line
-        breaks. Not included for HTTP/2 requests
       * `resp_body_bytes`: The length of the response body, in octets. If the response is
         compressed, this is the size of the compressed payload as sent on the wire
       * `resp_uncompressed_body_bytes`: The length of the original, uncompressed body. Only
@@ -58,15 +53,9 @@ defmodule Bandit.Telemetry do
       * `telemetry_span_context`: A unique identifier for this span
       * `connection_telemetry_span_context`: The span context of the Thousand Island `:connection`
         span which contains this request
-      * `method`: The HTTP method of the request. If Bandit could not determine the method, this
-        will be nil
-      * `request_target`: The raw request target for the request. Returned as a tuple comprising the
-        constituent parts of the request target: `{scheme, host, port, path}`. If Bandit could not
-        determine the request target, this will be nil
-      * `status`: The numeric response status code of the response
       * `conn`: The `Plug.Conn` representing this connection. Not present in cases where `error`
-        is also set
-      * `stream_id`: The stream ID of the request, if part of an HTTP/2 connection
+        is also set and the nature of error is such that Bandit was unable to successfully build
+        the conn
       * `error`: The error that caused the span to end, if it ended in error
 
   The following events may be emitted within this span:
@@ -84,6 +73,9 @@ defmodule Bandit.Telemetry do
       * `telemetry_span_context`: A unique identifier for this span
       * `connection_telemetry_span_context`: The span context of the Thousand Island `:connection`
         span which contains this request
+      * `conn`: The `Plug.Conn` representing this connection. Not present in cases where `error`
+        is also set and the nature of error is such that Bandit was unable to successfully build
+        the conn
       * `kind`: The kind of unexpected condition, typically `:exit`
       * `exception`: The exception which caused this unexpected termination
       * `stacktrace`: The stacktrace of the location which caused this unexpected termination
@@ -106,8 +98,6 @@ defmodule Bandit.Telemetry do
       This event contains the following metadata:
 
       * `telemetry_span_context`: A unique identifier for this span
-      * `origin_telemetry_span_context`: The span context of the Bandit `:request` span from which
-        this connection originated
       * `connection_telemetry_span_context`: The span context of the Thousand Island `:connection`
         span which contains this request
 

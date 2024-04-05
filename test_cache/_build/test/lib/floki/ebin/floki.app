@@ -41,4 +41,4 @@
                         'Elixir.String.Chars.Floki.Selector.PseudoClass',
                         floki_mochi_html,floki_selector_lexer]},
               {registered,[]},
-              {vsn,"0.36.0"}]}.
+              {vsn,"0.36.1"}]}.

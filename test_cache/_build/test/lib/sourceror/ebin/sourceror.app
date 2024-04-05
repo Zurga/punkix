@@ -12,4 +12,4 @@
                         'Elixir.Sourceror.Zipper',
                         'Elixir.Sourceror.Zipper.Inspect']},
               {registered,[]},
-              {vsn,"1.0.1"}]}.
+              {vsn,"1.0.2"}]}.

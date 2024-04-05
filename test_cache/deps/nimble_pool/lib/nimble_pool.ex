@@ -15,20 +15,33 @@ defmodule NimblePool do
   @type client_state :: term
   @type user_reason :: term
 
+  @typedoc since: "1.1.0"
+  @type pool :: GenServer.server()
+
   @doc """
   Initializes the worker.
 
-  It receives the worker argument passed to `start_link/1`. It must
-  return `{:ok, worker_state, pool_state}` or `{:async, fun}`, where the `fun`
+  It receives the worker argument passed to `start_link/1` if `c:init_pool/1` is
+  not implemented, otherwise the pool state returned by `c:init_pool/1`. It must
+  return `{:ok, worker_state, pool_state}` or `{:async, fun, pool_state}`, where the `fun`
   is a zero-arity function that must return the worker state.
 
-  Note this callback is synchronous and therefore will block the pool.
-  If you need to perform long initialization, consider using the
-  `{:async, fun}` return type.
+  If this callback returns `{:async, fun, pool_state}`, `fun` is executed in a **separate
+  one-off process**. Because of this, if you start resources that the pool needs to "own",
+  you need to transfer ownership to the pool process. For example, if your async `fun`
+  opens a `:gen_tcp` socket, you'll have to use `:gen_tcp.controlling_process/2` to transfer
+  ownership back to the pool.
+
+  > #### Blocking the pool {: .warning}
+  >
+  > This callback is synchronous and therefore will block the pool, potentially
+  > for a significant amount of time since it's executed in the pool process once
+  > per worker. > If you need to perform long initialization, consider using the
+  > `{:async, fun, pool_state}` return type.
   """
   @doc callback: :worker
   @callback init_worker(pool_state) ::
-              {:ok, worker_state, pool_state} | {:async, (() -> worker_state), pool_state}
+              {:ok, worker_state, pool_state} | {:async, (-> worker_state), pool_state}
 
   @doc """
   Initializes the pool.
@@ -38,12 +51,20 @@ defmodule NimblePool do
   `:ignore` to exit normally, or `{:stop, reason}` to exit with `reason`
   and return `{:error, reason}`.
 
-  This is a good place to perform a registration for example.
+  This is a good place to perform a registration, for example.
 
   It must return the `pool_state`. The `pool_state` is given to
-  `init_worker`. By default, it simply returns the arguments given.
+  `init_worker`. By default, it simply returns the given arguments.
 
   This callback is optional.
+
+  ## Examples
+
+      @impl NimblePool
+      def init_pool(options) do
+        Registry.register(options[:registry], :some_key, :some_value)
+      end
+
   """
   @doc callback: :pool
   @callback init_pool(init_arg) :: {:ok, pool_state} | :ignore | {:stop, reason :: any()}
@@ -51,23 +72,30 @@ defmodule NimblePool do
   @doc """
   Checks a worker out.
 
-  It receives `maybe_wrapped_command`. The `command` is given to the `checkout!/4`
-  call and may optionally be wrapped by `c:handle_enqueue/2`. It must return either
-  `{:ok, client_state, worker_state, pool_state}`, `{:remove, reason, pool_state}`,
-  or `{:skip, Exception.t(), pool_state}`.
+  The `maybe_wrapped_command` is the `command` passed to `checkout!/4` if the worker
+  doesn't implement the `c:handle_enqueue/2` callback, otherwise it's the possibly-wrapped
+  command returned by `c:handle_enqueue/2`.
 
-  If `:remove` is returned, `NimblePool` will attempt to checkout another
-  worker.
+  This callback must return one of:
 
-  If `:skip` is returned, `NimblePool` will skip the checkout, the client will
-  raise the returned exception, and the worker will be left ready for the next
-  checkout attempt.
+    * `{:ok, client_state, worker_state, pool_state}` — the client state is given to
+      the callback function passed to `checkout!/4`. `worker_state` and `pool_state`
+      can potentially update the state of the checked-out worker and the pool.
 
-  Note this callback is synchronous and therefore will block the pool.
-  Avoid performing long work in here, instead do as much work as
-  possible on the client.
+    * `{:remove, reason, pool_state}` — `NimblePool` will remove the checked-out worker and
+      attempt to checkout another worker.
 
-  Once the connection is checked out, the worker won't receive any
+    * `{:skip, Exception.t(), pool_state}` — `NimblePool` will skip the checkout, the client will
+      raise the returned exception, and the worker will be left ready for the next
+      checkout attempt.
+
+  > #### Blocking the pool {: .warning}
+  >
+  > This callback is synchronous and therefore will block the pool.
+  > Avoid performing long work in here. Instead, do as much work as
+  > possible on the client.
+
+  Once the worker is checked out, the worker won't handle any
   messages targeted to `c:handle_info/2`.
   """
   @doc callback: :worker
@@ -77,15 +105,17 @@ defmodule NimblePool do
               | {:skip, Exception.t(), pool_state}
 
   @doc """
-  Checks a worker in.
+  Checks a worker back in the pool.
 
-  It receives the `client_state`, returned by the `checkout!/4`
-  anonymous function and it must return either
+  It receives the potentially-updated `client_state`, returned by the `checkout!/4`
+  anonymous function, and it must return either
   `{:ok, worker_state, pool_state}` or `{:remove, reason, pool_state}`.
 
-  Note this callback is synchronous and therefore will block the pool.
-  Avoid performing long work in here, instead do as much work as
-  possible on the client.
+  > #### Blocking the pool {: .warning}
+  >
+  > This callback is synchronous and therefore will block the pool.
+  > Avoid performing long work in here, instead do as much work as
+  > possible on the client.
 
   Once the connection is checked in, it may immediately be handed
   to another client, without traversing any of the messages in the
@@ -98,7 +128,7 @@ defmodule NimblePool do
               {:ok, worker_state, pool_state} | {:remove, user_reason, pool_state}
 
   @doc """
-  Handles update instruction from checked out worker.
+  Handles an update instruction from a checked out worker.
 
   See `update/2` for more information.
 
@@ -109,13 +139,19 @@ defmodule NimblePool do
               {:ok, worker_state, pool_state}
 
   @doc """
-  Receives a message in the worker.
+  Receives a message in the pool and handles it as each worker.
 
   It receives the `message` and it must return either
-  `{:ok, worker_state}` or `{:remove, reason}`.
+  `{:ok, worker_state}` to update the worker state, or `{:remove, reason}` to
+  remove the worker.
 
-  Note this callback is synchronous and therefore will block the pool.
-  Avoid performing long work in here.
+  Since there is only a single pool process that can receive messages, this
+  callback is executed once for every worker when the pool receives `message`.
+
+  > #### Blocking the pool {: .warning}
+  >
+  > This callback is synchronous and therefore will block the pool while it
+  > executes for each worker. Avoid performing long work in here.
 
   This callback is optional.
   """
@@ -124,7 +160,7 @@ defmodule NimblePool do
               {:ok, worker_state} | {:remove, user_reason}
 
   @doc """
-  Executed by the pool, whenever a request to checkout a worker is enqueued.
+  Executed by the pool whenever a request to check out a worker is enqueued.
 
   The `command` argument should be treated as an opaque value, but it can be
   wrapped with some data to be used in `c:handle_checkout/4`.
@@ -132,10 +168,20 @@ defmodule NimblePool do
   It must return either `{:ok, maybe_wrapped_command, pool_state}` or
   `{:skip, Exception.t(), pool_state}` if checkout is to be skipped.
 
-  Note this callback is synchronous and therefore will block the pool.
-  Avoid performing long work in here.
+  > #### Blocking the pool {: .warning}
+  >
+  > This callback is synchronous and therefore will block the pool.
+  > Avoid performing long work in here.
 
   This callback is optional.
+
+  ## Examples
+
+      @impl NimblePool
+      def handle_enqueue(command, pool_state) do
+        {:ok, {:wrapped, command}, pool_state}
+      end
+
   """
   @doc callback: :pool
   @callback handle_enqueue(command :: term, pool_state) ::
@@ -145,36 +191,39 @@ defmodule NimblePool do
   @doc """
   Terminates a worker.
 
-  This callback is invoked with `:DOWN` whenever the client
-  link breaks, with `:timeout` whenever the client times out,
-  with one of `:throw`, `:error`, `:exit` whenever the client
-  crashes with one of the reasons above.
+  The `reason` argument is:
 
-  If at any point you return `{:remove, reason}`, the `reason`
-  will also be given to `terminate`. If any callback raises,
-  the raised exception will be given as `reason`.
+    * `:DOWN` whenever the client link breaks
+    * `:timeout` whenever the client times out
+    * one of `:throw`, `:error`, `:exit` whenever the client crashes with one
+      of the reasons above.
+    * `reason` if at any point you return `{:remove, reason}`
+    * if any callback raises, the raised exception will be given as `reason`.
 
   It receives the latest known `worker_state`, which may not
-  be the latest state. For example, if a client checksout the
+  be the latest state. For example, if a client checks out the
   state and crashes, we don't fully know the `client_state`,
-  so the `terminate_state` callback needs to take such scenarios
+  so the `c:terminate_worker/3` callback needs to take such scenarios
   into account.
+
+  This callback must always return `{:ok, pool_state}` with the potentially-updated
+  pool state.
 
   This callback is optional.
   """
   @doc callback: :pool
   @callback terminate_worker(
-              :DOWN | :timeout | :throw | :error | :exit | user_reason,
+              reason :: :DOWN | :timeout | :throw | :error | :exit | user_reason,
               worker_state,
               pool_state
             ) ::
               {:ok, pool_state}
 
   @doc """
-  Handle pings due to inactivity on worker.
+  Handle pings due to inactivity on the worker.
 
   Executed whenever the idle worker periodic timer verifies that a worker has been idle
-  on the pool for longer than `:worker_idle_timeout` pool configuration milliseconds.
+  on the pool for longer than the `:worker_idle_timeout` pool configuration (in milliseconds).
 
   This callback must return one of the following values:
 
@@ -190,24 +239,24 @@ defmodule NimblePool do
 
   ## Max idle pings
 
-  The `:max_idle_pings` pool option is useful to prevent sequencial termination of a large number
-  of workers. But it is important to keep in mind the following behaviours whenever utilizing it.
+  The `:max_idle_pings` pool option is useful to prevent sequential termination of a large number
+  of workers. However, it is important to keep in mind the following behaviours whenever
+  utilizing it.
 
-    * If you are not terminating workers with `handle_ping/2`, you may end up pinging only the same
-      workers over and over again because each cycle will ping only the first `:max_idle_pings` workers
+    * If you are not terminating workers with `c:handle_ping/2`, you may end up pinging only
+      the same workers over and over again because each cycle will ping only the first
+      `:max_idle_pings` workers.
 
-    * If you are terminating workers with `handle_ping/2`, the last worker may be terminated after up to
-      `worker_idle_timeout + worker_idle_timeout * ceil(number_of_workers/max_idle_pings)`
-       instead of `2 * worker_idle_timeout` milliseconds of idle time.
+    * If you are terminating workers with `c:handle_ping/2`, the last worker may be terminated
+      after up to `worker_idle_timeout + worker_idle_timeout * ceil(number_of_workers/max_idle_pings)`,
+      instead of `2 * worker_idle_timeout` milliseconds of idle time.
 
-      For instance consider a pool with 10 workers and a ping of 1 second.
+  For instance consider a pool with 10 workers and a ping of 1 second.
 
-      Given a negligible worker termination time and a worst case scenario where all the workers
-      go idle right after a verification cycle is started,
-
-      then without `max_idle_pings` the last worker will be terminated in the next cycle (2 seconds),
-
-      whereas with a `max_idle_pings` of 2 the last worker will be terminated only in the 5th cycle (6 seconds).
+  Given a negligible worker termination time and a worst-case scenario where all the workers
+  go idle right after a verification cycle is started, then without `max_idle_pings` the
+  last worker will be terminated in the next cycle (2 seconds), whereas with a
+  `max_idle_pings` of 2 the last worker will be terminated only in the 5th cycle (6 seconds).
 
   ## Disclaimers
 
@@ -217,8 +266,8 @@ defmodule NimblePool do
     * On not lazy pools, if you return `{:remove, user_reason}` you may end up
       terminating and initializing workers at the same time every idle verification cycle.
 
-    * On large pools, if many resources goes idle at the same cycle you may end up terminating
-      a large number of workers sequentially, what could lead to the pool being unable to
+    * On large pools, if many resources go idle at the same cycle, you may end up terminating
+      a large number of workers sequentially, which could lead to the pool being unable to
       fulfill requests. See `:max_idle_pings` option to prevent this.
 
   """
@@ -229,13 +278,55 @@ defmodule NimblePool do
             ) ::
               {:ok, worker_state} | {:remove, user_reason()} | {:stop, user_reason()}
 
+  @doc """
+  Handle pool termination.
+
+  The `reason` argmument is the same given to GenServer's terminate/2 callback.
+
+  It is not necessary to terminate workers here because the
+  `terminate_worker/3` callback has already been invoked.
+
+  This should be used only for clean up extra resources that can not be
+  handled by `terminate_worker/3` callback.
+
+  This callback is optional.
+  """
+  @doc callback: :pool
+  @callback terminate_pool(
+              reason :: :DOWN | :timeout | :throw | :error | :exit | user_reason,
+              pool_state
+            ) :: :ok
+
+  @doc """
+  Handle cancelled checkout requests.
+
+  This callback is executed when a checkout request is cancelled unexpectedly.
+
+  The context argument may be `:queued` or `:checked_out`:
+
+  * `:queued` means the cancellation happened before resource checkout. This may happen
+  when the pool is starving under load and can not serve resources.
+
+  * `:checked_out` means the cancellation happened after resource checkout. This may happen
+  when the function given to `checkout!/4` raises.
+
+  This callback is optional.
+  """
+  @doc callback: :pool
+  @callback handle_cancelled(
+              context :: :queued | :checked_out,
+              pool_state
+            ) :: :ok
+
   @optional_callbacks init_pool: 1,
                       handle_checkin: 4,
                       handle_info: 2,
                       handle_enqueue: 2,
                       handle_update: 3,
                       handle_ping: 2,
-                      terminate_worker: 3
+                      terminate_worker: 3,
+                      terminate_pool: 2,
+                      handle_cancelled: 2
 
   @doc """
   Defines a pool to be started under the supervision tree.
@@ -243,10 +334,14 @@ defmodule NimblePool do
   It accepts the same options as `start_link/1` with the
   addition or `:restart` and `:shutdown` that control the
   "Child Specification".
-  """
-  def child_spec(opts)
 
-  def child_spec(opts) do
+  ## Examples
+
+      NimblePool.child_spec(worker: {__MODULE__, :some_arg}, restart: :temporary)
+
+  """
+  @spec child_spec(keyword) :: Supervisor.child_spec()
+  def child_spec(opts) when is_list(opts) do
     {worker, _} = Keyword.fetch!(opts, :worker)
     {restart, opts} = Keyword.pop(opts, :restart, :permanent)
     {shutdown, opts} = Keyword.pop(opts, :shutdown, 5_000)
@@ -266,9 +361,9 @@ defmodule NimblePool do
 
     * `:worker` - a `{worker_mod, worker_init_arg}` tuple with the worker
       module that implements the `NimblePool` behaviour and the worker
-      initial argument. This argument is required.
+      initial argument. This argument is **required**.
 
-    * `:pool_size` - how many workers in the pool. Defaults to 10.
+    * `:pool_size` - how many workers in the pool. Defaults to `10`.
 
     * `:lazy` - When `true`, workers are started lazily, only when necessary.
       Defaults to `false`.
@@ -283,8 +378,13 @@ defmodule NimblePool do
       Defaults to no limit. See `handle_ping/2` for more details.
 
   """
-  def start_link(opts) do
-    {{worker, arg}, opts} = Keyword.pop(opts, :worker)
+  @spec start_link(keyword) :: GenServer.on_start()
+  def start_link(opts) when is_list(opts) do
+    {{worker, arg}, opts} =
+      Keyword.pop_lazy(opts, :worker, fn ->
+        raise ArgumentError, "missing required :worker option"
+      end)
+
     {pool_size, opts} = Keyword.pop(opts, :pool_size, 10)
     {lazy, opts} = Keyword.pop(opts, :lazy, false)
     {worker_idle_timeout, opts} = Keyword.pop(opts, :worker_idle_timeout, nil)
@@ -294,8 +394,8 @@ defmodule NimblePool do
       raise ArgumentError, "worker must be an atom, got: #{inspect(worker)}"
     end
 
-    unless pool_size > 0 do
-      raise ArgumentError, "pool_size must be more than 0, got: #{inspect(pool_size)}"
+    unless is_integer(pool_size) and pool_size > 0 do
+      raise ArgumentError, "pool_size must be a positive integer, got: #{inspect(pool_size)}"
     end
 
     GenServer.start_link(
@@ -306,29 +406,42 @@ defmodule NimblePool do
   end
 
   @doc """
-  Stops a pool.
+  Stops the given `pool`.
+
+  The pool exits with the given `reason`. The pool has `timeout` milliseconds
+  to terminate, otherwise it will be brutally terminated.
+
+  ## Examples
+
+      NimblePool.stop(pool)
+      #=> :ok
+
   """
+  @spec stop(pool, reason :: term, timeout) :: :ok
   def stop(pool, reason \\ :normal, timeout \\ :infinity) do
     GenServer.stop(pool, reason, timeout)
   end
 
   @doc """
-  Checks out from the pool.
+  Checks out a worker from the pool.
 
   It expects a command, which will be passed to the `c:handle_checkout/4`
   callback. The `c:handle_checkout/4` callback will return a client state,
   which is given to the `function`.
 
-  The `function` receives two arguments, the pool `{pid(), reference()}` and the `client_state`.
+  The `function` receives two arguments, the request
+  (`{pid(), reference()}`) and the `client_state`.
   The function must return a two-element tuple, where the first element is the
-  return value for `checkout!`, and the second element is the updated `client_state`,
+  return value for `checkout!/4`, and the second element is the updated `client_state`,
   which will be given as the first argument to `c:handle_checkin/4`.
 
-  `checkout!` also has an optional `timeout` value, this value will be applied
-  to checkout operation itself. `checkin` happens asynchronously.
+  `checkout!/4` also has an optional `timeout` value. This value will be applied
+  to the checkout operation itself. The "check in" operation happens asynchronously.
   """
+  @spec checkout!(pool, command :: term, function, timeout) :: result
+        when function: (from, client_state -> {result, client_state}), result: var
   def checkout!(pool, command, function, timeout \\ 5_000) when is_function(function, 2) do
-    # Reimplementation of gen.erl call to avoid multiple monitors.
+    # Re-implementation of gen.erl call to avoid multiple monitors.
     pid = GenServer.whereis(pool)
 
     unless pid do
@@ -364,23 +477,26 @@ defmodule NimblePool do
         exit!(reason, :checkout, [pool])
     after
       timeout ->
+        send(pid, {__MODULE__, :cancel, ref, :timeout})
         Process.demonitor(ref, [:flush])
         exit!(:timeout, :checkout, [pool])
     end
   end
 
   @doc """
-  Sends an `update` instruction to the pool about the checked out worker.
+  Sends an **update** instruction to the pool about the checked out worker.
 
-  This must be called inside the `checkout!` callback with
-  the `from` value given to `checkout`.
+  This must be called inside the `checkout!/4` callback function with
+  the `from` value given to `c:handle_checkout/4`.
 
-  This is useful to update the pool state before effectively
+  This is useful to update the pool's state before effectively
   checking the state in, which is handy when transferring
-  resources that requires two steps.
+  resources requires two steps.
   """
-  def update({pid, ref}, command) do
+  @spec update(from, command :: term) :: :ok
+  def update({pid, ref} = _from, command) do
     send(pid, {__MODULE__, :update, ref, command})
+    :ok
   end
 
   defp deadline(timeout) when is_integer(timeout) do
@@ -407,7 +523,15 @@ defmodule NimblePool do
   @impl true
   def init({worker, arg, pool_size, lazy, worker_idle_timeout, max_idle_pings}) do
     Process.flag(:trap_exit, true)
-    _ = Code.ensure_loaded(worker)
+
+    case Code.ensure_loaded(worker) do
+      {:module, _} ->
+        :ok
+
+      {:error, reason} ->
+        raise ArgumentError, "failed to load worker module #{inspect(worker)}: #{inspect(reason)}"
+    end
+
     lazy = if lazy, do: pool_size, else: nil
 
     if worker_idle_timeout do
@@ -605,9 +729,13 @@ defmodule NimblePool do
   end
 
   @impl true
-  def terminate(reason, %{resources: resources} = state) do
+  def terminate(reason, %{worker: worker, resources: resources} = state) do
     for {worker_server_state, _} <- :queue.to_list(resources) do
       maybe_terminate_worker(reason, worker_server_state, state)
+    end
+
+    if function_exported?(worker, :terminate_pool, 2) do
+      worker.terminate_pool(reason, state)
     end
 
     :ok
@@ -639,19 +767,39 @@ defmodule NimblePool do
     {:noreply, %{state | resources: resources, async: async, state: pool_state}}
   end
 
-  defp cancel_request_ref(ref, reason, %{requests: requests} = state) do
+  defp cancel_request_ref(
+         ref,
+         reason,
+         %{requests: requests, worker: worker, state: pool_state} = state
+       ) do
     case requests do
       # Exited or timed out before we could serve it
       %{^ref => {_, mon_ref, :command, _command, _deadline}} ->
+        if function_exported?(worker, :handle_cancelled, 2) do
+          args = [:queued, pool_state]
+          apply_worker_callback(worker, :handle_cancelled, args)
+        end
+
         {:noreply, remove_request(state, ref, mon_ref)}
 
       # Exited or errored during client processing
       %{^ref => {_, mon_ref, :state, worker_server_state}} ->
+        if function_exported?(worker, :handle_cancelled, 2) do
+          args = [:checked_out, pool_state]
+          apply_worker_callback(worker, :handle_cancelled, args)
+        end
+
         state = remove_request(state, ref, mon_ref)
         {:noreply, remove_worker(reason, worker_server_state, state)}
 
+      # The client timed out, sent us a message, and we dropped the deadlined request
       %{} ->
-        exit(:unexpected_remove)
+        if function_exported?(worker, :handle_cancelled, 2) do
+          args = [:queued, pool_state]
+          apply_worker_callback(worker, :handle_cancelled, args)
+        end
+
+        {:noreply, state}
     end
   end
 
@@ -797,6 +945,9 @@ defmodule NimblePool do
         if time_diff >= state.worker_idle_timeout do
           case maybe_ping_worker(worker_server_state, state) do
             {:ok, new_worker_state} ->
+              # We don't need to update the worker_metadata because, by definition,
+              # if we are checking for idle resources again and the timestamp is the same,
+              # it is because it has to be checked again.
               new_resource_data = {new_worker_state, worker_metadata}
               new_resources = :queue.in(new_resource_data, new_resources)
 

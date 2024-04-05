@@ -2,7 +2,7 @@ defmodule Swoosh.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/swoosh/swoosh"
-  @version "1.15.3"
+  @version "1.16.3"
 
   def project do
     [
@@ -46,6 +46,9 @@ defmodule Swoosh.Mixfile do
           Mail,
           Mail.Message,
           Mail.Renderers.RFC2822,
+          Mua,
+          Multipart,
+          Multipart.Part,
           {IEx, :started?, 0}
         ]
       ]
@@ -73,10 +76,12 @@ defmodule Swoosh.Mixfile do
       {:req, "~> 0.4 or ~> 1.0", optional: true},
       {:mail, "~> 0.2", optional: true},
       {:gen_smtp, "~> 0.13 or ~> 1.0", optional: true},
+      {:mua, "~> 0.1.0", optional: true},
       {:cowboy, "~> 1.1 or ~> 2.4", optional: true},
       {:plug, "~> 1.9", optional: true},
       {:plug_cowboy, ">= 1.0.0", optional: true},
       {:bandit, ">= 1.0.0", optional: true},
+      {:multipart, "~> 0.4", optional: true},
       {:ex_aws, "~> 2.1", optional: true},
       {:bypass, "~> 2.1", only: :test},
       {:ex_doc, "~> 0.26", only: :docs, runtime: false}

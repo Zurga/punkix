@@ -18,7 +18,14 @@ defmodule Punkix.GenContextTest do
                mix_cmd(
                  project_path,
                  "punkix.gen.context",
-                 ~w"Shop Article articles name:string description:string"
+                 "Shop ArticleCategory article_categories name:string"
+               )
+
+      assert {_, 0} =
+               mix_cmd(
+                 project_path,
+                 "punkix.gen.context",
+                 "Shop Article articles name:string description:string category:references:article_categories"
                )
 
       assert_file(

@@ -1,8 +1,14 @@
 defmodule Mix.Tasks.Punkix.Gen.Live do
   use Mix.Task
-  use Punkix.Patcher
+  use Punkix
 
+  use Punkix.Patcher
   alias Mix.Phoenix.Schema
+  # wrap(Mix.Phoenix, :generator_paths, 0, :add_punkix)
+
+  # def add_punkix(paths) do
+  #   List.insert_at(paths, 1, :punkix)
+  # end
 
   wrap(Mix.Tasks.Phx.Gen.Live, :files_to_be_generated, 1, :patch_files)
 
@@ -17,7 +23,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     ~w[string]a => "TextInput"
   }
 
-  defdelegate run(args), to: Mix.Tasks.Phx.Gen.Live
+  def run(args), do: patched(Mix.Tasks.Phx.Gen.Live).run(args)
 
   def patch_files(files) do
     Enum.flat_map(files, fn {type, template, path} = file ->
