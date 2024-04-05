@@ -24,7 +24,6 @@ defmodule Punkix.Generator.Single do
      "phx_single/lib/app_name_web/html.ex": "lib/:lib_web_name/html.ex",
      "phx_single/lib/app_name_web/live_component.ex": "lib/:lib_web_name/live_component.ex",
      "phx_single/lib/app_name_web/live_view.ex": "lib/:lib_web_name/live_view.ex",
-     "phx_single/lib/app_name_web/socket.ex": "lib/:lib_web_name/socket.ex",
      "phx_single/mix.exs": "mix.exs",
      "phx_single/README.md": "README.md",
      "phx_single/formatter.exs": ".formatter.exs",

@@ -4,8 +4,6 @@ defmodule Punkix.Context do
   def context_fun_args(schema), do: context_fun_args("", schema)
 
   def context_fun_args(argument, schema) do
-    # Enum.map_join(schema.attrs, ", ", &elem(&1, 0))
-    # |> maybe_prepend(argument)
     "#{schema.singular}_attrs"
     |> maybe_prepend(argument)
   end

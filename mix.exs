@@ -8,7 +8,9 @@ defmodule Punkix.MixProject do
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
-      deps: deps()
+      deps: deps(),
+      aliases: aliases(),
+      compilers: Mix.compilers() ++ [:surface]
     ]
   end
 
@@ -28,7 +30,17 @@ defmodule Punkix.MixProject do
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
       {:phoenix, "~> 1.7.0"},
       {:phx_new, "~> 1.7.0"},
-      {:typed_ecto_schema, "~> 0.4.1"}
+      {:typed_ecto_schema, "~> 0.4.1"},
+      {:msgpax, "~> 2.4.0"},
+      {:surface, "~> 0.11.2"},
+      {:esbuild, "~> 0.2", only: [:dev, :test]}
+    ]
+  end
+
+  defp aliases do
+    [
+      "assets.build": ["esbuild module", "esbuild main"],
+      "assets.watch": ["esbuild module --watch"]
     ]
   end
 end

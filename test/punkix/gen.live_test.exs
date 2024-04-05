@@ -5,7 +5,7 @@ defmodule Punkix.GenLiveTest do
   import MixHelper
 
   @tag timeout: :infinity
-  test "new_context" do
+  test "new_live" do
     Application.put_env(:punkix, :dep, ~s[path: "../../../"])
 
     in_tmp("test", fn project_path, project_name ->
@@ -18,7 +18,7 @@ defmodule Punkix.GenLiveTest do
                mix_cmd(
                  project_path,
                  "punkix.gen.live",
-                 ~w"Shop Article articles name:string description:string --context schemas"
+                 "Shop Article articles name:string description:string"
                )
 
       assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/index.ex"))
@@ -31,7 +31,7 @@ defmodule Punkix.GenLiveTest do
       assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/show.sface"))
 
       assert_file(
-        Path.join(project_path, "lib/#{project_name}_web/live/article/form_component.ex")
+        Path.join(project_path, "lib/#{project_name}_web/live/article_live/form_component.ex")
       )
 
       refute_file(Path.join(project_path, "lib/#{project_name}_web/core_components.ex"))

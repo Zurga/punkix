@@ -11,9 +11,9 @@ defmodule <%= @endpoint_module %> do
     same_site: "Lax"
   ]
 
-  <%= if !(@dashboard || @live) do %><%= "# " %><% end %>socket "/live", Phoenix.LiveView.Socket,
-  <%= if !(@dashboard || @live) do %><%= "# " %><% end %>  websocket: [connect_info: [session: @session_options]],
-  <%= if !(@dashboard || @live) do %><%= "# " %><% end %>  longpoll: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [connect_info: [session: @session_options]],
+    serializer: [{Punkix.MsgpackSerializer, "2.0.0"}]
 
   # Serve at "/" the static files from "priv/static" directory.
   #

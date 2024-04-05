@@ -1,0 +1,28 @@
+{
+  "name": "punkix",
+  "version": "0.0.1",
+  "description": "Extra modules for phoenix liveview",
+  "license": "MIT",
+  "module": "./priv/static/punkix.esm.js",
+  "main": "./priv/static/punkix.cjs.js",
+  "exports": {
+    "import": "./priv/static/punkix.esm.js",
+    "require": "./priv/static/punkix.cjs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Zurga/punkix"
+  },
+  "author": "Jim Lemmers",
+  "files": [
+    "README.md",
+    "LICENSE.md",
+    "package.json",
+    "priv/static/*",
+    "assets/js/punkix/*"
+  ],
+  "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2",
+    "@shopify/draggable": "^1.1.3"
+  }
+}

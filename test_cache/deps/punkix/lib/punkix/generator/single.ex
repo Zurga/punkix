@@ -9,21 +9,6 @@ defmodule Punkix.Generator.Single do
      "phx_single/config/prod.exs": "config/prod.exs",
      "phx_single/config/runtime.exs": "config/runtime.exs",
      "phx_single/config/test.exs": "config/test.exs"},
-    # {:text, :project,
-    #  for file <- Path.wildcard("priv/templates/**/*.ex") do
-    #    {String.to_atom(Path.absname(file, "../")), file}
-    #  end
-    #  |> Keyword.new()},
-    # {:text, :project,
-    #  for file <- Path.wildcard("priv/templates/**/*.exs") do
-    #    {String.to_atom(Path.absname(file, "../")), file}
-    #  end
-    #  |> Keyword.new()},
-    # {:text, :project,
-    #  for file <- Path.wildcard("priv/templates/**/*.sface") do
-    #    {String.to_atom(Path.absname(file, "../")), file}
-    #  end
-    #  |> Keyword.new()},
     {:eex, :web,
      "phx_single/lib/app_name/application.ex": "lib/:app/application.ex",
      "phx_single/lib/app_name.ex": "lib/:app.ex",
@@ -39,7 +24,6 @@ defmodule Punkix.Generator.Single do
      "phx_single/lib/app_name_web/html.ex": "lib/:lib_web_name/html.ex",
      "phx_single/lib/app_name_web/live_component.ex": "lib/:lib_web_name/live_component.ex",
      "phx_single/lib/app_name_web/live_view.ex": "lib/:lib_web_name/live_view.ex",
-     "phx_single/lib/app_name_web/socket.ex": "lib/:lib_web_name/socket.ex",
      "phx_single/mix.exs": "mix.exs",
      "phx_single/README.md": "README.md",
      "phx_single/formatter.exs": ".formatter.exs",
