@@ -1,6 +1,6 @@
 Mix.shell(Mix.Shell.Process)
 
-defmodule Punkix.GenLiveTest do
+defmodule Punkix.BoundaryTest do
   use ExUnit.Case, async: true
   import MixHelper
   import Punkix.Test.Support.Gen.Live
@@ -11,6 +11,7 @@ defmodule Punkix.GenLiveTest do
 
     in_tmp("test", fn project_path, project_name ->
       gen_live(project_path, project_name)
+      assert {_, 0} = mix_cmd(project_path, "compile", "--force")
     end)
   end
 end

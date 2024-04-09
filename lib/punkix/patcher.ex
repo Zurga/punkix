@@ -19,6 +19,7 @@ defmodule Punkix.Patcher do
     exports = Module.get_attribute(env.module, :exports)
     module_patches = Module.get_attribute(env.module, :module_patches)
 
+
     modules_and_modifications =
       [wrappers, replacers, exports]
       |> Enum.flat_map(fn rule -> Enum.map(rule, &elem(&1, 0)) end)
@@ -58,9 +59,7 @@ defmodule Punkix.Patcher do
                 unquote(Macro.escape(modules_and_binary)) do
             modname = Punkix.Patcher.namespace(module, unquote(env.module))
 
-            unless Code.ensure_loaded?(modname) do
-              {:module, _loaded_module} = :code.load_binary(modname, [], binary)
-            end
+            {:module, _loaded_module} = :code.load_binary(modname, [], binary)
           end
 
           Punkix.Patcher.namespace(module, unquote(env.module))
@@ -105,7 +104,10 @@ defmodule Punkix.Patcher do
     Module.concat(module, suffix)
   end
 
-  defp abstract_code(module) do
+  @doc """
+  Returns the abstract code from the given module.
+  """
+  def abstract_code(module) do
     {_, beam, _} = :code.get_object_code(module)
 
     {:ok, {_, [{:abstract_code, {:raw_abstract_v1, code}}]}} =
@@ -114,9 +116,12 @@ defmodule Punkix.Patcher do
     code
   end
 
-  defp export_functions(code, nil), do: code
+  @doc """
+  Manipulates abstract code to exports the given functions.
+  """
+  def export_functions(code, nil), do: code
 
-  defp export_functions(code, functions) do
+  def export_functions(code, functions) do
     {:attribute, line, :export, exports} = List.keyfind(code, :export, 2)
 
     attr = {:attribute, line, :export, exports ++ functions}
@@ -124,12 +129,16 @@ defmodule Punkix.Patcher do
     List.keyreplace(code, :export, 2, attr)
   end
 
-  defp replace_function(code, nothing, _) when is_nil(nothing) or nothing == [], do: code
+  @doc """
+  Manipulates abstract code to replace a function in a module with call to the 
+  wrapping module
+  """
+  def replace_function(code, nothing, _) when is_nil(nothing) or nothing == [], do: code
 
-  defp replace_function(code, replacers, wrapping_module) when is_list(replacers),
+  def replace_function(code, replacers, wrapping_module) when is_list(replacers),
     do: Enum.reduce(replacers, code, &replace_function(&2, &1, wrapping_module))
 
-  defp replace_function(code, {_module, function, arity, remote_function}, wrapping_module) do
+  def replace_function(code, {_module, function, arity, remote_function}, wrapping_module) do
     modify_function(
       code,
       function,
@@ -138,17 +147,18 @@ defmodule Punkix.Patcher do
     )
   end
 
-  defp wrap_function(code, nothing, _) when is_nil(nothing) or nothing == [], do: code
+  @doc false
+  def wrap_function(code, nothing, _) when is_nil(nothing) or nothing == [], do: code
 
-  defp wrap_function(code, mfws, wrapping_module) when is_list(mfws) do
+  def wrap_function(code, mfws, wrapping_module) when is_list(mfws) do
     Enum.reduce(mfws, code, &wrap_function(&2, &1, wrapping_module))
   end
 
-  defp wrap_function(code, {_module, function, _}, wrapping_module) do
+  def wrap_function(code, {_module, function, _}, wrapping_module) do
     do_wrap_function(code, function, nil, wrapping_module)
   end
 
-  defp wrap_function(code, {_module, function, arity, _}, wrapping_module) do
+  def wrap_function(code, {_module, function, arity, _}, wrapping_module) do
     do_wrap_function(code, function, arity, wrapping_module)
   end
 
@@ -196,7 +206,8 @@ defmodule Punkix.Patcher do
     {:function, line, function, arity, [{:clause, clause_line, args, guards, body}]}
   end
 
-  defp compile(code) do
+  @doc false
+  def compile(code) do
     {:ok, _modname, binary} = :compile.forms(code)
     binary
   end

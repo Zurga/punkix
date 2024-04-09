@@ -8,6 +8,7 @@ defmodule Punkix.Patches.Schema do
         schema
         |> set_path()
         |> set_module_name()
+        |> IO.inspect(label: :schema)
       end
 
       def set_module_name(schema) do

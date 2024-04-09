@@ -14,18 +14,24 @@ defmodule MixHelper do
     len |> :crypto.strong_rand_bytes() |> Base.encode32() |> binary_part(0, len)
   end
 
-  def in_tmp(which, function) do
+  def in_tmp(which, function, install_args \\ []) do
     project_name = to_string(which) <> random_string(10)
 
     path =
       Path.join([tmp_path(), project_name])
+
+    project_path = Path.join(path, project_name)
 
     try do
       File.rm_rf!(path)
 
       File.mkdir_p!(path)
 
-      function.(Path.join(path, project_name), project_name)
+      Mix.Tasks.Punkix.run(install_args ++ ~w"--no-install #{project_path}")
+      put_cache(project_path)
+      mix_cmd(project_path, "deps.get")
+
+      function.(project_path, project_name)
     after
       # File.rm_rf!(path)
     end

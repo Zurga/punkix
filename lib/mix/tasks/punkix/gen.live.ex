@@ -3,13 +3,10 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
   use Punkix
 
   use Punkix.Patcher
+  use Punkix.Patches.Schema
   alias Mix.Phoenix.Schema
-  # wrap(Mix.Phoenix, :generator_paths, 0, :add_punkix)
 
-  # def add_punkix(paths) do
-  #   List.insert_at(paths, 1, :punkix)
-  # end
-
+  patch(Mix.Tasks.Phx.Gen.Context)
   wrap(Mix.Tasks.Phx.Gen.Live, :files_to_be_generated, 1, :patch_files)
 
   replace(Mix.Tasks.Phx.Gen.Live, :inputs, 1, :inputs)

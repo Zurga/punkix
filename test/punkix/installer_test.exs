@@ -9,12 +9,9 @@ defmodule Punkix.InstallerTest do
     Application.put_env(:punkix, :dep, ~s[path: "../../../"])
 
     in_tmp("test", fn project_path, project_name ->
-      Mix.Tasks.Punkix.run(~w/--no-install #{project_path}/)
-      put_cache(project_path)
+      assert_file(Path.join(project_path, "mix.exs"), ~w/punkix/)
 
-      assert_file("mix.exs", ~w/punkix/)
-
-      assert_file("mix.exs", fn content ->
+      assert_file(Path.join(project_path, "mix.exs"), fn content ->
         refute content =~ "tailwind"
       end)
 
@@ -33,14 +30,14 @@ defmodule Punkix.InstallerTest do
         assert_file(Path.join(project_path, "lib/#{project_name}_web/#{file}.ex"))
       end
 
-      assert {_, 0} = mix_cmd(project_path, ~w/deps.get/)
-      assert {_, 0} = mix_cmd(project_path, ~w/compile --warnings-as-errors/)
+      assert {_, 0} = mix_cmd(project_path, "deps.get")
+      assert {_, 0} = mix_cmd(project_path, "compile --warnings-as-errors")
 
       for asset_cmd <- ~w/build deploy/ do
-        assert {_, 0} = mix_cmd(project_path, ["assets.#{asset_cmd}"])
+        assert {_, 0} = mix_cmd(project_path, "assets.#{asset_cmd}")
       end
 
-      assert {_, 0} = mix_cmd(project_path, ~w/test/)
+      assert {_, 0} = mix_cmd(project_path, "test")
     end)
   end
 end

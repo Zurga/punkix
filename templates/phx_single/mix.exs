@@ -61,6 +61,9 @@ defmodule <%= @app_module %>.MixProject do
       {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
       {:boundary, "~> 0.10.0"},
       {:typed_ecto_schema, "~> 0.4.1"},
+      <%= if @binary_id do %>{:uuid_v7, "~> 0.3.0"},<% end %>
+
+      # Testing deps
       {:skipper, "~> 0.3.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test]}
     ]
