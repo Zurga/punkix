@@ -30,6 +30,14 @@ defmodule Punkix.Test.Support.Gen.Live do
           Path.join(project_path, "lib/#{project_name}_web/live/article_live/form_component.ex")
         )
 
+        assert_file(
+          Path.join(
+            project_path,
+            "lib/#{project_name}_web/live/article_live/form_component.ex"
+          ),
+          &(not (&1 =~ "Elixir"))
+        )
+
         refute_file(Path.join(project_path, "lib/#{project_name}_web/core_components.ex"))
 
         router_path = Path.join([project_path, "lib", "#{project_name}_web", "router.ex"])

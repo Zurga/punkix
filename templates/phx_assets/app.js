@@ -23,14 +23,11 @@ import { encode, decode, PunkixHooks} from "punkix";
 import Hooks from "./_hooks"
 import topbar from "../vendor/topbar"
 
-const encoder = new Encoder({ ignoreUndefined: true });
-const decoder = new Decoder();
-
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
 	hooks: {...PunkixHooks, ...Hooks},
-	encode: encode,
-	decode: decode,
+	// encode: encode,
+	// decode: decode,
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken}
 })

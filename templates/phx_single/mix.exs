@@ -58,7 +58,7 @@ defmodule <%= @app_module %>.MixProject do
       {<%= inspect @web_adapter_app %>, "<%= @web_adapter_vsn %>"},
       {:surface, "~> 0.11.2"},
       {:surface_catalogue, "~> 0.6.2"},
-      {:punkix, "<%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>"},
+      {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
       {:boundary, "~> 0.10.0"},
       {:typed_ecto_schema, "~> 0.4.1"},
       <%= if @binary_id do %>{:uuid_v7, "~> 0.3.0"},<% end %>
