@@ -1,9 +1,10 @@
 defmodule <%= @web_namespace %>.FormComponent do
+  @moduledoc false
   defmacro __using__(_) do
     quote do
       use Surface.LiveComponent
       alias Surface.Components.Form
-      alias Surface.Components.Form.{Field}
+      alias Surface.Components.Form.{ErrorTag, Field, Label}
       import unquote(__MODULE__)
 
       unquote(<%= @web_namespace %>.html_helpers())

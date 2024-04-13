@@ -4,7 +4,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   alias <%= inspect context.module %>
   <%= Mix.Tasks.Punkix.Gen.Live.input_aliases(schema) %>
 
-  defmodule <%= schema.alias %>.Form do
+  defmodule <%= inspect(schema.alias) %>.Form do
     use Ecto.Schema
     import Ecto.Changeset
 
@@ -57,7 +57,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def update(%{<%= schema.singular %>: <%= schema.singular %>} = assigns, socket) do
-    changeset = <%= schema.alias %>.Form.changeset(<%= schema.singular %>)
+    changeset = <%= inspect schema.alias %>.Form.changeset(<%= schema.singular %>)
 
     {:ok,
      socket
@@ -67,7 +67,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def handle_event("validate", %{"<%= schema.singular %>" => <%= schema.singular %>_params}, socket) do
-    changeset = <%= schema.alias %>.Form.changeset(~a[<%= schema.singular %>], <%= schema.singular %>_params)
+    changeset = <%= inspect schema.alias %>.Form.changeset(~a[<%= schema.singular %>], <%= schema.singular %>_params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
@@ -78,7 +78,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp save_<%= schema.singular %>(socket, :edit, <%= schema.singular %>_params) do
-    with {:ok, <%= schema.singular %>_params} <- <%= schema.alias %>.Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
+    with {:ok, <%= schema.singular %>_params} <- <%= inspect schema.alias %>.Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
       {:ok, <%= schema.singular %>} <-
           <%= context.name %>.update_<%= schema.singular %>(~a[<%= schema.singular %>].id, <%= schema.singular %>_params) do
         notify_parent({:saved, <%= schema.singular %>})
@@ -93,7 +93,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp save_<%= schema.singular %>(socket, :new, <%= schema.singular %>_params) do
-    with {:ok, <%= schema.singular %>_params} <- <%= schema.alias %>.Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
+    with {:ok, <%= schema.singular %>_params} <- <%= inspect schema.alias %>.Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
       {:ok, <%= schema.singular %>} <-
           <%= context.name %>.create_<%= schema.singular %>(<%= schema.singular %>_params) do
         notify_parent({:saved, <%= schema.singular %>})
