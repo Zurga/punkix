@@ -182,8 +182,7 @@ defmodule MixHelper do
     do:
       System.shell("yes | mix #{cmd} #{args}",
         env: [{"MIX_ENV", "test"}],
-        cd: path,
-        into: IO.stream()
+        cd: path
       )
 
   def put_cache(project_path) do

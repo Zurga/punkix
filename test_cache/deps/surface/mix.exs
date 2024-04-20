@@ -1,7 +1,7 @@
 defmodule Surface.MixProject do
   use Mix.Project
 
-  @version "0.11.2"
+  @version "0.11.4"
 
   def project do
     [
@@ -32,7 +32,7 @@ defmodule Surface.MixProject do
 
   defp deps do
     [
-      {:phoenix_live_view, "~> 0.19.0 or ~> 0.20.0"},
+      {:phoenix_live_view, "~> 0.19.0 or ~> 0.20.10"},
       {:phoenix_html, "~> 3.3.1"},
       {:sourceror, "~> 1.0.0"},
       {:jason, "~> 1.0", only: :test},

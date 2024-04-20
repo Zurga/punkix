@@ -5,13 +5,8 @@ defmodule Punkix.Repo do
     quote do
       use Ecto.Repo, unquote(opts)
 
-      def fetch_one(schema, id) do
-        case get(schema, id) do
-          nil -> {:error, :not_found}
-          record -> {:ok, record}
-        end
-      end
-
+      def fetch_one(query), do: nil_to_error(one(query))
+      def fetch_one(schema, id), do: nil_to_error(get(schema, id))
       def validate(true, _), do: :ok
       def validate(false, reason), do: {:error, reason}
 
@@ -32,6 +27,13 @@ defmodule Punkix.Repo do
           end,
           opts
         )
+      end
+
+      defp nil_to_error(result) do
+        case result do
+          nil -> {:error, :not_found}
+          record -> {:ok, record}
+        end
       end
     end
   end

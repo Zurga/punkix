@@ -29,6 +29,7 @@ telemetry_poller:start_link(
     {example_app_measurements, dispatch_session_count, []}
   ]},
   {period, timer:seconds(10)}, % configure sampling period - default is timer:seconds(5)
+  {init_delay, timer:seconds(600)}, % configure sampling initial delay - default is 0
   {name, my_app_poller}
 ]).
 ```
@@ -45,7 +46,25 @@ dispatch_session_count() ->
 
 ### Elixir
 
-First define the poller with the custom measurements. The first measurement is the built-in `process_info` measurement and the second one is given by a custom module-function-args defined  by you:
+You typically start the poller as a child in your supervision tree:
+
+```elixir
+children = [
+  {:telemetry_poller,
+   # include custom measurement as an MFA tuple
+   measurements: [
+     {:process_info, name: :my_app_worker, event: [:my_app, :worker], keys: [:memory, :message_queue_len]},
+     {ExampleApp.Measurements, :dispatch_session_count, []},
+   ],
+   period: :timer.seconds(10), # configure sampling period - default is :timer.seconds(5)
+   init_delay: :timer.seconds(600), # configure sampling initial delay - default is 0
+   name: :my_app_poller}
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+The poller above has two periodic measurements. The first is the built-in `process_info` measurement that will gather the memory and message queue length of a process. The second is given by a custom module-function-args defined by you, such as below:
 
 ```elixir
 defmodule ExampleApp.Measurements do
@@ -56,26 +75,45 @@ defmodule ExampleApp.Measurements do
 end
 ```
 
-```elixir
-:telemetry_poller.start_link(
-  # include custom measurement as an MFA tuple
-  measurements: [
-    {:process_info, name: :my_app_worker, event: [:my_app, :worker], keys: [:message, :message_queue_len]},
-    {ExampleApp.Measurements, :dispatch_session_count, []},
-  ],
-  period: :timer.seconds(10), # configure sampling period - default is :timer.seconds(5)
-  name: :my_app_poller
-)
-```
-
 ## Documentation
 
 See [documentation](https://hexdocs.pm/telemetry_poller/) for more concrete examples and usage
 instructions.
 
+## VM metrics example
+
+### Erlang
+
+Find, in `examples/telemetry_poller_vm.erl`, an example on how to retrieve to VM measurements,
+mentioned above.
+
+To see it in action, fire up `rebar3 shell`, then
+
+```erlang
+{ok, telemetry_poller_vm} = c("examples/telemetry_poller_vm").
+ok = file:delete("telemetry_poller_vm.beam").  % Deletes generated BEAM
+ok = telemetry_poller_vm:attach().
+```
+
+### Elixir
+
+Find, in `examples/TelemetryPollerVM.ex`, an example on how to retrieve to VM measurements,
+mentioned above.
+
+To see it in action, first compile the Erlang sources with `rebar3 compile`.
+
+Then fire up `iex -pa "_build/default/lib/*/ebin"`, then
+
+```elixir
+{:ok, _} = Application.ensure_all_started(:telemetry_poller)
+
+[TelemetryPollerVM] = c("examples/TelemetryPollerVM.ex")
+:ok = TelemetryPollerVM.attach()
+```
+
 ## Copyright and License
 
-telemetry_poller is copyright (c) 2018 Chris McCord and Erlang Solutions.
+Copyright (c) 2019 Erlang Ecosystem Foundation and Erlang Solutions.
 
 telemetry_poller source code is released under Apache License, Version 2.0.
 

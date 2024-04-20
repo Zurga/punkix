@@ -37,7 +37,7 @@ defmodule <%= @app_module %>.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      <%= @phoenix_dep %>,<%= if @ecto do %>
+      {:phoenix, "1.7.11"},<%= if @ecto do %>
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.10"},
       {<%= inspect @adapter_app %>, ">= 0.0.0"},<% end %>
@@ -61,6 +61,7 @@ defmodule <%= @app_module %>.MixProject do
       {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
       {:boundary, "~> 0.10.0"},
       {:typed_ecto_schema, "~> 0.4.1"},
+      {:flop, "~> 0.25.0"},
       <%= if @binary_id do %>{:uuid_v7, "~> 0.3.0"},<% end %>
 
       # Testing deps

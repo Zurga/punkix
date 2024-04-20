@@ -16,6 +16,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     ~w[boolean]a => "Checkbox",
     ~w[array enum]a => "Select",
     ~w[datetime naive_datetime utc_datetime]a => "DateTimeInput",
+    ~w[date]a => "DateInput",
     ~w[time]a => "TimeInput",
     ~w[string]a => "TextInput"
   }
@@ -52,7 +53,6 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
       end)
     end)
     |> Enum.uniq()
-    |> Enum.concat(~w[Field Label ErrorTag]a)
     |> Enum.sort()
     |> Enum.join(", ")
     |> case do

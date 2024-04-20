@@ -13,7 +13,7 @@ Use of the `sigil_p` macro allows paths and URLs throughout your
 application to be compile-time verified against your Phoenix router(s).
 For example the following path and URL usages:
 
-    <.link href={~p"/sessions/new"} method="post">Sign in</.link>
+    <.link href={~p"/sessions/new"} method="post">Log in</.link>
 
     redirect(to: url(~p"/posts/#{post}"))
 
@@ -46,6 +46,29 @@ styled with Tailwind CSS by default. You can opt-out of Tailwind CSS with the `-
 flag (the Tailwind CSS classes are kept in the generated components as reference for
 future styling).
 
+## 1.7.12 (2024-04-11)
+
+### JavaScript Client Bug Fixes
+  * Fix all unjoined channels from being removed from the socket when channel leave is called on any single unjoined channel instance
+
+### Enhancements
+  * [phx.gen.auth] Add enhanced session fixation protection.
+    For applications whichs previously used `phx.gen.auth`, the following line can be added to the `renew_session` function in the auth module:
+
+    ```diff
+      defp renew_session(conn) do
+    +   delete_csrf_token()
+
+        conn
+        |> configure_session(renew: true)
+        |> clear_session()
+    ```
+
+    *Note*: because the session id is in a http-only cookie by default, the only way to perform this attack prior to this change is if your application was already vulnerable to an XSS attack, which itself grants more escalated "privileges” than the CSRF fixation.
+
+## JavaScript Client Enhancements
+  * Only memorize longpoll fallback for browser session if WebSocket never had a successful connection
+
 ## 1.7.11 (2024-02-01)
 
 ### Enhancements
@@ -55,6 +78,9 @@ future styling).
 ### JavaScript Client Enhancements
   * Support new `longPollFallbackMs` option to auto fallback when websocket fails to connect
   * Support new `debug` option to enable verbose logging
+
+### Deprecation
+  * Deprecate the `c:init/2` callback in endpoints in favor of `config/runtime.exs` or in favor of `{Phoenix.Endpoint, options}`
 
 ## 1.7.10 (2023-11-03)
 
@@ -99,7 +125,7 @@ future styling).
 
 ## 1.7.7 (2023-07-10)
 
-## Enhancements
+### Enhancements
   * Support incoming binary payloads to channels over longpoll transport
 
 ## 1.7.6 (2023-06-16)
@@ -107,7 +133,7 @@ future styling).
 ### Bug Fixes
   * Support websock_adapter 0.5.3
 
-## Enhancements
+### Enhancements
   *  Allow using Phoenix.ChannelTest socket/connect in another process
 
 ## 1.7.5 (2023-06-15)

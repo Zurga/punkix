@@ -22,7 +22,6 @@ defmodule Punkix.Patcher do
 
     patcher_opts =
       Module.get_attribute(env.module, :patcher_opts)
-      |> IO.inspect()
 
     modules_and_modifications =
       [wrappers, replacers, exports]
