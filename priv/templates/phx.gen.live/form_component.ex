@@ -20,9 +20,10 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     end
 
     def change(struct, attrs, action) do
-      {:ok, changeset(struct, attrs)
-      |> apply_action!(action)
-      |> Map.take([<%= Enum.map_join(schema.attrs, ", ", &inspect(elem(&1, 0))) %>])}
+      with {:ok, <%= schema.singular %>} <- changeset(struct, attrs) |> apply_action!(action) do
+        {:ok, Map.take(<%= schema.singular %>, 
+          [<%= Enum.map_join(schema.attrs, ", ", &inspect(elem(&1, 0))) %>])}
+      end
     end
   end
 
