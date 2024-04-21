@@ -11,6 +11,9 @@ defmodule <%= @web_namespace %>.Components.Table do
   @doc "The data that populates the table"
   prop data, :generator, required: true
 
+  @doc "Whether or not the data prop comes from a stream or not"
+  prop stream, :boolean
+
   @doc "The CSS class for the wrapping `<div>` element"
   prop class, :css_class
 
@@ -28,7 +31,7 @@ defmodule <%= @web_namespace %>.Components.Table do
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody phx-update={(@stream && "stream") || ""}>
           <tr
             :for={item <- @data}
           >
