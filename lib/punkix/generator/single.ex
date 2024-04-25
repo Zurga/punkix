@@ -26,6 +26,7 @@ defmodule Punkix.Generator.Single do
      "phx_single/lib/app_name_web/live_view.ex": "lib/:lib_web_name/live_view.ex",
      "phx_single/mix.exs": "mix.exs",
      "phx_single/README.md": "README.md",
+     "phx_single/LICENSE.md": "LICENSE.md",
      "phx_single/formatter.exs": ".formatter.exs",
      "phx_single/gitignore": ".gitignore",
      "phx_test/support/conn_case.ex": "test/support/conn_case.ex",
