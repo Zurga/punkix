@@ -8,6 +8,9 @@ defmodule <%= @web_namespace %>.Components.Table do
 
   use <%= @web_namespace %>.Component
 
+  @doc "The id of the table"
+  prop id, :string
+
   @doc "The data that populates the table"
   prop data, :generator, required: true
 
@@ -22,7 +25,7 @@ defmodule <%= @web_namespace %>.Components.Table do
 
   def render(assigns) do
     ~F"""
-    <div class={@class}>
+    <div {=@id} class={@class}>
       <table>
         <thead>
           <tr>
@@ -31,17 +34,28 @@ defmodule <%= @web_namespace %>.Components.Table do
             </th>
           </tr>
         </thead>
-        <tbody phx-update={(@stream && "stream") || ""}>
-          <tr
-            :for={item <- @data}
-          >
-            <td :for={col <- @cols}>
-              <span><#slot {col} generator_value={item} /></span>
-            </td>
-          </tr>
+        <tbody id={"#{@id}_container"} phx-update={(@stream && "stream") || ""}>
+          {#if @stream}
+            <tr
+              {=id}
+              :for={{id, _} = item <- @data}
+            >
+              <td :for={col <- @cols}>
+                <span><#slot {col} generator_value={item} /></span>
+              </td>
+            </tr>
+          {#else}
+            <tr
+              :for={item <- @data}
+            >
+              <td :for={col <- @cols}>
+                <span><#slot {col} generator_value={item} /></span>
+              </td>
+            </tr>
+          {/if}
         </tbody>
       </table>
     </div>
-    """
+  """
   end
 end

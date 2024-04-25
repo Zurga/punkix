@@ -3,6 +3,7 @@ defmodule <%= @web_namespace %>.FormComponent do
   defmacro __using__(_) do
     quote do
       use Surface.LiveComponent
+      use Punkix.FormComponent
       alias Surface.Components.Form
       alias Surface.Components.Form.{ErrorTag, Field, Label}
       import unquote(__MODULE__)
@@ -10,7 +11,6 @@ defmodule <%= @web_namespace %>.FormComponent do
       unquote(<%= @web_namespace %>.html_helpers())
     end
   end
-
 #   def autosave(%{assigns: %{action: :new}} = socket, params) do
 #     changeset = do_change(params, socket)
 

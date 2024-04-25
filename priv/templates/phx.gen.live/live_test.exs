@@ -27,9 +27,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       |> click("a", "New <%= schema.human_singular %>")
       |> rerender()
       |> assert_visible("New <%= schema.human_singular %>")
-      |> change_form("#<%= schema.singular %>-form", <%= schema.singular %>: @invalid_attrs)
+      |> change_form("#<%= schema.singular %>-form", form: @invalid_attrs)
       |> assert_visible("<%= Mix.Phoenix.Schema.failed_render_change_message(schema) %>")
-      |> submit_form("#<%= schema.singular %>-form", <%= schema.singular %>: @create_attrs)
+      |> submit_form("#<%= schema.singular %>-form", form: @create_attrs)
       |> rerender()
       |> assert_visible("<%= schema.human_singular %> created successfully")<%= if schema.string_attr do %>
       |> assert_visible("some <%= schema.string_attr %>")<% end %>
@@ -39,9 +39,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       start(conn, ~p"<%= schema.route_prefix %>")
       |> click("#<%= schema.plural %>-#{<%= schema.singular %>.id} a", "Edit")
       |> assert_visible("Edit <%= schema.human_singular %>")
-      |> change_form("#<%= schema.singular %>-form", <%= schema.singular %>: @invalid_attrs)
+      |> change_form("#<%= schema.singular %>-form", form: @invalid_attrs)
       |> assert_visible("<%= Mix.Phoenix.Schema.failed_render_change_message(schema) %>")
-      |> submit_form("#<%= schema.singular %>-form", <%= schema.singular %>: @update_attrs)
+      |> submit_form("#<%= schema.singular %>-form", form: @update_attrs)
       |> rerender()
       |> assert_visible("<%= schema.human_singular %> updated successfully")<%= if schema.string_attr do %>
       |> assert_visible("some updated <%= schema.string_attr %>")<% end %>
@@ -67,9 +67,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       start(conn, ~p"<%= schema.route_prefix %>/#{<%= schema.singular %>}")
       |> click("a", "Edit")
       |> assert_visible("Edit <%= schema.human_singular %>")
-      |> change_form("#<%= schema.singular %>-form", <%= schema.singular %>: @invalid_attrs)
+      |> change_form("#<%= schema.singular %>-form", form: @invalid_attrs)
       |> assert_visible("<%= Mix.Phoenix.Schema.failed_render_change_message(schema) %>")
-      |> submit_form("#<%= schema.singular %>-form", <%= schema.singular %>: @update_attrs)
+      |> submit_form("#<%= schema.singular %>-form", form: @update_attrs)
       |> rerender()
       |> assert_visible("<%= schema.human_singular %> updated successfully")<%= if schema.string_attr do %>
       |> assert_visible("some updated <%= schema.string_attr %>")<% end %>

@@ -8,21 +8,24 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     use Ecto.Schema
     import Ecto.Changeset
 
+    @valid_fields ~w/<%= Enum.map_join(schema.attrs, " ", &elem(&1, 0)) %>/a
+    @required_fields ~w/<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), " ", &elem(&1, 0)) %>/a
+  
     embedded_schema do
       <%= for {key, type} <- schema.attrs, type != :map and is_atom(type) == true do %>
       field <%= inspect(key) %>, <%= inspect(type) %><% end %>
     end
 
-    def changeset(<%= schema.singular %>_or_changeset, attrs \\ %{}) do
-      <%= schema.singular %>_or_changeset
-      |> cast(attrs, [<%= Enum.map_join(schema.attrs, ", ", &inspect(elem(&1, 0))) %>])
-      |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])
+    def changeset(<%= schema.singular %>, attrs \\ %{}) do
+      <%= schema.singular %>
+      |> to_form_struct(__MODULE__, @valid_fields)
+      |> cast(attrs, @valid_fields)
+      |> validate_required(@required_fields)
     end
 
     def change(struct, attrs, action) do
-      with {:ok, <%= schema.singular %>} <- changeset(struct, attrs) |> apply_action!(action) do
-        {:ok, Map.take(<%= schema.singular %>, 
-          [<%= Enum.map_join(schema.attrs, ", ", &inspect(elem(&1, 0))) %>])}
+      with {:ok, <%= schema.singular %>} <- changeset(struct, attrs) |> apply_action(action) do
+        {:ok, Map.take(<%= schema.singular %>, @valid_fields)}
       end
     end
   end
@@ -67,14 +70,14 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   @impl true
-  def handle_event("validate", %{"<%= schema.singular %>" => <%= schema.singular %>_params}, socket) do
+  def handle_event("validate", %{"form" => <%= schema.singular %>_params}, socket) do
     changeset = <%= inspect schema.alias %>.Form.changeset(~a[<%= schema.singular %>], <%= schema.singular %>_params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
   end
 
-  def handle_event("save", %{"<%= schema.singular %>" => <%= schema.singular %>_params}, socket) do
+  def handle_event("save", %{"form" => <%= schema.singular %>_params}, socket) do
     {:noreply, save_<%= schema.singular %>(socket, ~a[action], <%= schema.singular %>_params)}
   end
 

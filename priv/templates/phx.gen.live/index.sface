@@ -8,15 +8,15 @@
 </header>
 
 <section>
-  <Table
+  <Table id="<%= schema.singular %>_table"
     stream
     data={{id, <%= schema.singular %>} <- @streams.<%= schema.collection %>}
   ><%= for {k, _} <- schema.attrs do %>
     <Column label="<%= Phoenix.Naming.humanize(Atom.to_string(k)) %>">{ <%= schema.singular %>.<%= k %> }</Column><% end %>
     <Column label="">
       <div id={id}>
-        <LivePatch to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>}/edit"}>Edit</LivePatch>
-        <Link to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>}"}>Show</Link>
+        <LivePatch to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}/edit"}>Edit</LivePatch>
+        <Link to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}"}>Show</Link>
         <a
           phx-click={JS.push("delete", value: %{id: <%= schema.singular %>.id})}
           data-confirm="Are you sure?"
