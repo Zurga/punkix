@@ -1,7 +1,7 @@
 # Punkix
 
 An opionated Phoenix installer and generator. It uses Surface as the templating engine, 
-does not use Tailwind and has basic semantic css in the generated components. The generators
+does not use Tailwind and has basic semantic html in the generated components. The generators
 re-use as much of the code that the Phoenix generators as possible to ease mainainability.
 
 ## Installation
