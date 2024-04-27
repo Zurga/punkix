@@ -38,10 +38,10 @@ TODO Context
  
 TODO Generators
 - [ ] phx.gen.auth
-- [ ] phx.gen.context
+- [x] phx.gen.context
 - [ ] phx.gen.html
-- [ ] phx.gen.live
-- [ ] phx.gen.schema
+- [x] phx.gen.live
+- [x] phx.gen.schema
 - [ ] phx.gen.embedded
 - [ ] phx.gen.notifier
 - [ ] phx.gen.socket
