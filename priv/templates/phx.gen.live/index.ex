@@ -19,7 +19,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
-    {:ok, <%= schema.singular %>}  = <%= inspect context.alias %>.get_<%= schema.singular %>(id)
+    {:ok, <%= schema.singular %>} = <%= inspect context.alias %>.get_<%= schema.singular %>(id)
     socket
     |> assign(:page_title, "Edit <%= schema.human_singular %>")
     |> assign(:<%= schema.singular %>, <%= schema.singular %>)

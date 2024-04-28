@@ -11,8 +11,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     @valid_fields ~w/<%= Enum.map_join(schema.attrs, " ", &elem(&1, 0)) %>/a
     @required_fields ~w/<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), " ", &elem(&1, 0)) %>/a
   
-    embedded_schema do
-      <%= for {key, type} <- schema.attrs, type != :map and is_atom(type) == true do %>
+    embedded_schema do<%= for {key, type} <- schema.attrs, type != :map and is_atom(type) == true do %>
       field <%= inspect(key) %>, <%= inspect(type) %><% end %>
     end
 
