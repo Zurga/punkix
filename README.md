@@ -1,6 +1,8 @@
 # Punkix
 
-**TODO: Add description**
+An opionated Phoenix installer and generator. It uses Surface as the templating engine, 
+does not use Tailwind and has basic semantic html in the generated components. The generators
+re-use as much of the code that the Phoenix generators as possible to ease mainainability.
 
 ## Installation
 
@@ -38,10 +40,10 @@ TODO Context
  
 TODO Generators
 - [ ] phx.gen.auth
-- [ ] phx.gen.context
+- [x] phx.gen.context
 - [ ] phx.gen.html
-- [ ] phx.gen.live
-- [ ] phx.gen.schema
+- [x] phx.gen.live
+- [x] phx.gen.schema
 - [ ] phx.gen.embedded
 - [ ] phx.gen.notifier
 - [ ] phx.gen.socket
