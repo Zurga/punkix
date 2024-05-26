@@ -1,6 +1,6 @@
 
   alias <%= inspect schema.module %>
-
+  @<%= schema.singular %>_preloads []
   @doc """
   Returns the list of <%= schema.plural %>.
 
@@ -13,6 +13,7 @@
   @spec list_<%= schema.plural %>() :: [<%= inspect schema.alias %>.t()]
   def list_<%= schema.plural %> do
     Repo.all(<%= inspect schema.alias %>)
+    |> <%= schema.singular %>_preload()
   end
 
   @doc """
@@ -31,7 +32,7 @@
   """
   @spec get_<%= schema.singular %>(<%= Punkix.spec_alias(schema.alias) %>.id()) :: 
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, :not_found}
-  def get_<%= schema.singular %>(id), do: Repo.fetch_one(<%= inspect schema.alias %>, id)
+  def get_<%= schema.singular %>(id), do: Repo.fetch_one(<%= inspect schema.alias %>, id) |> <%= schema.singular %>_preload()
 
   @doc """
   Creates a <%= schema.singular %>.
@@ -99,4 +100,21 @@
     |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])
 <%= for k <- schema.uniques do %>    |> unique_constraint(<%= inspect k %>)
 <% end %>    |> Repo.insert_or_update()
+    |> <%= schema.singular %>_preload(@<%= schema.singular %>_preloads)
   end
+
+  defp <%= schema.singular %>_preload(result, preloads \\ [])
+  
+  defp <%= schema.singular %>_preload(<%= schema.singular %>s, preloads) when is_list(<%= schema.singular %>s) do
+    Enum.map(<%= schema.singular %>s, &<%= schema.singular %>_preload(&1, preloads))
+  end
+
+  defp <%= schema.singular %>_preload({:ok, <%= schema.singular %>}, preloads), do: {:ok, do_<%= schema.singular %>_preload(<%= schema.singular %>, preloads)}
+
+  defp <%= schema.singular %>_preload(result, _), do: result
+
+  defp do_<%= schema.singular %>_preload(<%= schema.singular %>, preloads) do
+    Repo.preload(<%= schema.singular %>, preloads)
+  end
+
+
