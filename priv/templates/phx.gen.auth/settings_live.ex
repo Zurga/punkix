@@ -1,36 +1,36 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>SettingsLive do
   use <%= inspect context.web_module %>.LiveView
+  use <%= inspect context.web_module %>.FormComponent
+  alias Surface.Components.Form.{Checkbox, EmailInput, PasswordInput, TextInput}
 
   alias <%= inspect context.module %>
 
   def render(assigns) do
     ~F"""
-    <.header class="text-center">
+    <header class="text-center">
       Account Settings
-      <:subtitle>Manage your account email address and password settings</:subtitle>
-    </.header>
+      <p>Manage your account email address and password settings</p>
+    </header>
 
     <div class="space-y-12 divide-y">
       <div>
         <Form
           for={@email_form}
           id="email_form"
-          phx-submit="update_email"
-          phx-change="validate_email"
+          submit="update_email"
+          change="validate_email"
         >
-          <.input field={@email_form[:email]} type="email" label="Email" required />
-          <.input
-            field={@email_form[:current_password]}
-            name="current_password"
-            id="current_password_for_email"
-            type="password"
-            label="Current password"
-            value={@email_form_current_password}
-            required
-          />
-          <:actions>
-            <.button phx-disable-with="Changing...">Change Email</.button>
-          </:actions>
+<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email]) 
+ |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
+          <EmailInput field={:email} type="email" label="Email" required />
+          <Field name={:current_password}>
+            <Label>Current password</Label>
+            <PasswordInput name="current_password" value={@email_form_current_password} />
+            <ErrorTag />
+          </Field>
+          <fieldset>
+            <button phx-disable-with="Changing...">Change Email</button>
+          </fieldset>
         </Form>
       </div>
       <div>
@@ -39,34 +39,29 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
           id="password_form"
           action={~p"<%= schema.route_prefix %>/log_in?_action=password_updated"}
           method="post"
-          phx-change="validate_password"
-          phx-submit="update_password"
-          phx-trigger-action={@trigger_submit}
+          submit="update_password"
+          change="validate_password"
+          opts={["phx-trigger-action": @trigger_submit]}
         >
-          <input
+          <EmailInput
             name={@password_form[:email].name}
             type="hidden"
             id="hidden_<%= schema.singular %>_email"
             value={@current_email}
           />
-          <.input field={@password_form[:password]} type="password" label="New password" required />
-          <.input
-            field={@password_form[:password_confirmation]}
-            type="password"
-            label="Confirm new password"
-          />
-          <.input
-            field={@password_form[:current_password]}
+<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:password, :password_confirmation])
+ |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
+          <PasswordInput
+            field={:current_password}
             name="current_password"
             type="password"
             label="Current password"
             id="current_password_for_password"
             value={@current_password}
-            required
           />
-          <:actions>
-            <.button phx-disable-with="Changing...">Change Password</.button>
-          </:actions>
+          <fieldset>
+            <button phx-disable-with="Changing...">Change Password</button>
+          </fieldset>
         </Form>
       </div>
     </div>

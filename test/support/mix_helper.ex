@@ -180,23 +180,13 @@ defmodule MixHelper do
 
   def mix_cmd(path, cmd, args \\ []),
     do:
-      System.shell("yes | mix #{cmd} #{args}",
+      System.shell("echo yes | mix #{cmd} #{args}",
         env: [{"MIX_ENV", "test"}],
         cd: path
       )
 
   def put_cache(project_path) do
     home = "../../../"
-
-    punkix_dir =
-      Path.join([project_path, home, "test_cache/deps/punkix/lib"])
-
-    File.mkdir_p(punkix_dir)
-
-    File.cp_r(
-      Path.join([project_path, home, "lib"]),
-      punkix_dir
-    )
 
     File.cp_r(
       Path.join([project_path, home, "test_cache/deps"]),

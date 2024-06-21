@@ -33,7 +33,7 @@
   def get_<%= schema.singular %>_by_email_and_password(email, password)
       when is_binary(email) and is_binary(password) do
     <%= schema.singular %> = Repo.get_by(<%= inspect schema.alias %>, email: email)
-    if <%= inspect schema.alias %>.valid_password?(<%= schema.singular %>, password), do: <%= schema.singular %>
+    if valid_password?(<%= schema.singular %>, password), do: <%= schema.singular %>
   end
 
   @doc """
@@ -57,6 +57,21 @@
   @doc """
   Registers a <%= schema.singular %>.
 
+  ## Options
+
+    * `:hash_password` - Hashes the password so it can be stored securely
+      in the database and ensures the password field is cleared to prevent
+      leaks in the logs. If password hashing is not needed and clearing the
+      password field is not desired (like when using this changeset for
+      validations on a LiveView form), this option can be set to `false`.
+      Defaults to `true`.
+
+    * `:validate_email` - Validates the uniqueness of the email, in case
+      you don't want to validate the uniqueness of the email (like when
+      using this changeset for validations on a LiveView form before
+      submitting the form), this option can be set to `false`.
+      Defaults to `true`.
+
   ## Examples
 
       iex> register_<%= schema.singular %>(%{field: value})
@@ -66,12 +81,19 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  def register_<%= schema.singular %>(attrs) do
+  def register_<%= schema.singular %>(attrs, opts \\ []) do
     %<%= inspect schema.alias %>{}
-    |> <%= inspect schema.alias %>.registration_changeset(attrs)
+    |> registration_changeset(attrs, opts)
     |> Repo.insert()
   end
 
+  def registration_changeset(<%= schema.singular %>, attrs, opts) do
+    <%= schema.singular %>
+    |> cast(attrs, [:email, :password])
+    |> validate_email(opts)
+    |> validate_password(opts)
+  end
+    
   @doc """
   Returns an `%Ecto.Changeset{}` for tracking <%= schema.singular %> changes.
 
@@ -82,7 +104,7 @@
 
   """
   def change_<%= schema.singular %>_registration(%<%= inspect schema.alias %>{} = <%= schema.singular %>, attrs \\ %{}) do
-    <%= inspect schema.alias %>.registration_changeset(<%= schema.singular %>, attrs, hash_password: false, validate_email: false)
+    registration_changeset(<%= schema.singular %>, attrs, hash_password: false, validate_email: false)
   end
 
   ## Settings
@@ -97,7 +119,7 @@
 
   """
   def change_<%= schema.singular %>_email(<%= schema.singular %>, attrs \\ %{}) do
-    <%= inspect schema.alias %>.email_changeset(<%= schema.singular %>, attrs, validate_email: false)
+    email_changeset(<%= schema.singular %>, attrs, validate_email: false)
   end
 
   @doc """
@@ -115,8 +137,8 @@
   """
   def apply_<%= schema.singular %>_email(<%= schema.singular %>, password, attrs) do
     <%= schema.singular %>
-    |> <%= inspect schema.alias %>.email_changeset(attrs)
-    |> <%= inspect schema.alias %>.validate_current_password(password)
+    |> email_changeset(attrs)
+    |> validate_current_password(password)
     |> Ecto.Changeset.apply_action(:update)
   end
 
@@ -141,8 +163,8 @@
   defp <%= schema.singular %>_email_multi(<%= schema.singular %>, email, context) do
     changeset =
       <%= schema.singular %>
-      |> <%= inspect schema.alias %>.email_changeset(%{email: email})
-      |> <%= inspect schema.alias %>.confirm_changeset()
+      |> email_changeset(%{email: email})
+      |> confirm_changeset()
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:<%= schema.singular %>, changeset)
@@ -176,7 +198,7 @@
 
   """
   def change_<%= schema.singular %>_password(<%= schema.singular %>, attrs \\ %{}) do
-    <%= inspect schema.alias %>.password_changeset(<%= schema.singular %>, attrs, hash_password: false)
+    password_changeset(<%= schema.singular %>, attrs, hash_password: false)
   end
 
   @doc """
@@ -194,8 +216,8 @@
   def update_<%= schema.singular %>_password(<%= schema.singular %>, password, attrs) do
     changeset =
       <%= schema.singular %>
-      |> <%= inspect schema.alias %>.password_changeset(attrs)
-      |> <%= inspect schema.alias %>.validate_current_password(password)
+      |> password_changeset(attrs)
+      |> validate_current_password(password)
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:<%= schema.singular %>, changeset)
@@ -277,7 +299,7 @@
 
   defp confirm_<%= schema.singular %>_multi(<%= schema.singular %>) do
     Ecto.Multi.new()
-    |> Ecto.Multi.update(:<%= schema.singular %>, <%= inspect schema.alias %>.confirm_changeset(<%= schema.singular %>))
+    |> Ecto.Multi.update(:<%= schema.singular %>, confirm_changeset(<%= schema.singular %>))
     |> Ecto.Multi.delete_all(:tokens, <%= inspect schema.alias %>Token.by_<%= schema.singular %>_and_contexts_query(<%= schema.singular %>, ["confirm"]))
   end
 
@@ -334,11 +356,135 @@
   """
   def reset_<%= schema.singular %>_password(<%= schema.singular %>, attrs) do
     Ecto.Multi.new()
-    |> Ecto.Multi.update(:<%= schema.singular %>, <%= inspect schema.alias %>.password_changeset(<%= schema.singular %>, attrs))
+    |> Ecto.Multi.update(:<%= schema.singular %>, password_changeset(<%= schema.singular %>, attrs))
     |> Ecto.Multi.delete_all(:tokens, <%= inspect schema.alias %>Token.by_<%= schema.singular %>_and_contexts_query(<%= schema.singular %>, :all))
     |> Repo.transaction()
     |> case do
       {:ok, %{<%= schema.singular %>: <%= schema.singular %>}} -> {:ok, <%= schema.singular %>}
       {:error, :<%= schema.singular %>, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  defp validate_email(changeset, opts) do
+    changeset
+    |> validate_required([:email])
+    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
+    |> validate_length(:email, max: 160)
+    |> maybe_validate_unique_email(opts)
+  end
+
+  defp validate_password(changeset, opts) do
+    changeset
+    |> validate_required([:password])
+    |> validate_length(:password, min: 12, max: 72)
+    # Examples of additional password validation:
+    # |> validate_format(:password, ~r/[a-z]/, message: "at least one lower case character")
+    # |> validate_format(:password, ~r/[A-Z]/, message: "at least one upper case character")
+    # |> validate_format(:password, ~r/[!?@#$%^&*_0-9]/, message: "at least one digit or punctuation character")
+    |> maybe_hash_password(opts)
+  end
+
+  defp maybe_hash_password(changeset, opts) do
+    hash_password? = Keyword.get(opts, :hash_password, true)
+    password = get_change(changeset, :password)
+
+    if hash_password? && password && changeset.valid? do
+      changeset<%= if hashing_library.name == :bcrypt do %>
+      # If using Bcrypt, then further validate it is at most 72 bytes long
+      |> validate_length(:password, max: 72, count: :bytes)<% end %>
+      # Hashing could be done with `Ecto.Changeset.prepare_changes/2`, but that
+      # would keep the database transaction open longer and hurt performance.
+      |> put_change(:hashed_password, <%= inspect hashing_library.module %>.hash_pwd_salt(password))
+      |> delete_change(:password)
+    else
+      changeset
+    end
+  end
+
+  defp maybe_validate_unique_email(changeset, opts) do
+    if Keyword.get(opts, :validate_email, true) do
+      changeset = changeset
+      |> unsafe_validate_unique(:email, <%= inspect schema.repo %>)
+      |> unique_constraint(:email)
+
+      errors = changeset.errors
+        |> Enum.map(fn {field, {msg, opts}} ->
+          {field, {msg, Enum.flat_map(opts, fn {key, value} when is_list(value) ->
+              Enum.map(value, &{key, &1})
+            {key, value} -> [{key, value}]
+          end)}}        
+        end)
+      %{changeset | errors: errors}
+    else
+      changeset
+    end
+  end
+
+  @doc """
+  A <%= schema.singular %> changeset for changing the email.
+
+  It requires the email to change otherwise an error is added.
+  """
+  def email_changeset(<%= schema.singular %>, attrs, opts \\ []) do
+    <%= schema.singular %>
+    |> cast(attrs, [:email])
+    |> validate_email(opts)
+    |> case do
+      %{changes: %{email: _}} = changeset -> changeset
+      %{} = changeset -> add_error(changeset, :email, "did not change")
+    end
+  end
+
+  @doc """
+  A <%= schema.singular %> changeset for changing the password.
+
+  ## Options
+
+    * `:hash_password` - Hashes the password so it can be stored securely
+      in the database and ensures the password field is cleared to prevent
+      leaks in the logs. If password hashing is not needed and clearing the
+      password field is not desired (like when using this changeset for
+      validations on a LiveView form), this option can be set to `false`.
+      Defaults to `true`.
+  """
+  def password_changeset(<%= schema.singular %>, attrs, opts \\ []) do
+    <%= schema.singular %>
+    |> cast(attrs, [:password])
+    |> validate_confirmation(:password, message: "does not match password")
+    |> validate_password(opts)
+  end
+
+  @doc """
+  Confirms the account by setting `confirmed_at`.
+  """
+  def confirm_changeset(<%= schema.singular %>) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    change(<%= schema.singular %>, confirmed_at: now)
+  end
+
+  @doc """
+  Verifies the password.
+
+  If there is no <%= schema.singular %> or the <%= schema.singular %> doesn't have a password, we call
+  `<%= inspect hashing_library.module %>.no_user_verify/0` to avoid timing attacks.
+  """
+  def valid_password?(%<%= inspect schema.module %>{hashed_password: hashed_password}, password)
+      when is_binary(hashed_password) and byte_size(password) > 0 do
+    <%= inspect hashing_library.module %>.verify_pass(password, hashed_password)
+  end
+
+  def valid_password?(_, _) do
+    <%= inspect hashing_library.module %>.no_user_verify()
+    false
+  end
+
+  @doc """
+  Validates the current password otherwise adds an error to the changeset.
+  """
+  def validate_current_password(changeset, password) do
+    if valid_password?(changeset.data, password) do
+      changeset
+    else
+      add_error(changeset, :current_password, "is not valid")
     end
   end

@@ -1,33 +1,30 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>ResetPasswordLive do
   use <%= inspect context.web_module %>.LiveView
+  use <%= inspect context.web_module %>.FormComponent
+  alias Surface.Components.Form.PasswordInput
 
   alias <%= inspect context.module %>
 
   def render(assigns) do
     ~F"""
     <div class="mx-auto max-w-sm">
-      <.header class="text-center">Reset Password</.header>
+      <header class="text-center">Reset Password</header>
 
       <Form
-        for={@form}
+        for={@changeset}
         id="reset_password_form"
-        phx-submit="reset_password"
-        phx-change="validate"
+        submit="reset_password"
+        change="validate"
       >
-        <.error :if={@form.errors != []}>
+        <p class="error" :if={@changeset.errors != []}>
           Oops, something went wrong! Please check the errors below.
-        </.error>
+        </p>
 
-        <.input field={@form[:password]} type="password" label="New password" required />
-        <.input
-          field={@form[:password_confirmation]}
-          type="password"
-          label="Confirm new password"
-          required
-        />
-        <:actions>
-          <.button phx-disable-with="Resetting..." class="w-full">Reset Password</.button>
-        </:actions>
+<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:password, {:password_confirmation, "Confirm new password"}]) 
+ |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
+        <fieldset>
+          <button phx-disable-with="Resetting..." class="w-full">Reset Password</button>
+        </fieldset>
       </Form>
 
       <p class="text-center text-sm mt-4">
@@ -84,6 +81,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp assign_form(socket, %{} = source) do
-    assign(socket, :form, to_form(source, as: "<%= schema.singular %>"))
+    assign(socket, changeset: source)
   end
 end

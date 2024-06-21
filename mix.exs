@@ -31,6 +31,7 @@ defmodule Punkix.MixProject do
       {:phoenix, "1.7.11"},
       {:phx_new, "1.7.11"},
       {:typed_ecto_schema, "~> 0.4.1"},
+      {:sourceror, "~> 1.0.0"},
       {:msgpax, "~> 2.4.0"},
       {:surface, "~> 0.11.2"},
       {:esbuild, "~> 0.2", only: [:dev, :test]}

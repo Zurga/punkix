@@ -5,7 +5,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   import <%= inspect context.module %>Fixtures
 
   alias <%= inspect context.module %>
-  alias <%= inspect schema.repo %><%= schema.repo_alias %>
+  alias <%= inspect schema.repo %>
 
   setup do
     %{<%= schema.singular %>: <%= schema.singular %>_fixture()}
@@ -33,7 +33,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     end
 
     test "does not send confirmation token if <%= schema.singular %> is confirmed", %{conn: conn, <%= schema.singular %>: <%= schema.singular %>} do
-      Repo.update!(<%= inspect context.alias %>.<%= inspect schema.alias %>.confirm_changeset(<%= schema.singular %>))
+      Repo.update!(<%= inspect context.alias %>.confirm_changeset(<%= schema.singular %>))
 
       {:ok, lv, _html} = live(conn, ~p"<%= schema.route_prefix %>/confirm")
 

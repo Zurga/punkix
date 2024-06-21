@@ -1,5 +1,7 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>RegistrationLive do
   use <%= inspect context.web_module %>.LiveView
+  use <%= inspect context.web_module %>.FormComponent
+  alias Surface.Components.Form.{EmailInput, PasswordInput}
 
   alias <%= inspect context.module %>
   alias <%= inspect schema.module %>
@@ -7,36 +9,35 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   def render(assigns) do
     ~F"""
     <div class="mx-auto max-w-sm">
-      <.header class="text-center">
+      <header class="text-center">
         Register for an account
-        <:subtitle>
+        <p>
           Already registered?
           <.link navigate={~p"<%= schema.route_prefix %>/log_in"} class="font-semibold text-brand hover:underline">
             Log in
           </.link>
           to your account now.
-        </:subtitle>
-      </.header>
+        </p>
+      </header>
 
       <Form
-        for={@form}
+        for={@changeset}
         id="registration_form"
-        phx-submit="save"
-        phx-change="validate"
-        phx-trigger-action={@trigger_submit}
+        submit="save"
+        change="validate"
+        opts={["phx-trigger-action": @trigger_submit]}
         action={~p"<%= schema.route_prefix %>/log_in?_action=registered"}
         method="post"
       >
-        <.error :if={@check_errors}>
+        <p class="error" :if={@check_errors}>
           Oops, something went wrong! Please check the errors below.
-        </.error>
+        </p>
+<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email, :password])
+ |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
 
-        <.input field={@form[:email]} type="email" label="Email" required />
-        <.input field={@form[:password]} type="password" label="Password" required />
-
-        <:actions>
-          <.button phx-disable-with="Creating account..." class="w-full">Create an account</.button>
-        </:actions>
+        <fieldset>
+          <button phx-disable-with="Creating account..." class="w-full">Create an account</button>
+        </fieldset>
       </Form>
     </div>
     """
@@ -50,7 +51,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       |> assign(trigger_submit: false, check_errors: false)
       |> assign_form(changeset)
 
-    {:ok, socket, temporary_assigns: [form: nil]}
+    {:ok, socket, temporary_assigns: [changeset: nil]}
   end
 
   def handle_event("save", %{"<%= schema.singular %>" => <%= schema.singular %>_params}, socket) do
@@ -76,12 +77,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
-    form = to_form(changeset, as: "<%= schema.singular %>")
-
-    if changeset.valid? do
-      assign(socket, form: form, check_errors: false)
-    else
-      assign(socket, form: form)
-    end
+    assign(socket, changeset: changeset)
   end
 end

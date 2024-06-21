@@ -1,18 +1,21 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>ConfirmationLive do
   use <%= inspect context.web_module %>.LiveView
+  use <%= inspect context.web_module %>.FormComponent
+  import Phoenix.HTML.Form, only: [input_value: 2]
+  alias Surface.Components.Form.HiddenInput
 
   alias <%= inspect context.module %>
 
   def render(%{live_action: :edit} = assigns) do
     ~F"""
     <div class="mx-auto max-w-sm">
-      <.header class="text-center">Confirm Account</.header>
+      <header class="text-center">Confirm Account</header>
 
-      <Form for={@form} id="confirmation_form" phx-submit="confirm_account">
-        <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
-        <:actions>
-          <.button phx-disable-with="Confirming..." class="w-full">Confirm my account</.button>
-        </:actions>
+      <Form for={@changeset} :let={form: form} as={:<%= schema.singular %>} id="confirmation_form" submit="confirm_account">
+        <Field name={:token}>
+          <HiddenInput value={input_value(form, :token)} />
+        </Field>
+        <button phx-disable-with="Confirming..." class="w-full">Confirm my account</button>
       </Form>
 
       <p class="text-center mt-4">
@@ -24,8 +27,8 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   def mount(%{"token" => token}, _session, socket) do
-    form = to_form(%{"token" => token}, as: "<%= schema.singular %>")
-    {:ok, assign(socket, form: form), temporary_assigns: [form: nil]}
+    
+    {:ok, assign(socket, changeset: Ecto.Changeset.cast({%{}, %{token: :string}}, %{token: token}, [:token])), temporary_assigns: [form: nil]}
   end
 
   # Do not log in the <%= schema.singular %> after confirmation to avoid a

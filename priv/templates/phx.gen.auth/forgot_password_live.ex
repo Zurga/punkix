@@ -1,23 +1,26 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>ForgotPasswordLive do
   use <%= inspect context.web_module %>.LiveView
+  use <%= inspect context.web_module %>.FormComponent
+  alias Surface.Components.Form.EmailInput
 
   alias <%= inspect context.module %>
 
   def render(assigns) do
     ~F"""
     <div class="mx-auto max-w-sm">
-      <.header class="text-center">
+      <header class="text-center">
         Forgot your password?
-        <:subtitle>We'll send a password reset link to your inbox</:subtitle>
-      </.header>
+        <p>We'll send a password reset link to your inbox</p>
+      </header>
 
-      <Form for={@form} id="reset_password_form" phx-submit="send_email">
-        <.input field={@form[:email]} type="email" placeholder="Email" required />
-        <:actions>
-          <.button phx-disable-with="Sending..." class="w-full">
+      <Form for={@changeset} as={:user} id="reset_password_form" submit="send_email">
+<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email])
+ |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
+        <fieldset>
+          <button phx-disable-with="Sending..." class="w-full">
             Send password reset instructions
-          </.button>
-        </:actions>
+          </button>
+        </fieldset>
       </Form>
       <p class="text-center text-sm mt-4">
         <.link href={~p"<%= schema.route_prefix %>/register"}>Register</.link>
@@ -28,7 +31,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, form: to_form(%{}, as: "<%= schema.singular %>"))}
+    {:ok, assign(socket, changeset: Ecto.Changeset.cast({%{}, %{email: :string}}, %{}, [:email]))}
   end
 
   def handle_event("send_email", %{"<%= schema.singular %>" => %{"email" => email}}, socket) do

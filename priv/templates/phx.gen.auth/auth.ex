@@ -1,5 +1,8 @@
 defmodule <%= inspect auth_module %> do
-  use <%= inspect context.web_module %>, :verified_routes
+  use Phoenix.VerifiedRoutes,
+    endpoint: <%= inspect(endpoint_module) %>,
+    router: <%= web_namespace %>.Router,
+    statics: <%= web_namespace %>.static_paths()
 
   import Plug.Conn
   import Phoenix.Controller

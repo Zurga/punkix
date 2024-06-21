@@ -1,23 +1,26 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>ConfirmationInstructionsLive do
   use <%= inspect context.web_module %>.LiveView
+  use <%= inspect context.web_module %>.FormComponent
+  alias Surface.Components.Form.EmailInput
 
   alias <%= inspect context.module %>
 
   def render(assigns) do
     ~F"""
     <div class="mx-auto max-w-sm">
-      <.header class="text-center">
+      <header class="text-center">
         No confirmation instructions received?
-        <:subtitle>We'll send a new confirmation link to your inbox</:subtitle>
-      </.header>
+        <p>We'll send a new confirmation link to your inbox</p>
+      </header>
 
-      <Form for={@form} id="resend_confirmation_form" phx-submit="send_instructions">
-        <.input field={@form[:email]} type="email" placeholder="Email" required />
-        <:actions>
-          <.button phx-disable-with="Sending..." class="w-full">
+      <Form for={@changeset} id="resend_confirmation_form" submit="send_instructions">
+<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email]) 
+ |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
+        <fieldset>
+          <button phx-disable-with="Sending..." class="w-full">
             Resend confirmation instructions
-          </.button>
-        </:actions>
+          </button>
+        </fieldset>
       </Form>
 
       <p class="text-center mt-4">
@@ -29,7 +32,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, form: to_form(%{}, as: "<%= schema.singular %>"))}
+    {:ok, assign(socket, changeset: to_form(%{}, as: "<%= schema.singular %>"))}
   end
 
   def handle_event("send_instructions", %{"<%= schema.singular %>" => %{"email" => email}}, socket) do
