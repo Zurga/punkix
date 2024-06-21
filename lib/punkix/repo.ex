@@ -7,6 +7,8 @@ defmodule Punkix.Repo do
 
       def fetch_one(query), do: nil_to_error(one(query))
       def fetch_one(schema, id), do: nil_to_error(get(schema, id))
+      def fetch_by(schema, condition, opts \\ []), do: nil_to_error(get_by(schema, condition, opts))
+
       def validate(true, _), do: :ok
       def validate(false, reason), do: {:error, reason}
 
