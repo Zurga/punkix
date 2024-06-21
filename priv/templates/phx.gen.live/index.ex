@@ -38,7 +38,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   @impl true
-  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.FormComponent, {:saved, <%= schema.singular %>}}, socket) do
+  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:saved, <%= schema.singular %>}}, socket) do
     {:noreply, stream_insert(socket, :<%= schema.collection %>, <%= schema.singular %>)}
   end
 

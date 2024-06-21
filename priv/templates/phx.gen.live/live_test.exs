@@ -4,6 +4,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   use Skipper.LiveViewTest
   import <%= inspect context.module %>Fixtures
 
+  @create_attrs <%= Punkix.Context.args_to_params(schema, :create) %>
+  @update_attrs <%= Punkix.Context.args_to_params(schema, :update) %>
+  @invalid_attrs <%= Punkix.Context.invalid_args_to_params(schema, :update) %>
   @create_attrs <%= Mix.Phoenix.to_text for {key, value} <- schema.params.create, into: %{}, do: {key, Mix.Phoenix.Schema.live_form_value(value)} %>
   @update_attrs <%= Mix.Phoenix.to_text for {key, value} <- schema.params.update, into: %{}, do: {key, Mix.Phoenix.Schema.live_form_value(value)} %>
   @invalid_attrs <%= Mix.Phoenix.to_text for {key, value} <- schema.params.create, into: %{}, do: {key, value |> Mix.Phoenix.Schema.live_form_value() |> Mix.Phoenix.Schema.invalid_form_value()} %>

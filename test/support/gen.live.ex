@@ -24,13 +24,13 @@ defmodule Punkix.Test.Support.Gen.Live do
       assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/show.sface"))
 
       assert_file(
-        Path.join(project_path, "lib/#{project_name}_web/live/article_live/form_component.ex")
+        Path.join(project_path, "lib/#{project_name}_web/live/article_live/article_component.ex")
       )
 
       assert_file(
         Path.join(
           project_path,
-          "lib/#{project_name}_web/live/article_live/form_component.ex"
+          "lib/#{project_name}_web/live/article_live/article_component.ex"
         ),
         &(not (&1 =~ "Elixir"))
       )

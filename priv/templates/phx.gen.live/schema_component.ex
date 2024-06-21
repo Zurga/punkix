@@ -1,4 +1,5 @@
-defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.FormComponent do
+defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component do
+  use <%= inspect context.web_module %>.LiveComponent
   use <%= inspect context.web_module %>.FormComponent
 
   alias <%= inspect context.module %>
@@ -33,7 +34,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   prop <%= schema.singular %>, :any
   prop action, :atom, default: :new
   prop patch, :string
-  data changeset, :changeset
 
   @impl true
   def render(assigns) do

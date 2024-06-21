@@ -4,10 +4,12 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
   use Punkix.Patcher
   use Punkix.Patches.Schema
+  import PunkixWeb.FormUtils
   alias Mix.Phoenix.Schema
+  alias Mix.Phoenix.Context
 
   patch(Mix.Tasks.Phx.Gen.Context)
-  wrap(Mix.Tasks.Phx.Gen.Live, :files_to_be_generated, 1, :patch_files)
+  replace(Mix.Tasks.Phx.Gen.Live, :files_to_be_generated, 1, :files_to_be_generated)
 
   replace(Mix.Tasks.Phx.Gen.Live, :inputs, 1, :inputs)
 
@@ -23,19 +25,22 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
   def run(args), do: patched(Mix.Tasks.Phx.Gen.Live).run(args)
 
-  def patch_files(files) do
-    Enum.flat_map(files, fn {type, template, path} = file ->
-      cond do
-        String.ends_with?(template, "html.heex") ->
-          [{type, rename_to_sface(template), rename_to_sface(path)}]
+  def files_to_be_generated(%Context{schema: schema, context_app: context_app}) do
+    web_prefix = Mix.Phoenix.web_path(context_app)
+    test_prefix = Mix.Phoenix.web_test_path(context_app)
+    web_path = to_string(schema.web_path)
+    live_subdir = "#{schema.singular}_live"
+    web_live = Path.join([web_prefix, "live", web_path, live_subdir])
+    test_live = Path.join([test_prefix, "live", web_path])
 
-        template == "core_components.ex" ->
-          []
-
-        true ->
-          [file]
-      end
-    end)
+    [
+      {:eex, "show.ex", Path.join(web_live, "show.ex")},
+      {:eex, "index.ex", Path.join(web_live, "index.ex")},
+      {:eex, "schema_component.ex", Path.join(web_live, "#{schema.singular}_component.ex")},
+      {:eex, "index.sface", Path.join(web_live, "index.sface")},
+      {:eex, "show.sface", Path.join(web_live, "show.sface")},
+      {:eex, "live_test.exs", Path.join(test_live, "#{schema.singular}_live_test.exs")}
+    ]
   end
 
   def input_aliases(schema) do
@@ -98,17 +103,9 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
             type in types && name
           end)
 
-        ~s"""
-        <Field name={#{inspect(key)}}>
-          <Label>#{label(key)}</Label>
-          <#{input} />
-          <ErrorTag />
-        </Field>
-        """
+        wrap_input(key, input)
     end)
   end
-
-  defp label(key), do: Phoenix.Naming.humanize(to_string(key))
 
   defp default_options({:array, :string}),
     do: Enum.map([1, 2], &{"Option #{&1}", "option#{&1}"})

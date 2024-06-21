@@ -1,7 +1,7 @@
 defmodule Punkix.Patcher do
   alias Punkix.Patcher.Abstract
 
-  defmacro __using__(_) do
+  defmacro __using__(opts \\ []) do
     quote do
       import unquote(__MODULE__)
       Module.register_attribute(__MODULE__, :wrappers, accumulate: true)
@@ -9,6 +9,7 @@ defmodule Punkix.Patcher do
       Module.register_attribute(__MODULE__, :exports, accumulate: true)
       Module.register_attribute(__MODULE__, :module_patches, accumulate: true)
 
+      @patcher_opts unquote(Macro.escape(opts))
       @before_compile unquote(__MODULE__)
     end
   end
@@ -19,6 +20,8 @@ defmodule Punkix.Patcher do
     exports = Module.get_attribute(env.module, :exports)
     module_patches = Module.get_attribute(env.module, :module_patches)
 
+    patcher_opts =
+      Module.get_attribute(env.module, :patcher_opts)
 
     modules_and_modifications =
       [wrappers, replacers, exports]
@@ -51,6 +54,10 @@ defmodule Punkix.Patcher do
          |> Abstract.rewrite(&Map.get(namespaced_modules, &1, &1))
          |> compile()}
       end
+
+    if patcher_opts[:debug] do
+      :beam
+    end
 
     [
       quote do
@@ -198,6 +205,16 @@ defmodule Punkix.Patcher do
     {:function, line, function, arity, [{:clause, clause_line, args, guards, _body}]} =
       function_tuple
 
+    # If pattern matching is used in the arguments, the args cannot be transplanted in the function call of the replacing function.
+    # instead we unmatch the arguments and create variables with the names of their Structs. 
+    # To avoid conflicts if two identical modules are used, we append the names with a counter.
+    # For example:
+    #   def foo(%Bar{buz: buz}, %Bar{})
+    # will be normalized to:
+    #   def foo(bar1)
+    args =
+      normalize_args(args)
+
     body = [
       {:call, line, {:remote, line, {:atom, line, remote_module}, {:atom, line, remote_function}},
        args}
@@ -206,10 +223,32 @@ defmodule Punkix.Patcher do
     {:function, line, function, arity, [{:clause, clause_line, args, guards, body}]}
   end
 
+  defp normalize_args(args) do
+    args
+    |> Enum.with_index()
+    |> Enum.map(fn
+      {{:map, line,
+        [
+          {:map_field_exact, _, {:atom, _, :__struct__}, {:atom, _, struct}} | _
+        ]}, index} ->
+        variable_name = Module.split(struct) |> Enum.at(-1) |> to_string() |> String.downcase()
+        {:var, line, :"_#{variable_name}_#{index}@1"}
+
+      {arg, _} ->
+        arg
+    end)
+  end
+
   @doc false
   def compile(code) do
-    {:ok, _modname, binary} = :compile.forms(code)
-    binary
+    case :compile.forms(code) do
+      {:ok, _modname, binary} ->
+        binary
+
+      :error ->
+        IO.inspect(code, label: :could_not_compile)
+        :error
+    end
   end
 
   defp wrappers(module_map) do
