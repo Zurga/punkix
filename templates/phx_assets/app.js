@@ -32,6 +32,31 @@ const liveSocket = new LiveSocket("/live", Socket, {
   params: {_csrf_token: csrfToken}
 })
 
+// Store the state of details in localStorage and restore them on update
+function initDetails() {
+	for (detail of document.querySelectorAll("details")) {
+		detail.addEventListener("toggle", (event) => {
+			const key = `details_${detail.id}`
+			if (detail.open) {
+				localStorage.setItem(key, true)
+			} else
+				localStorage.removeItem(key)
+			}
+			)
+	}
+}
+function restoreDetailsStates() {
+	for (detail of document.querySelectorAll("details")) {
+		if (detail.id) {
+			if (localStorage.getItem(`details_${detail.id}`)) {
+				detail.setAttribute("open", "")
+			}
+		}
+	}
+}
+document.addEventListener("phx:update", restoreDetailsStates)
+document.addEventListener('DOMContentLoaded', initDetails);
+
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
