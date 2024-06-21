@@ -1,6 +1,6 @@
 Mix.shell(Mix.Shell.Process)
 
-defmodule Punkix.InstallerSchemaTest do
+defmodule Punkix.GenSchemaTest do
   use ExUnit.Case, async: true
   import MixHelper
 
