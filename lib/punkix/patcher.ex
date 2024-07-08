@@ -87,6 +87,14 @@ defmodule Punkix.Patcher do
     end
   end
 
+  defmacro replace(module, function, arity, replacement_function \\ nil)
+
+  defmacro replace(module, function, arity, nil) do
+    quote do
+      @replacers {unquote(module), unquote(function), unquote(arity), unquote(function)}
+    end
+  end
+
   defmacro replace(module, function, arity, replacement_function) do
     quote do
       @replacers {unquote(module), unquote(function), unquote(arity),
