@@ -7,7 +7,18 @@ defmodule Punkix.Repo do
 
       def fetch_one(query), do: nil_to_error(one(query))
       def fetch_one(schema, id), do: nil_to_error(get(schema, id))
-      def fetch_by(schema, condition, opts \\ []), do: nil_to_error(get_by(schema, condition, opts))
+
+      def fetch_by(schema, condition, opts \\ []),
+        do: nil_to_error(get_by(schema, condition, opts))
+
+      def maybe_preload(result, nil), do: result
+      def maybe_preload({:error, _} = result, _), do: result
+
+      def maybe_preload(structs, preloads) when is_list(structs),
+        do: for(result <- structs, do: maybe_preload(result, preloads))
+
+      def maybe_preload({:ok, struct}, preloads), do: {:ok, preload(struct, preloads)}
+      def maybe_preload(struct, preloads), do: preload(struct, preloads)
 
       def validate(true, _), do: :ok
       def validate(false, reason), do: {:error, reason}

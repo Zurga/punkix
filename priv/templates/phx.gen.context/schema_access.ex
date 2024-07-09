@@ -3,6 +3,7 @@
   @<%= schema.singular %>_preloads []
   @doc """
   Returns the list of <%= schema.plural %>.
+  Optionally uses the preloads that are given.
 
   ## Examples
 
@@ -10,14 +11,15 @@
       [%<%= inspect schema.alias %>{}, ...]
 
   """
-  @spec list_<%= schema.plural %>() :: [<%= inspect schema.alias %>.t()]
-  def list_<%= schema.plural %> do
+  @spec list_<%= schema.plural %>(nil | []) :: [<%= inspect schema.alias %>.t()]
+  def list_<%= schema.plural %>(preloads \\ nil) do
     Repo.all(<%= inspect schema.alias %>)
-    |> <%= schema.singular %>_preload()
+    |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
   end
 
   @doc """
   Gets a single <%= schema.singular %>.
+  Optionally uses the preloads that are given.
 
   Returns {:error, :not_found} if the <%= schema.human_singular %> does not exist.
 
@@ -30,9 +32,9 @@
       ** {:error, :not_found}
 
   """
-  @spec get_<%= schema.singular %>(<%= Punkix.spec_alias(schema.alias) %>.id()) :: 
+  @spec get_<%= schema.singular %>(<%= Punkix.spec_alias(schema.alias) %>.id(), nil | []) :: 
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, :not_found}
-  def get_<%= schema.singular %>(id), do: Repo.fetch_one(<%= inspect schema.alias %>, id) |> <%= schema.singular %>_preload()
+  def get_<%= schema.singular %>(id, preloads \\ nil), do: Repo.fetch_one(<%= inspect schema.alias %>, id) |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
 
   @doc """
   Creates a <%= schema.singular %>.
@@ -46,11 +48,11 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec create_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec(schema) %>) :: 
+  @spec create_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec(schema) %>, nil | []) :: 
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, Ecto.Changeset.t()}
-  def create_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema) %>) do
+  def create_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema) %>, preloads \\ nil) do
     %<%= inspect schema.alias %>{}
-    |> store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema) %>)
+    |> store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema) %>, preloads)
   end
 
   @doc """
@@ -65,11 +67,11 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec update_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec("#{inspect schema.alias}.id()", schema) %>) :: 
+  @spec update_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec("#{inspect schema.alias}.id()", schema) %>, nil | []) :: 
     {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
-  def update_<%= schema.singular %>(<%= Punkix.Context.context_fun_args("#{schema.singular}_id", schema) %>) do
+  def update_<%= schema.singular %>(<%= Punkix.Context.context_fun_args("#{schema.singular}_id", schema) %>, preloads \\ nil) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
-      store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.context_fun_args(schema) %>)
+      store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.context_fun_args(schema) %>, preloads)
     end
   end
 
@@ -94,27 +96,11 @@
   end
 
   @doc false
-  defp store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema.singular, schema) %>) do
+  defp store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema.singular, schema) %>, preloads \\ nil) do
     <%= schema.singular %>
     |> change(<%= Punkix.Context.context_fun_args(schema) %>)
     |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])
 <%= for k <- schema.uniques do %>    |> unique_constraint(<%= inspect k %>)
 <% end %>    |> Repo.insert_or_update()
-    |> <%= schema.singular %>_preload(@<%= schema.singular %>_preloads)
+    |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
   end
-
-  defp <%= schema.singular %>_preload(result, preloads \\ [])
-  
-  defp <%= schema.singular %>_preload(<%= schema.singular %>s, preloads) when is_list(<%= schema.singular %>s) do
-    Enum.map(<%= schema.singular %>s, &<%= schema.singular %>_preload(&1, preloads))
-  end
-
-  defp <%= schema.singular %>_preload({:ok, <%= schema.singular %>}, preloads), do: {:ok, do_<%= schema.singular %>_preload(<%= schema.singular %>, preloads)}
-
-  defp <%= schema.singular %>_preload(result, _), do: result
-
-  defp do_<%= schema.singular %>_preload(<%= schema.singular %>, preloads) do
-    Repo.preload(<%= schema.singular %>, preloads)
-  end
-
-
