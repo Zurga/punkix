@@ -14,16 +14,15 @@
   ><%= for {k, _} <- schema.attrs do %>
     <Column label="<%= Phoenix.Naming.humanize(Atom.to_string(k)) %>">{ <%= schema.singular %>.<%= k %> }</Column><% end %>
     <Column label="">
-      <div id={id}>
-        <LivePatch to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}/edit"}>Edit</LivePatch>
-        <Link to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}"}>Show</Link>
-        <a
-          phx-click={JS.push("delete", value: %{id: <%= schema.singular %>.id})}
-          data-confirm="Are you sure?"
-        >
-          Delete
-        </a>
-      </div>
+      <Context put={<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, presentation: :list}>
+        <div id={id}>
+          <<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
+            {=<%= schema.singular %>}
+            {=id}
+            patch={~p"<%= schema.route_prefix %>"}
+          />
+        </div>
+      </Context>
     </Column>
   </Table>
 </section>

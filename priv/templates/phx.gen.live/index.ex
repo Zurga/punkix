@@ -6,7 +6,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   alias <%= inspect context.module %>
   alias <%= inspect schema.module %>
-  alias Surface.Components.{Link, LivePatch}
+  alias Surface.Components.Link
 
   @impl true
   def mount(_params, _session, socket) do
@@ -38,14 +38,12 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   @impl true
-  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:saved, <%= schema.singular %>}}, socket) do
+  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {event, <%= schema.singular %>}}, socket) when event in ~w/created updated/a do
     {:noreply, stream_insert(socket, :<%= schema.collection %>, <%= schema.singular %>)}
   end
 
   @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    {:ok, <%= schema.singular %>} = <%= inspect context.alias %>.delete_<%= schema.singular %>(id)
-
+  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:deleted, <%= schema.singular %>}}, socket) do
     {:noreply, stream_delete(socket, :<%= schema.collection %>, <%= schema.singular %>)}
   end
 end
