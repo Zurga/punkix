@@ -25,7 +25,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     ~w[string]a => "TextInput"
   }
 
-  def run(args), do: patched(Mix.Tasks.Phx.Gen.Live).run(args)
+  def run(args), do: IO.inspect(patched(Mix.Tasks.Phx.Gen.Live)).run(args)
 
   def files_to_be_generated(%Context{schema: schema, context_app: context_app}) do
     web_prefix = Mix.Phoenix.web_path(context_app)
@@ -36,6 +36,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     test_live = Path.join([test_prefix, "live", web_path])
 
     [
+      {:eex, "live_session.ex", Path.join(web_live, "#{schema.singular}_live_session.ex")},
       {:eex, "show.ex", Path.join(web_live, "show.ex")},
       {:eex, "index.ex", Path.join(web_live, "index.ex")},
       {:eex, "schema_component.ex", Path.join(web_live, "#{schema.singular}_component.ex")},
@@ -48,7 +49,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
   def live_route_instructions(schema) do
     [
       ~s|scope "/#{schema.plural}" do\n|,
-      ~s|  live_session :#{schema.plural}, on_mount: #{inspect(schema.alias)}.LiveSession do\n|,
+      ~s|  live_session :#{schema.plural}, on_mount: #{inspect(schema.alias)}Live.LiveSession do\n|,
       ~s|    live "/", #{inspect(schema.alias)}Live.Index, :index\n|,
       ~s|    live "/new", #{inspect(schema.alias)}Live.Index, :new\n|,
       ~s|    live "/:id/edit", #{inspect(schema.alias)}Live.Index, :edit\n|,
