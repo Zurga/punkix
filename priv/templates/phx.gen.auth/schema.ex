@@ -1,9 +1,9 @@
 defmodule <%= inspect schema.module %> do
-  use Ecto.Schema
+  use <%= Mix.Phoenix.base() %>.Schema
 
 <%= if schema.binary_id do %>  @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id<% end %>
-  schema <%= inspect schema.table %> do
+  typed_schema <%= inspect schema.table %> do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true

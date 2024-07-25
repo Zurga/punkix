@@ -1,7 +1,7 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>SettingsLive do
   use <%= inspect context.web_module %>.LiveView
   use <%= inspect context.web_module %>.FormComponent
-  alias Surface.Components.Form.{Checkbox, EmailInput, PasswordInput, TextInput}
+  alias Surface.Components.Form.{Checkbox, EmailInput, HiddenInput, PasswordInput, TextInput}
 
   alias <%= inspect context.module %>
 
@@ -22,7 +22,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         >
 <%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email]) 
  |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
-          <EmailInput field={:email} type="email" label="Email" required />
+          <EmailInput field={:email} label="Email" />
           <Field name={:current_password}>
             <Label>Current password</Label>
             <PasswordInput name="current_password" value={@email_form_current_password} />
@@ -43,9 +43,8 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
           change="validate_password"
           opts={["phx-trigger-action": @trigger_submit]}
         >
-          <EmailInput
+          <HiddenInput
             name={@password_form[:email].name}
-            type="hidden"
             id="hidden_<%= schema.singular %>_email"
             value={@current_email}
           />
@@ -54,7 +53,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
           <PasswordInput
             field={:current_password}
             name="current_password"
-            type="password"
             label="Current password"
             id="current_password_for_password"
             value={@current_password}

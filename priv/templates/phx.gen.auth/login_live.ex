@@ -17,7 +17,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         </p>
       </header>
 
-      <Form for={@changeset} as={:login} id="login_form" action={~p"<%= schema.route_prefix %>/log_in"} opts={["phx-update": "ignore"]}>
+      <Form for={@changeset} as={:user} id="login_form" action={~p"<%= schema.route_prefix %>/log_in"} opts={["phx-update": "ignore"]}>
 <%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email, :password]) 
  |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
 

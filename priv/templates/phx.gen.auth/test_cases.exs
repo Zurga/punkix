@@ -1,5 +1,5 @@
   import <%= inspect context.module %>Fixtures
-  alias <%= inspect context.module %>.{<%= inspect schema.alias %>, <%= inspect schema.alias %>Token}
+  alias <%= inspect context.base_module %>.Schemas.<%= inspect context.alias %>.{<%= inspect schema.alias %>, <%= inspect schema.alias %>Token}
 
   describe "get_<%= schema.singular %>_by_email/1" do
     test "does not return the <%= schema.singular %> if the email does not exist" do

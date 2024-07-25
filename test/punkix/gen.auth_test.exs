@@ -12,6 +12,9 @@ defmodule Punkix.GenAuthTest do
     in_tmp("test", fn project_path, project_name ->
       mix_cmd(project_path, "punkix.gen.auth Accounts User users")
       mix_cmd(project_path, "deps.get")
+      schemas_path = Path.join(project_path, "lib/#{project_name}/schemas/accounts/")
+      assert_file(Path.join(schemas_path, "user.ex"))
+
       mix_cmd(project_path, "test")
     end)
   end

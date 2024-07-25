@@ -3,7 +3,9 @@ defmodule <%= inspect auth_module %>Test do
 
   alias Phoenix.LiveView
   alias <%= inspect context.module %>
-  alias <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Auth
+  alias <%= inspect context.web_module %>.<%= inspect schema.alias %>Auth
+  alias <%= inspect context.module %>.<%= inspect schema.alias %>Notifier
+  alias <%= inspect context.base_module %>.Schemas.<%= inspect context.alias %>.{<%= inspect schema.alias %>, <%= inspect schema.alias %>Token}
   import <%= inspect context.module %>Fixtures
 
   @remember_me_cookie "_<%= web_app_name %>_<%= schema.singular %>_remember_me"
