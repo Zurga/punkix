@@ -30,6 +30,9 @@ defmodule Punkix.Generator.Single do
      "phx_single/LICENSE.md": "LICENSE.md",
      "phx_single/formatter.exs": ".formatter.exs",
      "phx_single/gitignore": ".gitignore",
+     "phx_single/post_commit": ".git/hooks/post-commit",
+     "phx_single/default.nix": "default.nix",
+     "phx_single/service.nix": "service.nix",
      "phx_test/support/conn_case.ex": "test/support/conn_case.ex",
      "phx_single/test/test_helper.exs": "test/test_helper.exs",
      "phx_test/controllers/error_json_test.exs":
@@ -126,6 +129,7 @@ defmodule Punkix.Generator.Single do
     if Project.gettext?(project), do: gen_gettext(project)
 
     gen_assets(project)
+    set_git_hook_permissions(project)
 
     project
   end
@@ -163,5 +167,9 @@ defmodule Punkix.Generator.Single do
 
   def gen_mailer(%Project{} = project) do
     copy_from(project, __MODULE__, :mailer)
+  end
+
+  defp set_git_hook_permissions(project) do
+    File.chmod(Project.join_path(project, :web, ".git/hooks/post-commit"), 0o755)
   end
 end

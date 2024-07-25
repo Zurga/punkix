@@ -34,6 +34,8 @@ defmodule Punkix.InstallerTest do
       assert {_, 0} = mix_cmd(project_path, "compile --warnings-as-errors")
 
       assert_file(Path.join(project_path, "LICENSE.md"))
+      assert_file(Path.join(project_path, "default.nix"))
+      assert_file(Path.join(project_path, "service.nix"))
 
       for asset_cmd <- ~w/build deploy/ do
         assert {_, 0} = mix_cmd(project_path, "assets.#{asset_cmd}")
