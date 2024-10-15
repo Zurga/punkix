@@ -33,4 +33,45 @@ defmodule Punkix.GenContextTest do
       assert {_, 0} = mix_cmd(project_path, "test")
     end)
   end
+
+  @tag timeout: :infinity
+  test "new_context with belongs_to assocs" do
+    Application.put_env(:punkix, :dep, ~s[path: "../../../"])
+
+    in_tmp("test", fn project_path, project_name ->
+      assert {_, 0} =
+               mix_cmd(
+                 project_path,
+                 "punkix.gen.context",
+                 "Persons Person persons name:string description:string articles:references:articles,schema:Articles.Article.writer,foreign_key:writer_id"
+               )
+
+      assert {_, 0} =
+               mix_cmd(
+                 project_path,
+                 "punkix.gen.context",
+                 "Articles Article articles name:string description:string writer_id:references:persons,schema:Persons.Person.articles,required:true"
+               )
+
+      schemas_path = Path.join(project_path, "lib/#{project_name}/schemas")
+      contexts_path = Path.join(project_path, "lib/#{project_name}")
+
+      assert_file(
+        Path.join([schemas_path, "articles", "article.ex"]),
+        "belongs_to :writer, Person"
+      )
+
+      assert_file(
+        Path.join([contexts_path, "articles.ex"]),
+        "Repo.with_assocs(articles: writer)"
+      )
+
+      assert_file(
+        Path.join([schemas_path, "persons", "person.ex"]),
+        "has_many :articles, Article"
+      )
+
+      assert {_, 0} = mix_cmd(project_path, "test")
+    end)
+  end
 end

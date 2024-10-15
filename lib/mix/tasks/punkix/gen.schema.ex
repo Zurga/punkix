@@ -3,5 +3,5 @@ defmodule Mix.Tasks.Punkix.Gen.Schema do
   use Punkix
   use Punkix.Patches.Schema
 
-  def run(args), do: patched(Gen.Schema).run(args)
+  def run(args), do: patched(Mix.Tasks.Phx.Gen.Schema).run(args)
 end

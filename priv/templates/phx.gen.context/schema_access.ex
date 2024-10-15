@@ -48,10 +48,10 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec create_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec(schema) %>, nil | []) :: 
+  @spec create_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec(schema, :create) %>, nil | []) :: 
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, Ecto.Changeset.t()}
-  def create_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema) %>, preloads \\ nil) do
-    %<%= inspect schema.alias %>{}
+  def create_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(Punkix.Context.required_assocs_as_arguments(schema), schema) %>, preloads \\ nil) do
+    <%= if Punkix.Context.required_assocs(schema) != [] do %>Repo.with_assocs(<%= Punkix.Context.build_assocs(schema) %>)<% else %> %<%= inspect schema.alias %>{}<% end %>
     |> store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema) %>, preloads)
   end
 
@@ -96,7 +96,7 @@
   end
 
   @doc false
-  defp store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema.singular, schema) %>, preloads \\ nil) do
+  defp store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema.singular, schema) %>, preloads) do
     <%= schema.singular %>
     |> change(<%= Punkix.Context.context_fun_args(schema) %>)
     |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])

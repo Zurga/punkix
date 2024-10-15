@@ -8,6 +8,46 @@ defmodule Punkix.Context do
     |> maybe_prepend(argument)
   end
 
+  # TODO add fixtures in tests
+
+  def build_assocs(schema) do
+    Enum.map_join(schema.assocs, ", ", fn assoc ->
+      _struct_name = String.downcase(assoc.schema)
+      "#{assoc.reverse}: #{assoc.field}"
+    end)
+  end
+
+  def assoc_fixtures(schema) do
+    base_app = Module.split(schema.module) |> Enum.at(0)
+
+    required_assocs(schema)
+    |> Enum.map_join("\n", fn assoc ->
+      context = String.split(assoc.alias, ".") |> Enum.at(0)
+      "import #{base_app}.#{context}Fixtures"
+    end)
+  end
+
+  def required_assocs(schema) do
+    for %{required: true} = assoc <- schema.assocs do
+      assoc
+    end
+  end
+
+  def required_assocs_as_arguments(schema) do
+    for %{required: true} = assoc <- schema.assocs do
+      assoc
+    end
+    |> Enum.map_join(",", & &1.field)
+  end
+
+  def context_fun_spec(%{assocs: _assocs} = schema, :create) do
+    struct_args =
+      required_assocs(schema)
+      |> Enum.map_join(",", &"#{&1.schema}.t()")
+
+    context_fun_spec(struct_args, schema)
+  end
+
   def context_fun_spec(schema), do: context_fun_spec("", schema)
 
   def context_fun_spec(argument, schema) do
@@ -64,7 +104,7 @@ defmodule Punkix.Context do
 
   def spec_alias(module), do: Module.split(module) |> Enum.reverse() |> hd()
 
-  defp maybe_prepend("", argument), do: argument
-  defp maybe_prepend(args, ""), do: args
-  defp maybe_prepend(other_args, argument), do: "#{argument}, #{other_args}"
+  def maybe_prepend("", argument), do: argument
+  def maybe_prepend(args, ""), do: args
+  def maybe_prepend(other_args, argument), do: "#{argument}, #{other_args}"
 end

@@ -2,6 +2,7 @@ defmodule Punkix do
   defmacro __using__(_) do
     quote do
       use Punkix.Patcher
+      patch(Mix.Phoenix)
       wrap(Mix.Phoenix, :generator_paths, 0, :add_punkix)
 
       def add_punkix(paths) do

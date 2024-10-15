@@ -42,6 +42,13 @@ defmodule Punkix.Repo do
         )
       end
 
+      def with_assocs(assocs) do
+        for {key, struct} <- assocs, reduce: %{} do
+          acc ->
+            Ecto.build_assoc(struct, key, acc)
+        end
+      end
+
       defp nil_to_error(result) do
         case result do
           nil -> {:error, :not_found}
