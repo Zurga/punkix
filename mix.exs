@@ -33,8 +33,12 @@ defmodule Punkix.MixProject do
       {:typed_ecto_schema, "~> 0.4.1"},
       {:sourceror, "~> 1.0.0"},
       {:msgpax, "~> 2.4.0"},
-      {:surface, "~> 0.11.2"},
-      {:esbuild, "~> 0.2", only: [:dev, :test]}
+      {:surface, "~> 0.12.0"},
+      {:esbuild, "~> 0.2", only: [:dev, :test]},
+      {:exflect, "~> 1.0.0"},
+      {:plug_cowboy, "~> 2.0", only: :dev},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:phoenix_ecto, "~> 4.6.2", only: :dev}
     ]
   end
 
