@@ -19,13 +19,15 @@
     end
 
     test "create_<%= schema.singular %>/1 with valid data creates a <%= schema.singular %>" do
-<%= for assoc <- Punkix.Context.required_assocs(context.schema) do %>      <%= assoc.field %> = <%= String.downcase(assoc.schema) %>_fixture()<% end %>
+<%= for assoc <- Punkix.Context.required_assocs(context.schema) do %>      <%= assoc.field %> = <%= String.downcase(assoc.schema) %>_fixture()
+<% end %>
       assert {:ok, %<%= inspect schema.alias %>{} = <%= schema.singular %>} = <%= inspect context.alias %>.create_<%= schema.singular %>(<%= Punkix.Context.maybe_prepend("@create_attrs", Punkix.Context.required_assocs_as_arguments(schema))%>)<%= for {field, value} <- schema.params.create do %>
       assert <%= schema.singular %>.<%= field %> == <%= Mix.Phoenix.Schema.value(schema, field, value) %><% end %>
     end
 
     test "create_<%= schema.singular %>/1 with invalid data returns error changeset" do
-<%= for assoc <- Punkix.Context.required_assocs(context.schema) do %>      <%= assoc.field %> = <%= String.downcase(assoc.schema) %>_fixture()<% end %>
+<%= for assoc <- Punkix.Context.required_assocs(context.schema) do %> <%= assoc.field %> = <%= String.downcase(assoc.schema) %>_fixture()
+<% end %>
       assert {:error, %Ecto.Changeset{}} = <%= inspect context.alias %>.create_<%= schema.singular %>(<%= Punkix.Context.maybe_prepend("@invalid_attrs", Punkix.Context.required_assocs_as_arguments(schema))%>)
     end
 

@@ -1,6 +1,6 @@
 
   alias <%= inspect schema.module %>
-  @<%= schema.singular %>_preloads []
+  @<%= schema.singular %>_preloads [<%= Enum.map_join(schema.assocs, ", ", &"#{&1.field}: []" %>]
   @doc """
   Returns the list of <%= schema.plural %>.
   Optionally uses the preloads that are given.
@@ -32,9 +32,17 @@
       ** {:error, :not_found}
 
   """
-  @spec get_<%= schema.singular %>(<%= Punkix.spec_alias(schema.alias) %>.id(), nil | []) :: 
+  @spec get_<%= schema.singular %>(<%= Punkix.spec_alias(schema.alias) %>.id() | String.t(), nil | []) :: 
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, :not_found}
-  def get_<%= schema.singular %>(id, preloads \\ nil), do: Repo.fetch_one(<%= inspect schema.alias %>, id) |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
+  def get_<%= schema.singular %>(id, preloads \\ nil)
+
+  def get_<%= schema.singular %>(id, preloads) when is_binary(id), 
+    do: get_<%= schema.singular %>(String.to_integer(id), preloads)
+
+  def get_<%= schema.singular %>(id, preloads) do
+    Repo.fetch_one(<%= inspect schema.alias %>, id) 
+    |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
+  end
 
   @doc """
   Creates a <%= schema.singular %>.

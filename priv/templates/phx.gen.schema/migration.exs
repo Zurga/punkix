@@ -9,6 +9,7 @@ defmodule <%= inspect schema.repo %>.Migrations.Create<%= Macro.camelize(schema.
 <% end %>
       timestamps(<%= if schema.timestamp_type != :naive_datetime, do: "type: #{inspect schema.timestamp_type}" %>)
     end
-<%= for %{assoc_fun: :belongs_to, key: key} <- schema.assocs do %>      create index(<%= inspect(schema.plural) %>, [<%= inspect(key) %>])<% end %>
+<%= for %{assoc_fun: :belongs_to, key: key} <- schema.assocs do %>
+    create index(<%= inspect(schema.plural) %>, [<%= inspect(key) %>])<% end %>
   end
 end

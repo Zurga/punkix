@@ -11,19 +11,24 @@ defmodule Punkix.Context do
   # TODO add fixtures in tests
 
   def build_assocs(schema) do
-    Enum.map_join(schema.assocs, ", ", fn assoc ->
+    schema.assocs
+    |> Enum.filter(&(&1.assoc_fun == :belongs_to))
+    |> Enum.map_join(", ", fn assoc ->
       _struct_name = String.downcase(assoc.schema)
       "#{assoc.reverse}: #{assoc.field}"
     end)
   end
 
   def assoc_fixtures(schema) do
-    base_app = Module.split(schema.module) |> Enum.at(0)
+    [base_app, _, schema_context | _] = Module.split(schema.module)
 
     required_assocs(schema)
     |> Enum.map_join("\n", fn assoc ->
       context = String.split(assoc.alias, ".") |> Enum.at(0)
-      "import #{base_app}.#{context}Fixtures"
+
+      if context != schema_context do
+        "  import #{base_app}.#{context}Fixtures"
+      end
     end)
   end
 
