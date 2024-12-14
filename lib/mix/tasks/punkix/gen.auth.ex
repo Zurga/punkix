@@ -3,7 +3,7 @@ defmodule Mix.Tasks.Punkix.Gen.Auth do
   use Punkix
   use Punkix.Patches.Schema
   alias Mix.Tasks.Phx.Gen.Auth
-  import PunkixWeb.FormUtils
+  import Punkix.Web.FormUtils
   # Remove this after Phoenix 1.7.13 is available
   patch(Mix.Tasks.Phx.Gen.Context)
   wrap(Auth, :generator_paths, 0, :add_punkix)
