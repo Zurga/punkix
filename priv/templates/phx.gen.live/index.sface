@@ -1,9 +1,9 @@
 <header>
   Listing <%= schema.human_plural %>
   <footer>
-    <Link to={~p"<%= schema.route_prefix %>/new"}>
+    <.link href={~p"<%= schema.route_prefix %>/new"}>
       <button>New <%= schema.human_singular %></button>
-    </Link>
+    </.link>
   </footer>
 </header>
 
@@ -18,9 +18,12 @@
         <div id={id}>
           <<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
             {=<%= schema.singular %>}
-            {=id}
-            patch={~p"<%= schema.route_prefix %>"}
-          />
+            {=id}>
+            <:buttons>
+              <.link patch={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}/edit"}>Edit</.link>
+              <.link to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}"}>Show</.link>
+            </:buttons>
+          </<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component>
         </div>
       </Context>
     </Column>
@@ -29,10 +32,9 @@
 
 <Modal :if={@live_action in [:new, :edit]} id="<%= schema.singular %>-modal" show on_cancel={JS.patch(~p"<%= schema.route_prefix %>")}>
   <<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
+    {=@<%= schema.singular %>}
     id={@<%= schema.singular %>.id || :new}
     title={@page_title}
     action={@live_action}
-    <%= schema.singular %>={@<%= schema.singular %>}
-    patch={~p"<%= schema.route_prefix %>"}
   />
 </Modal>

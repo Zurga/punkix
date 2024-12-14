@@ -1,14 +1,10 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component do
   use <%= inspect context.web_module %>.LiveComponent
   use <%= inspect context.web_module %>.FormComponent
-  alias Surface.Components.{Link, LivePatch}
 
   alias <%= inspect context.module %>
   <%= Mix.Tasks.Punkix.Gen.Live.input_aliases(schema) %>
 
-  # defmodule <%= inspect(schema.alias) %>Form do
-  #   use Params.Schema, <%= #Mix.Tasks.Phx.Gen.Live.params_schema(schema) %>
-  # end
   defmodule <%= inspect(schema.alias) %>Form do
     use Ecto.Schema
     import Ecto.Changeset
@@ -37,7 +33,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   prop title, :string
   prop <%= schema.singular %>, :any
   prop action, :atom, default: :new
-  prop patch, :string
+  slot buttons
   data presentation, :atom, from_context: {__MODULE__, :presentation}
   
   @impl true
@@ -62,14 +58,15 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
             <button phx-disable-with="Saving...">Save <%= schema.human_singular %></button>
           </Form>
         {#match :list}
-          <LivePatch to={~p"/#{@patch}/#{@<%= schema.singular %>.id}/edit"}>Edit</LivePatch>
-          <Link to={~p"/#{@patch}/#{@<%= schema.singular %>.id}"}>Show</Link>
-          <a
-            :on-click="delete"
-            data-confirm="Are you sure?"
-          >
-            Delete
-          </a>
+          <div class="buttons">
+            <#slot {@buttons} />
+            <a
+              :on-click="delete"
+              data-confirm="Are you sure?"
+            >
+              Delete
+            </a>
+          </div>
       {/case}
     </div>
     """
@@ -100,9 +97,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
           <%= context.name %>.create_<%= schema.singular %>(<%= schema.singular %>_params) do
         notify_parent({:created, <%= schema.singular %>})
 
-         socket
-         |> put_flash(:info, "<%= schema.human_singular %> created successfully")
-         |> push_patch(to: ~a[patch])
+        socket
     else
       {:error, %Ecto.Changeset{} = changeset} ->
         assign_form(socket, changeset)
@@ -116,10 +111,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       {:ok, <%= schema.singular %>} <-
           <%= context.name %>.update_<%= schema.singular %>(~a[<%= schema.singular %>].id, <%= schema.singular %>_params) do
         notify_parent({:updated, <%= schema.singular %>})
-
-         socket
-         |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
-         |> push_patch(to: ~a[patch])
+        socket
     else
       {:error, %Ecto.Changeset{} = changeset} ->
         assign_form(socket, changeset)

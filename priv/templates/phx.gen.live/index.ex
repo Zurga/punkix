@@ -6,7 +6,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   alias <%= inspect context.module %>
   alias <%= inspect schema.module %>
-  alias Surface.Components.Link
 
   @impl true
   def mount(_params, _session, socket) do
@@ -38,8 +37,21 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   @impl true
-  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {event, <%= schema.singular %>}}, socket) when event in ~w/created updated/a do
-    {:noreply, stream_insert(socket, :<%= schema.collection %>, <%= schema.singular %>)}
+  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:created, <%= schema.singular %>}}, socket) do
+    {:noreply,
+      socket
+      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
+      |> put_flash(:info, "<%= schema.human_singular %> created successfully")
+      |> push_patch(to: ~p"/<%= schema.route_prefix %>")}
+  end
+
+  @impl true
+  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:updated, <%= schema.singular %>}}, socket) do
+    {:noreply, 
+      socket
+      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>) 
+      |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
+      |> push_patch(to: ~p"/<%= schema.route_prefix %>")}
   end
 
   @impl true

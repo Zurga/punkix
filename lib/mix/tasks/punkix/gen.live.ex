@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
   use Punkix.Patcher
   use Punkix.Patches.Schema
-  import PunkixWeb.FormUtils
+  import Punkix.Web.FormUtils
   alias Mix.Phoenix.Schema
   alias Mix.Phoenix.Context
 
@@ -49,7 +49,9 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
   def live_route_instructions(schema) do
     [
       ~s|scope "/#{schema.plural}" do\n|,
-      ~s|  live_session :#{schema.plural}, on_mount: #{inspect(schema.alias)}Live.LiveSession do\n|,
+      ~s|  live_session :#{schema.plural},|,
+      ~s|    session: %{"topics" => ~w/#{Enum.map_join(schema.assocs, " ", & &1.field)}},\n|,
+      ~s|    on_mount: #{inspect(schema.alias)}Live.LiveSession do\n|,
       ~s|    live "/", #{inspect(schema.alias)}Live.Index, :index\n|,
       ~s|    live "/new", #{inspect(schema.alias)}Live.Index, :new\n|,
       ~s|    live "/:id/edit", #{inspect(schema.alias)}Live.Index, :edit\n|,
@@ -132,4 +134,8 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
   defp default_options({:array, _}), do: []
   defp rename_to_sface(string), do: String.replace(string, "html.heex", "sface")
+
+  def to_route(paths) do
+    "~p\"/#{Enum.join(paths, "/")}\""
+  end
 end

@@ -12,7 +12,7 @@
   <li title="<%= Phoenix.Naming.humanize(Atom.to_string(k)) %>">{ @<%= schema.singular %>.<%= k %> }</li><% end %>
 </ul>
 
-<Link to={~p"<%= schema.route_prefix %>"}>Back to <%= schema.plural %></Link>
+<.link href={~p"<%= schema.route_prefix %>"}>Back to <%= schema.plural %></.link>
 
 <Modal :if={@live_action == :edit} id="<%= schema.singular %>-modal" show on_cancel={JS.patch(~p"<%= schema.route_prefix %>/#{@<%= schema.singular %>}")}>
   <<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
@@ -20,6 +20,5 @@
     title={@page_title}
     action={@live_action}
     <%= schema.singular %>={@<%= schema.singular %>}
-    patch={~p"<%= schema.route_prefix %>/#{@<%= schema.singular %>}"}
   />
 </Modal>
