@@ -1,6 +1,7 @@
 
   alias <%= inspect schema.module %>
-  @<%= schema.singular %>_preloads [<%= Enum.map_join(schema.assocs, ", ", &"#{&1.field}: []" %>]
+  <%= Punkix.Context.assocs_aliasses(schema) %>
+  @<%= schema.singular %>_preloads [<%= Enum.map_join(schema.assocs, ", ", &"#{&1.field}: []") %>]
   @doc """
   Returns the list of <%= schema.plural %>.
   Optionally uses the preloads that are given.

@@ -9,12 +9,26 @@ defmodule Punkix.Context do
   end
 
   # TODO add fixtures in tests
+  def assocs_aliasses(schema) do
+    [base_app | _] = Module.split(schema.module)
+
+    schema.assocs
+    |> Enum.group_by(&context_from_alias(&1))
+    |> Enum.map_join("\n", fn {context, assocs} ->
+      base = "alias #{base_app}.Schemas.#{context}."
+
+      if [%{schema: schema}] = assocs do
+        base <> schema
+      else
+        base <> "{#{Enum.map_join(assocs, ", ", & &1.schema)}}"
+      end
+    end)
+  end
 
   def build_assocs(schema) do
     schema.assocs
     |> Enum.filter(&(&1.assoc_fun == :belongs_to))
     |> Enum.map_join(", ", fn assoc ->
-      _struct_name = String.downcase(assoc.schema)
       "#{assoc.reverse}: #{assoc.field}"
     end)
   end
@@ -24,7 +38,7 @@ defmodule Punkix.Context do
 
     required_assocs(schema)
     |> Enum.map_join("\n", fn assoc ->
-      context = String.split(assoc.alias, ".") |> Enum.at(0)
+      context = context_from_alias(assoc)
 
       if context != schema_context do
         "  import #{base_app}.#{context}Fixtures"
@@ -112,4 +126,9 @@ defmodule Punkix.Context do
   def maybe_prepend("", argument), do: argument
   def maybe_prepend(args, ""), do: args
   def maybe_prepend(other_args, argument), do: "#{argument}, #{other_args}"
+
+  defp context_from_alias(%{alias: alias}) do
+    [context | _] = String.split(alias, ".")
+    context
+  end
 end
