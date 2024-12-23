@@ -37,13 +37,13 @@ defmodule <%= @app_module %>.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "1.7.11"},<%= if @ecto do %>
+      {:phoenix, "1.7.18"},<%= if @ecto do %>
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.10"},
       {<%= inspect @adapter_app %>, ">= 0.0.0"},<% end %>
-      {:phoenix_html, "~> 3.0"},
+      {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.20.2"},
+      {:phoenix_live_view, "~> 1.0.0", override: true},
       {:floki, ">= 0.30.0", only: :test},<%= if @dashboard do %>
       {:phoenix_live_dashboard, "~> 0.8.3"},<% end %>
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
@@ -56,7 +56,8 @@ defmodule <%= @app_module %>.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {<%= inspect @web_adapter_app %>, "<%= @web_adapter_vsn %>"},
-      {:surface, "~> 0.11.2"},
+      {:surface, "~> 0.12.0"},
+      {:surface_form_helpers, "~> 0.2.0"},
       {:surface_catalogue, "~> 0.6.2"},
       {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
       {:boundary, "~> 0.10.0"},

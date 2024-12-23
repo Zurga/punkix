@@ -1,7 +1,9 @@
 defmodule Surface.MixProject do
   use Mix.Project
 
-  @version "0.11.4"
+  @version "0.12.0"
+  @source_url "https://github.com/surface-ui/surface"
+  @homepage_url "https://surface-ui.org"
 
   def project do
     [
@@ -9,10 +11,14 @@ defmodule Surface.MixProject do
       version: @version,
       elixir: "~> 1.13",
       description: "A component based library for Phoenix LiveView",
-      elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
+      elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
+      preferred_cli_env: [docs: :docs],
+      # Docs
+      name: "Surface",
+      source_url: @source_url,
+      homepage_url: @homepage_url,
       docs: docs(),
       package: package()
     ]
@@ -30,15 +36,18 @@ defmodule Surface.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"] ++ catalogues()
   defp elixirc_paths(_), do: ["lib"]
 
+  defp catalogues do
+    ["priv/catalogue"]
+  end
+
+  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       {:phoenix_live_view, "~> 0.19.0 or ~> 0.20.10"},
-      {:phoenix_html, "~> 3.3.1"},
-      {:sourceror, "~> 1.0.0"},
+      {:sourceror, "~> 1.0"},
+      {:blend, "~> 0.3.0", only: :dev},
       {:jason, "~> 1.0", only: :test},
       {:floki, "~> 0.35", only: :test},
-      {:phoenix_ecto, "~> 4.3", only: :test},
-      {:ecto, "~> 3.9.5 or ~> 3.9", only: :test},
       {:ex_doc, ">= 0.31.0", only: :docs}
     ]
   end
@@ -46,8 +55,8 @@ defmodule Surface.MixProject do
   defp docs do
     [
       main: "Surface",
+      logo: "assets/surface-logo.png",
       source_ref: "v#{@version}",
-      source_url: "https://github.com/surface-ui/surface",
       groups_for_modules: [
         Components: ~r/Surface.Components/,
         Catalogue: ~r/Catalogue/,
@@ -61,7 +70,6 @@ defmodule Surface.MixProject do
         Surface.Catalogue,
         Surface.Compiler,
         Surface.Components,
-        Surface.Components.Form,
         Surface.Directive,
         Surface.Formatter.Phases
       ],
@@ -76,11 +84,20 @@ defmodule Surface.MixProject do
   defp package do
     %{
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/surface-ui/surface"}
+      links: %{
+        Website: @homepage_url,
+        Changelog: "https://hexdocs.pm/surface/changelog.html",
+        GitHub: @source_url
+      },
+      files: ~w(
+        README.md
+        CHANGELOG.md
+        LICENSE.md
+        mix.exs
+        .formatter.exs
+        lib
+        priv/templates/surface.init
+      )
     }
-  end
-
-  defp catalogues do
-    ["priv/catalogue"]
   end
 end

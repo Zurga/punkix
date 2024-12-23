@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.19.3 (2024-11-12)
+
+* Enhancements
+  * Default params to in query APIs to `[]`
+  * Allow `:comment` as options to query APIs
+
+* Bug fixes
+  * Call disconnect on protocol when reconnecting in `Postgrex.SimpleConnection`
+
+## v0.19.2 (2024-10-23)
+
+* Bug fixes
+  * Protect against message length overflow vulnerability
+
+## v0.19.1 (2024-08-13)
+
+* Enhancements
+  * Allow encoding/decoding of LSN
+
+* Bug fixes
+  * Fix Dialyzer warnings on interval extension
+  * Log error message if Postgrex.ReplicationConnection is reconnecting
+
+## v0.19.0 (2024-08-03)
+
+* Enhancements
+  * Respect precision for interval, time, timestamp, and timestamptz
+  * Remove restriction on year 9999 on datetime columns
+  * Support decoding and encoding Elixir's v1.17 Duration as interval
+  * Allow starting one stream after the other in replication
+
+* Bug fixes
+  * Return `{:stop, state}` from `gen_statem` connection callback
+
 ## v0.18.0 (2024-05-18)
 
 * Deprecations
@@ -10,6 +44,9 @@
   * Allow ReplicationConnection callbacks to trigger disconnect
   * Add `:commit_comment` option on transactions for prepending a SQL comment to commit statements
   * Return database messages from `handle_prepare_execute`
+
+* Backwards incompatible changes
+  * Postgrex now sets the SNI headers for SSL authentication by default. If this causes connection issues, you may set `server_name_indication: :disable` in your `:ssl_opts`
 
 ## v0.17.5 (2024-03-01)
 

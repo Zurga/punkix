@@ -163,6 +163,8 @@ defmodule Boundary.Checker do
         # of the impl, they may belong to different boundaries
         not reference_to_implemented_protocol?(view, reference),
         from_boundary = Boundary.for_module(view, reference.from),
+        from_boundary != nil,
+        from_boundary.check.aliases or reference.type != :alias_reference,
         to_boundaries = to_boundaries(view, from_boundary, reference),
         {type, to_boundary_name} <- [reference_error(view, reference, from_boundary, to_boundaries)] do
       {:invalid_reference,
@@ -220,9 +222,6 @@ defmodule Boundary.Checker do
   defp reference_error(view, reference, from_boundary, to_boundary) do
     cond do
       not to_boundary.check.in ->
-        nil
-
-      reference.type == :alias_reference and not from_boundary.check.aliases ->
         nil
 
       to_boundary == from_boundary ->
@@ -316,8 +315,14 @@ defmodule Boundary.Checker do
   defp compile_time_reference?(%{from: module, from_function: {name, arity}}), do: macro_exported?(module, name, arity)
   defp compile_time_reference?(_), do: false
 
-  defp cross_app_ref?(view, reference),
-    do: Boundary.app(view, reference.from) != Boundary.app(view, reference.to)
+  defp cross_app_ref?(view, reference) do
+    to_app = Boundary.app(view, reference.to)
+
+    # to_app may be nil if no module is defined with the given alias
+    # such call is treated as an in-app call
+    to_app != nil and
+      to_app != Boundary.app(view, reference.from)
+  end
 
   defp exported?(view, boundary, module) do
     boundary.implicit? or module == boundary.name or

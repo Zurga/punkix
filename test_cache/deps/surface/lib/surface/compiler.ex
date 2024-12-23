@@ -43,7 +43,7 @@ defmodule Surface.Compiler do
     Surface.Directive.For
   ]
 
-  @valid_slot_props [:root, "for", "name", "index", "generator_value", ":args", "context_put"]
+  @valid_slot_props [:root, "generator_value", "context_put"]
 
   @directive_prefixes [":", "s-"]
 
@@ -332,12 +332,14 @@ defmodule Surface.Compiler do
   defp node_type(_), do: :text
 
   defp process_directives(%{directives: directives} = node) when is_list(directives) do
+    node_is_tag? = match?(%AST.Tag{}, node)
+
     {directives, _} =
       for %AST.Directive{module: mod, meta: meta} = directive <- directives,
           function_exported?(mod, :process, 2),
           reduce: {node, MapSet.new()} do
         {node, processed_directives} ->
-          if match_ast_node?(node) and MapSet.member?(processed_directives, directive.name) do
+          if node_is_tag? and MapSet.member?(processed_directives, directive.name) do
             message = """
             the directive `:#{format_directive_name(directive.name)}` has been passed multiple times. Considering only the last value.
 
@@ -359,10 +361,6 @@ defmodule Surface.Compiler do
     if to_string(directive_name) in Surface.Directive.Events.names(),
       do: "on-#{directive_name}",
       else: directive_name
-  end
-
-  defp match_ast_node?(node) do
-    match?(%AST.Tag{}, node) or match?(%AST.If{}, node) or match?(%AST.For{}, node)
   end
 
   defp convert_node_to_ast(:comment, {_, _comment, %{visibility: :private}}, _), do: :ignore
@@ -566,42 +564,27 @@ defmodule Surface.Compiler do
         ]
       end
 
-    # TODO: Validate attributes with custom messages
-
     has_root? = has_attribute?(attributes, :root)
-    has_for? = !has_root? and has_attribute?(attributes, "for")
+    name = extract_name_from_root(attributes)
 
     name =
-      extract_name_from_root(attributes) || attribute_value_as_atom(attributes, "name", nil) ||
-        extract_name_from_for(attributes)
-
-    name =
-      if !name and !has_for? and !has_root? do
+      if !name and !has_root? do
         :default
       else
         name
       end
 
-    default_syntax? = not has_attribute?(attributes, "name") && not has_for? && not has_root?
+    default_syntax? = not has_root?
 
     render_slot_args =
       if has_root? do
         attribute_value_as_ast(attributes, :root, :render_slot, %Surface.AST.Literal{value: nil}, compile_meta)
       end
 
-    for_ast =
-      cond do
-        has_for? ->
-          attribute_value_as_ast(attributes, "for", :any, %Surface.AST.Literal{value: nil}, compile_meta)
-
-        has_root? ->
-          render_slot_args.slot
-
-        true ->
-          nil
+    slot_entry_ast =
+      if has_root? do
+        render_slot_args.slot
       end
-
-    index = attribute_value_as_ast(attributes, "index", %Surface.AST.Literal{value: 0}, compile_meta)
 
     {:ok, directives, attrs} = collect_directives(@slot_directive_handlers, attributes, meta)
     validate_slot_attrs!(attrs, meta.caller)
@@ -611,31 +594,18 @@ defmodule Surface.Compiler do
         slot.name == name || (Keyword.has_key?(slot.opts, :as) and slot.opts[:as] == name)
       end)
 
-    if has_attribute?(attributes, ":args") do
-      Surface.IOHelper.warn(
-        "directive :args has been deprecated. Use the root prop instead.",
-        meta.caller,
-        meta.line
-      )
-    end
-
     arg =
-      cond do
-        has_root? ->
-          render_slot_args.argument
-
-        has_attribute?(attributes, ":args") ->
-          attribute_value_as_ast(attributes, ":args", :let_arg, %Surface.AST.Literal{value: nil}, compile_meta)
-
-        true ->
-          nil
+      if has_root? do
+        render_slot_args.argument
+      else
+        nil
       end
 
     if slot do
       maybe_warn_required_slot_with_default_value(
         slot,
         children,
-        for_ast,
+        slot_entry_ast,
         meta
       )
 
@@ -681,8 +651,7 @@ defmodule Surface.Compiler do
      %AST.Slot{
        name: name,
        as: if(slot, do: slot[:opts][:as]),
-       index: index,
-       for: for_ast,
+       for: slot_entry_ast,
        directives: directives,
        default: to_ast(children, compile_meta),
        arg: arg,
@@ -975,14 +944,6 @@ defmodule Surface.Compiler do
     node
   end
 
-  defp attribute_value_as_atom(attributes, attr_name, default) do
-    Enum.find_value(attributes, default, fn {name, value, _} ->
-      if name == attr_name do
-        String.to_atom(value)
-      end
-    end)
-  end
-
   defp attribute_raw_value(attributes, attr_name, default) do
     Enum.find_value(attributes, default, fn
       {^attr_name, {:attribute_expr, expr, _}, _} ->
@@ -991,20 +952,6 @@ defmodule Surface.Compiler do
       _ ->
         nil
     end)
-  end
-
-  defp extract_name_from_for(attributes) do
-    with value when is_binary(value) <- attribute_raw_value(attributes, "for", nil),
-         {:ok, {:@, _, [{assign_name, _, _}]}} when is_atom(assign_name) <- Code.string_to_quoted(value) do
-      assign_name
-    else
-      {:error, _} ->
-        # TODO: raise
-        nil
-
-      _ ->
-        nil
-    end
   end
 
   defp extract_name_from_root(attributes) do
@@ -1538,67 +1485,6 @@ defmodule Surface.Compiler do
     Enum.each(attrs, &validate_slot_attr!(&1, caller))
   end
 
-  defp validate_slot_attr!({"for", value, _meta}, caller) do
-    {:attribute_expr, expr, expr_meta} = value
-
-    message = """
-    property `for` has been deprecated. Please use the root prop instead. Examples:
-
-    Rendering the slot:
-
-      <#slot {#{expr}}/>
-
-    Iterating over the slot items:
-
-      {#for item <- #{expr}}
-        <#slot {item}/>
-      {/for}
-    """
-
-    Surface.IOHelper.warn(message, caller, expr_meta.line)
-    :ok
-  end
-
-  defp validate_slot_attr!({"name", value, meta}, caller) do
-    message = """
-    properties `name` and `index` have been deprecated. Please use root prop instead. Examples:
-
-    Rendering the slot:
-
-      <#slot {@#{value}}/>
-
-    Iterating over the slot items:
-
-      {#for item <- @#{value}}
-        <#slot {item}/>
-      {/for}
-    """
-
-    Surface.IOHelper.warn(message, caller, meta.line)
-
-    :ok
-  end
-
-  defp validate_slot_attr!({"index", _value, meta}, caller) do
-    message = """
-    properties `name` and `index` have been deprecated. Please use root prop instead. Examples:
-
-    Rendering the slot:
-
-      <#slot {@slot_name}/>
-
-    Iterating over the slot items:
-
-      {#for item <- @slot_name}
-        <#slot {item}/>
-      {/for}
-    """
-
-    Surface.IOHelper.warn(message, caller, meta.line)
-
-    :ok
-  end
-
   defp validate_slot_attr!({name, _, _meta}, _caller) when name in @valid_slot_props do
     :ok
   end
@@ -1613,7 +1499,7 @@ defmodule Surface.Compiler do
     message = """
     invalid #{type} `#{name}` for <#slot>.
 
-    Slots only accept the root prop, `for`, `name`, `index`, `generator_value`, `:args`, `:if` and `:for`.
+    Slots only accept the root prop, `generator_value`, `:if` and `:for`.
     """
 
     IOHelper.compile_error(message, file, line)

@@ -67,6 +67,10 @@ defmodule Postgrex do
   @max_rows 500
   @timeout 15_000
 
+  @comment_validation_error Postgrex.Error.exception(
+                              message: "`:comment` option cannot contain sequence \"*/\""
+                            )
+
   ### PUBLIC API ###
 
   @doc """
@@ -169,6 +173,11 @@ defmodule Postgrex do
       This is useful when using Postgrex against systems that do not support composite types
       (default: `false`).
 
+    * `:comment` - When a binary string is provided, appends the given text as a comment to the
+      query.  This can be useful for tracing purposes, such as when using SQLCommenter or similar
+      tools to track query performance and behavior. Note that including a comment disables query
+      caching since each query with a different comment is treated as unique (default: `nil`).
+
   `Postgrex` uses the `DBConnection` library and supports all `DBConnection`
   options like `:idle`, `:after_connect` etc. See `DBConnection.start_link/2`
   for more information.
@@ -246,7 +255,7 @@ defmodule Postgrex do
       ]
 
   """
-  @spec start_link([start_option]) :: {:ok, pid} | {:error, Postgrex.Error.t() | term}
+  @spec start_link([start_option]) :: GenServer.on_start()
   def start_link(opts) do
     opts = Postgrex.Utils.default_opts(opts)
     DBConnection.start_link(Postgrex.Protocol, opts)
@@ -288,8 +297,10 @@ defmodule Postgrex do
   """
   @spec query(conn, iodata, list, [execute_option]) ::
           {:ok, Postgrex.Result.t()} | {:error, Exception.t()}
-  def query(conn, statement, params, opts \\ []) do
-    if name = Keyword.get(opts, :cache_statement) do
+  def query(conn, statement, params \\ [], opts \\ []) when is_list(params) and is_list(opts) do
+    name = Keyword.get(opts, :cache_statement)
+
+    if comment_not_present!(opts) && name do
       query = %Query{name: name, cache: :statement, statement: IO.iodata_to_binary(statement)}
 
       case DBConnection.prepare_execute(conn, query, params, opts) do
@@ -319,12 +330,26 @@ defmodule Postgrex do
     end
   end
 
+  defp comment_not_present!(opts) do
+    case Keyword.get(opts, :comment) do
+      nil ->
+        true
+
+      comment when is_binary(comment) ->
+        if String.contains?(comment, "*/") do
+          raise @comment_validation_error
+        else
+          false
+        end
+    end
+  end
+
   @doc """
   Runs an (extended) query and returns the result or raises `Postgrex.Error` if
   there was an error. See `query/3`.
   """
   @spec query!(conn, iodata, list, [execute_option]) :: Postgrex.Result.t()
-  def query!(conn, statement, params, opts \\ []) do
+  def query!(conn, statement, params \\ [], opts \\ []) when is_list(params) and is_list(opts) do
     case query(conn, statement, params, opts) do
       {:ok, result} -> result
       {:error, err} -> raise err
@@ -363,7 +388,7 @@ defmodule Postgrex do
           {:ok, Postgrex.Query.t()} | {:error, Exception.t()}
   def prepare(conn, name, statement, opts \\ []) do
     query = %Query{name: name, statement: statement}
-    opts = Keyword.put(opts, :postgrex_prepare, true)
+    opts = Keyword.put(opts, :postgrex_prepare, comment_not_present!(opts))
     DBConnection.prepare(conn, query, opts)
   end
 
@@ -373,7 +398,7 @@ defmodule Postgrex do
   """
   @spec prepare!(conn, iodata, iodata, [option]) :: Postgrex.Query.t()
   def prepare!(conn, name, statement, opts \\ []) do
-    opts = Keyword.put(opts, :postgrex_prepare, true)
+    opts = Keyword.put(opts, :postgrex_prepare, comment_not_present!(opts))
     DBConnection.prepare!(conn, %Query{name: name, statement: statement}, opts)
   end
 
@@ -409,8 +434,9 @@ defmodule Postgrex do
   """
   @spec prepare_execute(conn, iodata, iodata, list, [execute_option]) ::
           {:ok, Postgrex.Query.t(), Postgrex.Result.t()} | {:error, Postgrex.Error.t()}
-  def prepare_execute(conn, name, statement, params, opts \\ []) do
+  def prepare_execute(conn, name, statement, params, opts \\ []) when is_list(params) do
     query = %Query{name: name, statement: statement}
+    opts = Keyword.put(opts, :postgrex_prepare, comment_not_present!(opts))
     DBConnection.prepare_execute(conn, query, params, opts)
   end
 
@@ -420,8 +446,9 @@ defmodule Postgrex do
   """
   @spec prepare_execute!(conn, iodata, iodata, list, [execute_option]) ::
           {Postgrex.Query.t(), Postgrex.Result.t()}
-  def prepare_execute!(conn, name, statement, params, opts \\ []) do
+  def prepare_execute!(conn, name, statement, params, opts \\ []) when is_list(params) do
     query = %Query{name: name, statement: statement}
+    opts = Keyword.put(opts, :postgrex_prepare, comment_not_present!(opts))
     DBConnection.prepare_execute!(conn, query, params, opts)
   end
 
@@ -455,7 +482,7 @@ defmodule Postgrex do
   """
   @spec execute(conn, Postgrex.Query.t(), list, [execute_option]) ::
           {:ok, Postgrex.Query.t(), Postgrex.Result.t()} | {:error, Postgrex.Error.t()}
-  def execute(conn, query, params, opts \\ []) do
+  def execute(conn, query, params, opts \\ []) when is_list(params) do
     DBConnection.execute(conn, query, params, opts)
   end
 
@@ -465,7 +492,7 @@ defmodule Postgrex do
   """
   @spec execute!(conn, Postgrex.Query.t(), list, [execute_option]) ::
           Postgrex.Result.t()
-  def execute!(conn, query, params, opts \\ []) do
+  def execute!(conn, query, params, opts \\ []) when is_list(params) do
     DBConnection.execute!(conn, query, params, opts)
   end
 

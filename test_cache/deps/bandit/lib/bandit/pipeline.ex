@@ -46,12 +46,15 @@ defmodule Bandit.Pipeline do
             {:upgrade, adapter.transport, protocol, opts}
         end
       rescue
-        error -> handle_error(error, __STACKTRACE__, transport, span, opts)
+        exception -> handle_error(:error, exception, __STACKTRACE__, transport, span, opts, conn)
+      catch
+        :throw, value ->
+          handle_error(:throw, value, __STACKTRACE__, transport, span, opts, conn)
       end
     rescue
-      error ->
+      exception ->
         span = Bandit.Telemetry.start_span(:request, measurements, metadata)
-        handle_error(error, __STACKTRACE__, transport, span, opts)
+        handle_error(:error, exception, __STACKTRACE__, transport, span, opts)
     end
   end
 
@@ -194,30 +197,26 @@ defmodule Bandit.Pipeline do
   end
 
   @spec handle_error(
-          Exception.t(),
+          :error | :throw,
+          Exception.t() | term(),
           Exception.stacktrace(),
           Bandit.HTTPTransport.t(),
           Bandit.Telemetry.t(),
-          map()
+          map(),
+          Plug.Conn.t() | nil
         ) :: {:ok, Bandit.HTTPTransport.t()} | {:error, term()}
-  defp handle_error(%type{} = error, stacktrace, transport, span, opts)
+  defp handle_error(kind, error, stacktrace, transport, span, opts, conn \\ nil)
+
+  defp handle_error(:error, %type{} = error, stacktrace, transport, span, opts, _conn)
        when type in [
               Bandit.HTTPError,
+              Bandit.TransportError,
               Bandit.HTTP2.Errors.StreamError,
               Bandit.HTTP2.Errors.ConnectionError
             ] do
     Bandit.Telemetry.stop_span(span, %{}, %{error: error.message})
 
-    case Keyword.get(opts.http, :log_protocol_errors, :short) do
-      :short ->
-        Logger.error(Exception.format_banner(:error, error, stacktrace), domain: [:bandit])
-
-      :verbose ->
-        Logger.error(Exception.format(:error, error, stacktrace), domain: [:bandit])
-
-      false ->
-        :ok
-    end
+    maybe_log_error(error, stacktrace, opts.http)
 
     # We want to do this at the end of the function, since the HTTP2 stack may kill this process
     # in the course of handling a ConnectionError
@@ -225,17 +224,44 @@ defmodule Bandit.Pipeline do
     {:error, error}
   end
 
-  defp handle_error(error, stacktrace, transport, span, opts) do
-    Bandit.Telemetry.span_exception(span, :exit, error, stacktrace)
-    status = error |> Plug.Exception.status() |> Plug.Conn.Status.code()
+  defp handle_error(kind, reason, stacktrace, transport, span, opts, conn) do
+    Bandit.Telemetry.span_exception(span, kind, reason, stacktrace)
+    status = reason |> Plug.Exception.status() |> Plug.Conn.Status.code()
 
     if status in Keyword.get(opts.http, :log_exceptions_with_status_codes, 500..599) do
-      Logger.error(Exception.format(:error, error, stacktrace), domain: [:bandit])
-      Bandit.HTTPTransport.send_on_error(transport, error)
-      {:error, error}
+      Logger.error(
+        Exception.format(kind, reason, stacktrace),
+        domain: [:bandit],
+        crash_reason: crash_reason(kind, reason, stacktrace),
+        conn: conn
+      )
+
+      Bandit.HTTPTransport.send_on_error(transport, reason)
+      {:error, reason}
     else
-      Bandit.HTTPTransport.send_on_error(transport, error)
+      Bandit.HTTPTransport.send_on_error(transport, reason)
       {:ok, transport}
     end
   end
+
+  def maybe_log_error(%Bandit.TransportError{error: :closed} = error, stacktrace, http_opts) do
+    do_maybe_log_error(error, stacktrace, Keyword.get(http_opts, :log_client_closures, false))
+  end
+
+  def maybe_log_error(error, stacktrace, http_opts) do
+    do_maybe_log_error(error, stacktrace, Keyword.get(http_opts, :log_protocol_errors, :short))
+  end
+
+  defp do_maybe_log_error(error, stacktrace, :short) do
+    Logger.error(Exception.format_banner(:error, error, stacktrace), domain: [:bandit])
+  end
+
+  defp do_maybe_log_error(error, stacktrace, :verbose) do
+    Logger.error(Exception.format(:error, error, stacktrace), domain: [:bandit])
+  end
+
+  defp do_maybe_log_error(_error, _stacktrace, false), do: :ok
+
+  defp crash_reason(:throw, reason, stacktrace), do: {{:nocatch, reason}, stacktrace}
+  defp crash_reason(_, reason, stacktrace), do: {reason, stacktrace}
 end

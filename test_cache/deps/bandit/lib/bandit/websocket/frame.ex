@@ -3,6 +3,8 @@ defmodule Bandit.WebSocket.Frame do
 
   alias Bandit.WebSocket.Frame
 
+  @behaviour Bandit.Extractor
+
   @typedoc "Indicates an opcode"
   @type opcode ::
           (binary :: 0x2)
@@ -21,50 +23,83 @@ defmodule Bandit.WebSocket.Frame do
           | Frame.Ping.t()
           | Frame.Pong.t()
 
-  @spec deserialize(binary(), non_neg_integer()) ::
-          {{:ok, frame()}, iodata()}
-          | {{:more, binary()}, <<>>}
-          | {{:error, term()}, iodata()}
-          | nil
-  def deserialize(
-        <<fin::1, compressed::1, rsv::2, opcode::4, 1::1, 127::7, length::64, mask::32,
-          payload::binary-size(length), rest::binary>>,
+  @impl Bandit.Extractor
+  @spec header_and_payload_length(binary(), non_neg_integer()) ::
+          {:ok, {header_length :: integer(), payload_length :: integer()}}
+          | {:error, :max_frame_size_exceeded | :client_frame_without_mask}
+          | :more
+  def header_and_payload_length(
+        <<_fin::1, _compressed::1, _rsv::2, _opcode::4, 1::1, 127::7, length::64, _mask::32,
+          _rest::binary>>,
+        max_frame_size
+      ) do
+    validate_max_frame_size(14, length, max_frame_size)
+  end
+
+  def header_and_payload_length(
+        <<_fin::1, _compressed::1, _rsv::2, _opcode::4, 1::1, 126::7, length::16, _mask::32,
+          _rest::binary>>,
+        max_frame_size
+      ) do
+    validate_max_frame_size(8, length, max_frame_size)
+  end
+
+  def header_and_payload_length(
+        <<_fin::1, _compressed::1, _rsv::2, _opcode::4, 1::1, length::7, _mask::32,
+          _rest::binary>>,
         max_frame_size
       )
-      when max_frame_size == 0 or length <= max_frame_size do
-    to_frame(fin, compressed, rsv, opcode, mask, payload, rest)
+      when length <= 125 do
+    validate_max_frame_size(6, length, max_frame_size)
+  end
+
+  def header_and_payload_length(
+        <<_fin::1, _compressed::1, _rsv::2, _opcode::4, 0::1, _rest::binary>>,
+        _max_frame_size
+      ) do
+    {:error, :client_frame_without_mask}
+  end
+
+  def header_and_payload_length(_msg, _max_frame_size) do
+    :more
+  end
+
+  defp validate_max_frame_size(header_length, payload_length, max_frame_size) do
+    if max_frame_size != 0 and header_length + payload_length > max_frame_size do
+      {:error, :max_frame_size_exceeded}
+    else
+      {:ok, {header_length, payload_length}}
+    end
+  end
+
+  @impl Bandit.Extractor
+  @spec deserialize(binary(), module()) :: {:ok, frame()} | {:error, term()}
+  def deserialize(
+        <<fin::1, compressed::1, rsv::2, opcode::4, 1::1, 127::7, length::64, mask::32,
+          payload::binary-size(length)>>,
+        primitive_ops_module
+      ) do
+    to_frame(fin, compressed, rsv, opcode, mask, payload, primitive_ops_module)
   end
 
   def deserialize(
         <<fin::1, compressed::1, rsv::2, opcode::4, 1::1, 126::7, length::16, mask::32,
-          payload::binary-size(length), rest::binary>>,
-        max_frame_size
-      )
-      when max_frame_size == 0 or length <= max_frame_size do
-    to_frame(fin, compressed, rsv, opcode, mask, payload, rest)
+          payload::binary-size(length)>>,
+        primitive_ops_module
+      ) do
+    to_frame(fin, compressed, rsv, opcode, mask, payload, primitive_ops_module)
   end
 
   def deserialize(
         <<fin::1, compressed::1, rsv::2, opcode::4, 1::1, length::7, mask::32,
-          payload::binary-size(length), rest::binary>>,
-        max_frame_size
-      )
-      when length <= 125 and (max_frame_size == 0 or length <= max_frame_size) do
-    to_frame(fin, compressed, rsv, opcode, mask, payload, rest)
+          payload::binary-size(length)>>,
+        primitive_ops_module
+      ) do
+    to_frame(fin, compressed, rsv, opcode, mask, payload, primitive_ops_module)
   end
 
-  # nil is used to indicate for Stream.unfold/2 that the frame deserialization is finished
-  def deserialize(<<>>, _max_frame_size) do
-    nil
-  end
-
-  def deserialize(msg, max_frame_size)
-      when max_frame_size != 0 and byte_size(msg) > max_frame_size do
-    {{:error, :max_frame_size_exceeded}, msg}
-  end
-
-  def deserialize(msg, _max_frame_size) do
-    {{:more, msg}, <<>>}
+  def deserialize(_msg, _primitive_ops_module) do
+    {:error, :deserialization_failed}
   end
 
   def recv_metrics(%frame_type{} = frame) do
@@ -123,14 +158,15 @@ defmodule Bandit.WebSocket.Frame do
     end
   end
 
-  defp to_frame(_fin, _compressed, rsv, _opcode, _mask, _payload, rest) when rsv != 0x0 do
-    {{:error, "Received unsupported RSV flags #{rsv}"}, rest}
+  defp to_frame(_fin, _compressed, rsv, _opcode, _mask, _payload, _primitive_ops_module)
+       when rsv != 0x0 do
+    {:error, "Received unsupported RSV flags #{rsv}"}
   end
 
-  defp to_frame(fin, compressed, 0x0, opcode, mask, payload, rest) do
+  defp to_frame(fin, compressed, 0x0, opcode, mask, payload, primitive_ops_module) do
     fin = fin == 0x1
     compressed = compressed == 0x1
-    unmasked_payload = mask(payload, mask)
+    unmasked_payload = primitive_ops_module.ws_mask(payload, mask)
 
     opcode
     |> case do
@@ -141,10 +177,6 @@ defmodule Bandit.WebSocket.Frame do
       0x9 -> Frame.Ping.deserialize(fin, compressed, unmasked_payload)
       0xA -> Frame.Pong.deserialize(fin, compressed, unmasked_payload)
       unknown -> {:error, "unknown opcode #{unknown}"}
-    end
-    |> case do
-      {:ok, frame} -> {{:ok, frame}, rest}
-      {:error, reason} -> {{:error, reason}, rest}
     end
   end
 
@@ -170,26 +202,4 @@ defmodule Bandit.WebSocket.Frame do
   defp mask_and_length(length) when length <= 125, do: <<0::1, length::7>>
   defp mask_and_length(length) when length <= 65_535, do: <<0::1, 126::7, length::16>>
   defp mask_and_length(length), do: <<0::1, 127::7, length::64>>
-
-  # Note that masking is an involution, so we don't need a separate unmask function
-  @spec mask(binary(), integer()) :: binary()
-  def mask(payload, mask)
-      when is_binary(payload) and is_integer(mask) and mask >= 0x00000000 and mask <= 0xFFFFFFFF do
-    mask(<<>>, payload, mask)
-  end
-
-  defp mask(acc, <<h::32, rest::binary>>, mask) do
-    mask(<<acc::binary, (<<Bitwise.bxor(h, mask)::32>>)>>, rest, mask)
-  end
-
-  for size <- [24, 16, 8] do
-    defp mask(acc, <<h::unquote(size)>>, mask) do
-      <<mask::unquote(size), _::binary>> = <<mask::32>>
-      <<acc::binary, (<<Bitwise.bxor(h, mask)::unquote(size)>>)>>
-    end
-  end
-
-  defp mask(acc, <<>>, _mask) do
-    acc
-  end
 end

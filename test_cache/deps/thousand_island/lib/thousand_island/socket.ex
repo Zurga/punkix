@@ -16,7 +16,12 @@ defmodule ThousandIsland.Socket do
           span: ThousandIsland.Telemetry.t()
         }
 
-  @doc false
+  @doc """
+  Creates a new socket struct based on the passed parameters.
+
+  This is normally called internally by `ThousandIsland.Handler` and does not need to be
+  called by implementations which are based on `ThousandIsland.Handler`
+  """
   @spec new(
           ThousandIsland.Transport.socket(),
           ThousandIsland.ServerConfig.t(),
@@ -41,8 +46,8 @@ defmodule ThousandIsland.Socket do
   @spec handshake(t()) :: ThousandIsland.Transport.on_handshake()
   def handshake(%__MODULE__{} = socket) do
     case socket.transport_module.handshake(socket.socket) do
-      {:ok, _} ->
-        {:ok, socket}
+      {:ok, inner_socket} ->
+        {:ok, %{socket | socket: inner_socket}}
 
       {:error, reason} = err ->
         ThousandIsland.Telemetry.stop_span(socket.span, %{}, %{error: reason})

@@ -10,7 +10,7 @@ defmodule Phoenix.LiveViewTest do
 
       def greet(assigns) do
         ~H"""
-        <div>Hello, <%= @name %>!</div>
+        <div>Hello, {@name}!</div>
         """
       end
 
@@ -532,8 +532,8 @@ defmodule Phoenix.LiveViewTest do
   If the element does not have a `phx-click` attribute but it is
   a link (the `<a>` tag), the link will be followed accordingly:
 
-    * if the link is a `live_patch`, the current view will be patched
-    * if the link is a `live_redirect`, this function will return
+    * if the link is a `patch`, the current view will be patched
+    * if the link is a `navigate`, this function will return
       `{:error, {:live_redirect, %{to: url}}}`, which can be followed
       with `follow_redirect/2`
     * if the link is a regular link, this function will return
@@ -962,7 +962,7 @@ defmodule Phoenix.LiveViewTest do
       end
     end)
 
-    unless Process.cancel_timer(timeout_ref) do
+    if !Process.cancel_timer(timeout_ref) do
       receive do
         {^timeout_ref, :timeout} -> :noop
       after
@@ -974,7 +974,7 @@ defmodule Phoenix.LiveViewTest do
   end
 
   @doc """
-  Simulates a `live_patch` to the given `path` and returns the rendered result.
+  Simulates a `push_patch` to the given `path` and returns the rendered result.
   """
   def render_patch(%View{} = view, path) when is_binary(path) do
     call(view, {:render_patch, proxy_topic(view), path})
@@ -1022,6 +1022,9 @@ defmodule Phoenix.LiveViewTest do
     call(element, {:render_element, :has_element?, element})
   end
 
+  defguardp is_text_filter(text_filter)
+            when is_binary(text_filter) or is_struct(text_filter, Regex) or is_nil(text_filter)
+
   @doc """
   Checks if the given `selector` with `text_filter` is on `view`.
 
@@ -1032,7 +1035,8 @@ defmodule Phoenix.LiveViewTest do
       assert has_element?(view, "#some-element")
 
   """
-  def has_element?(%View{} = view, selector, text_filter \\ nil) do
+  def has_element?(%View{} = view, selector, text_filter \\ nil)
+      when is_binary(selector) and is_text_filter(text_filter) do
     has_element?(element(view, selector, text_filter))
   end
 
@@ -1089,7 +1093,7 @@ defmodule Phoenix.LiveViewTest do
 
   defp call(view_or_element, tuple) do
     try do
-      GenServer.call(proxy_pid(view_or_element), tuple, 30_000)
+      GenServer.call(proxy_pid(view_or_element), tuple, :infinity)
     catch
       :exit, {{:shutdown, {kind, opts}}, _} when kind in [:redirect, :live_redirect] ->
         {:error, {kind, opts}}
@@ -1136,7 +1140,8 @@ defmodule Phoenix.LiveViewTest do
              |> element(~s{[href="/foo"][id="foo.bar.baz"]})
              |> render() =~ "Increment</a>"
   """
-  def element(%View{proxy: proxy}, selector, text_filter \\ nil) when is_binary(selector) do
+  def element(%View{proxy: proxy}, selector, text_filter \\ nil)
+      when is_binary(selector) and is_text_filter(text_filter) do
     %Element{proxy: proxy, selector: selector, text_filter: text_filter}
   end
 
@@ -1609,6 +1614,41 @@ defmodule Phoenix.LiveViewTest do
   end
 
   @doc """
+  Refutes an event will be pushed within timeout.
+
+  The default `timeout` is [ExUnit](https://hexdocs.pm/ex_unit/ExUnit.html#configure/1)'s
+  `refute_receive_timeout` (100 ms).
+
+  ## Examples
+
+      refute_push_event view, "scores", %{points: _, user: "josé"}
+  """
+  defmacro refute_push_event(
+             view,
+             event,
+             payload,
+             timeout \\ Application.fetch_env!(:ex_unit, :refute_receive_timeout)
+           ) do
+    quote do
+      %{proxy: {ref, _topic, _}} = unquote(view)
+
+      receive do
+        {^ref, {:push_event, unquote(event), unquote(payload) = data}} ->
+          flunk("""
+          Unexpectedly received event "#{unquote(event)}"
+
+          Payload:
+
+          #{inspect(data, pretty: true)}
+          """)
+      after
+        unquote(timeout) ->
+          false
+      end
+    end
+  end
+
+  @doc """
   Asserts a hook reply was returned from a `handle_event` callback.
 
   The default `timeout` is [ExUnit](https://hexdocs.pm/ex_unit/ExUnit.html#configure/1)'s
@@ -1714,7 +1754,7 @@ defmodule Phoenix.LiveViewTest do
 
   When attempting to navigate from a LiveView of a different
   `live_session`, an error redirect condition is returned indicating
-  a failed `live_redirect` from the client.
+  a failed `push_navigate` from the client.
 
   ## Examples
 
@@ -1738,13 +1778,13 @@ defmodule Phoenix.LiveViewTest do
       end
 
     live_module =
-      case Phoenix.LiveView.Route.live_link_info(root.endpoint, root.router, url) do
+      case Phoenix.LiveView.Route.live_link_info_without_checks(root.endpoint, root.router, url) do
         {:internal, route} ->
           route.view
 
         _ ->
           raise ArgumentError, """
-          attempted to live_redirect to a non-live route at #{inspect(url)}
+          attempted to navigate to a non-live route at #{inspect(url)}
           """
       end
 
@@ -1835,7 +1875,7 @@ defmodule Phoenix.LiveViewTest do
   def __render_trigger_submit__(%Element{} = form, name, required_attr, error_msg) do
     case render_tree(form) do
       {"form", attrs, _child_nodes} ->
-        unless List.keymember?(attrs, required_attr, 0) do
+        if not List.keymember?(attrs, required_attr, 0) do
           raise ArgumentError, error_msg <> ", got: #{inspect(attrs)}"
         end
 
@@ -1863,9 +1903,11 @@ defmodule Phoenix.LiveViewTest do
 
   Given the following LiveView template:
 
-      <%= for entry <- @uploads.avatar.entries do %>
-          <%= entry.name %>: <%= entry.progress %>%
-      <% end %>
+  ```heex
+  <%= for entry <- @uploads.avatar.entries do %>
+    {entry.name}: {entry.progress}%
+  <% end %>
+  ```
 
   Your test case can assert the uploaded content:
 
@@ -1893,11 +1935,11 @@ defmodule Phoenix.LiveViewTest do
   In the case where an upload progress callback issues a navigate, patch, or
   redirect, the following will be returned:
 
-    * if the navigate is a `live_patch`, the current view will be patched
-    * if the navigate is a `live_redirect`, this function will return
+    * for a patch, the current view will be patched
+    * for a navigate, this function will return
       `{:error, {:live_redirect, %{to: url}}}`, which can be followed
       with `follow_redirect/2`
-    * if the navigate is a regular redirect, this function will return
+    * for a regular redirect, this function will return
       `{:error, {:redirect, %{to: url}}}`, which can be followed
       with `follow_redirect/2`
   """
@@ -1908,7 +1950,7 @@ defmodule Phoenix.LiveViewTest do
         %{} -> nil
       end)
 
-    unless entry_name do
+    if !entry_name do
       raise ArgumentError, "no such entry with name #{inspect(entry_name)}"
     end
 

@@ -116,7 +116,8 @@ defmodule Mix.Tasks.Phx.Gen.Auth do
     table: :string,
     merge_with_existing_context: :boolean,
     prefix: :string,
-    live: :boolean
+    live: :boolean,
+    compile: :boolean
   ]
 
   @doc false
@@ -125,23 +126,22 @@ defmodule Mix.Tasks.Phx.Gen.Auth do
       Mix.raise("mix phx.gen.auth can only be run inside an application directory")
     end
 
+    Mix.Phoenix.ensure_live_view_compat!(__MODULE__)
+
     {opts, parsed} = OptionParser.parse!(args, strict: @switches)
     validate_args!(parsed)
     hashing_library = build_hashing_library!(opts)
 
     context_args = OptionParser.to_argv(opts, switches: @switches) ++ parsed
-
     {context, schema} = Gen.Context.build(context_args, __MODULE__)
 
     context = put_live_option(context)
-
     Gen.Context.prompt_for_code_injection(context)
 
-    if Keyword.get(test_opts, :validate_dependencies?, true) do
+    if "--no-compile" not in args do
       # Needed so we can get the ecto adapter and ensure other
       # libraries are loaded.
       Mix.Task.run("compile")
-
       validate_required_dependencies!()
     end
 

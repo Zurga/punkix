@@ -51,7 +51,7 @@ defmodule Phoenix.LiveView.JS do
             phx-key="escape"
           >
             <button class="phx-modal-close" phx-click={hide_modal()}>✖</button>
-            <p><%= @text %></p>
+            <p>{@text}</p>
           </div>
         </div>
         """
@@ -65,33 +65,41 @@ defmodule Phoenix.LiveView.JS do
   with the event, apply loading states to external elements, etc. For example,
   given this basic `phx-click` event:
 
-      <button phx-click="inc">+</button>
+  ```heex
+  <button phx-click="inc">+</button>
+  ```
 
   Imagine you need to target your current component, and apply a loading state
   to the parent container while the client awaits the server acknowledgement:
 
       alias Phoenix.LiveView.JS
 
+      ~H"""
       <button phx-click={JS.push("inc", loading: ".thermo", target: @myself)}>+</button>
+      """
 
   Push commands also compose with all other utilities. For example,
   to add a class when pushing:
 
-      <button phx-click={
-        JS.push("inc", loading: ".thermo", target: @myself)
-        |> JS.add_class("warmer", to: ".thermo")
-      }>+</button>
+  ```heex
+  <button phx-click={
+    JS.push("inc", loading: ".thermo", target: @myself)
+    |> JS.add_class("warmer", to: ".thermo")
+  }>+</button>
+  ```
 
   Any `phx-value-*` attributes will also be included in the payload, their
   values will be overwritten by values given directly to `push/1`. Any
   `phx-target` attribute will also be used, and overwritten.
 
-      <button
-        phx-click={JS.push("inc", value: %{limit: 40})}
-        phx-value-room="bedroom"
-        phx-value-limit="this value will be 40"
-        phx-target={@myself}
-      >+</button>
+  ```heex
+  <button
+    phx-click={JS.push("inc", value: %{limit: 40})}
+    phx-value-room="bedroom"
+    phx-value-limit="this value will be 40"
+    phx-target={@myself}
+  >+</button>
+  ```
 
   ## Custom JS events with `JS.dispatch/1` and `window.addEventListener`
 
@@ -105,20 +113,24 @@ defmodule Phoenix.LiveView.JS do
   a copy-to-clipboard functionality in your application. You can
   add a custom event for it:
 
-      window.addEventListener("my_app:clipcopy", (event) => {
-        if ("clipboard" in navigator) {
-          const text = event.target.textContent;
-          navigator.clipboard.writeText(text);
-        } else {
-          alert("Sorry, your browser does not support clipboard copy.");
-        }
-      });
+  ```javascript
+  window.addEventListener("my_app:clipcopy", (event) => {
+    if ("clipboard" in navigator) {
+      const text = event.target.textContent;
+      navigator.clipboard.writeText(text);
+    } else {
+      alert("Sorry, your browser does not support clipboard copy.");
+    }
+  });
+  ```
 
   Now you can have a button like this:
 
-      <button phx-click={JS.dispatch("my_app:clipcopy", to: "#element-with-text-to-copy")}>
-        Copy content
-      </button>
+  ```heex
+  <button phx-click={JS.dispatch("my_app:clipcopy", to: "#element-with-text-to-copy")}>
+    Copy content
+  </button>
+  ```
 
   The combination of `dispatch/1` with `window.addEventListener` is
   a powerful mechanism to increase the amount of actions you can trigger
@@ -151,7 +163,10 @@ defmodule Phoenix.LiveView.JS do
 
     * `:target` - A selector or component ID to push to. This value will
       overwrite any `phx-target` attribute present on the element.
-    * `:loading` - A selector to apply the phx loading classes to.
+    * `:loading` - A selector to apply the phx loading classes to,
+      such as `phx-click-loading` in case the event was triggered by
+      `phx-click`. The element will be locked from server updates
+      until the push is acknowledged by the server.
     * `:page_loading` - Boolean to trigger the phx:page-loading-start and
       phx:page-loading-stop events for this push. Defaults to `false`.
     * `:value` - A map of values to send to the server. These values will be
@@ -160,9 +175,11 @@ defmodule Phoenix.LiveView.JS do
 
   ## Examples
 
-      <button phx-click={JS.push("clicked")}>click me!</button>
-      <button phx-click={JS.push("clicked", value: %{id: @id})}>click me!</button>
-      <button phx-click={JS.push("clicked", page_loading: true)}>click me!</button>
+  ```heex
+  <button phx-click={JS.push("clicked")}>click me!</button>
+  <button phx-click={JS.push("clicked", value: %{id: @id})}>click me!</button>
+  <button phx-click={JS.push("clicked", page_loading: true)}>click me!</button>
+  ```
   """
   def push(event) when is_binary(event) do
     push(%JS{}, event, [])
@@ -214,9 +231,13 @@ defmodule Phoenix.LiveView.JS do
 
   ## Examples
 
-      window.addEventListener("click", e => console.log("clicked!", e.detail))
+  ```javascript
+  window.addEventListener("click", e => console.log("clicked!", e.detail))
+  ```
 
-      <button phx-click={JS.dispatch("click", to: ".nav")}>Click me!</button>
+  ```heex
+  <button phx-click={JS.dispatch("click", to: ".nav")}>Click me!</button>
+  ```
   """
   def dispatch(js \\ %JS{}, event)
   def dispatch(%JS{} = js, event), do: dispatch(js, event, [])
@@ -285,21 +306,24 @@ defmodule Phoenix.LiveView.JS do
       Defaults to #{@default_transition_time}.
     * `:display` - An optional display value to set when toggling in. Defaults
       to `"block"`.
+    * `:blocking` - A boolean flag to block the UI during the transition. Defaults `true`.
 
   When the toggle is complete on the client, a `phx:show-start` or `phx:hide-start`, and
   `phx:show-end` or `phx:hide-end` event will be dispatched to the toggled elements.
 
   ## Examples
 
-      <div id="item">My Item</div>
+  ```heex
+  <div id="item">My Item</div>
 
-      <button phx-click={JS.toggle(to: "#item")}>
-        toggle item!
-      </button>
+  <button phx-click={JS.toggle(to: "#item")}>
+    toggle item!
+  </button>
 
-      <button phx-click={JS.toggle(to: "#item", in: "fade-in-scale", out: "fade-out-scale")}>
-        toggle fancy!
-      </button>
+  <button phx-click={JS.toggle(to: "#item", in: "fade-in-scale", out: "fade-out-scale")}>
+    toggle fancy!
+  </button>
+  ```
   """
   def toggle(opts \\ [])
   def toggle(%JS{} = js), do: toggle(js, [])
@@ -307,7 +331,7 @@ defmodule Phoenix.LiveView.JS do
 
   @doc "See `toggle/1`."
   def toggle(js, opts) when is_list(opts) do
-    opts = validate_keys(opts, :toggle, [:to, :in, :out, :display, :time])
+    opts = validate_keys(opts, :toggle, [:to, :in, :out, :display, :time, :blocking])
     in_classes = transition_class_names(opts[:in])
     out_classes = transition_class_names(opts[:out])
     time = opts[:time]
@@ -317,12 +341,15 @@ defmodule Phoenix.LiveView.JS do
       display: opts[:display],
       ins: in_classes,
       outs: out_classes,
-      time: time
+      time: time,
+      blocking: opts[:blocking]
     )
   end
 
   @doc """
   Shows elements.
+
+  *Note*: Only targets elements that are hidden, meaning they have a height and/or width equal to zero.
 
   ## Options
 
@@ -334,6 +361,7 @@ defmodule Phoenix.LiveView.JS do
       `{"ease-out duration-300", "opacity-0", "opacity-100"}`
     * `:time` - The time in milliseconds to apply the transition from `:transition`.
       Defaults to #{@default_transition_time}.
+    * `:blocking` - A boolean flag to block the UI during the transition. Defaults `true`.
     * `:display` - An optional display value to set when showing. Defaults to `"block"`.
 
   During the process, the following events will be dispatched to the shown elements:
@@ -343,15 +371,17 @@ defmodule Phoenix.LiveView.JS do
 
   ## Examples
 
-      <div id="item">My Item</div>
+  ```heex
+  <div id="item">My Item</div>
 
-      <button phx-click={JS.show(to: "#item")}>
-        show!
-      </button>
+  <button phx-click={JS.show(to: "#item")}>
+    show!
+  </button>
 
-      <button phx-click={JS.show(to: "#item", transition: "fade-in-scale")}>
-        show fancy!
-      </button>
+  <button phx-click={JS.show(to: "#item", transition: "fade-in-scale")}>
+    show fancy!
+  </button>
+  ```
   """
   def show(opts \\ [])
   def show(%JS{} = js), do: show(js, [])
@@ -359,7 +389,7 @@ defmodule Phoenix.LiveView.JS do
 
   @doc "See `show/1`."
   def show(js, opts) when is_list(opts) do
-    opts = validate_keys(opts, :show, [:to, :transition, :display, :time])
+    opts = validate_keys(opts, :show, [:to, :transition, :display, :time, :blocking])
     transition = transition_class_names(opts[:transition])
     time = opts[:time]
 
@@ -367,12 +397,15 @@ defmodule Phoenix.LiveView.JS do
       to: opts[:to],
       display: opts[:display],
       transition: transition,
-      time: time
+      time: time,
+      blocking: opts[:blocking]
     )
   end
 
   @doc """
   Hides elements.
+
+  *Note*: Only targets elements that are visible, meaning they have a height and/or width greater than zero.
 
   ## Options
 
@@ -384,6 +417,7 @@ defmodule Phoenix.LiveView.JS do
       `{"ease-out duration-300", "opacity-100", "opacity-0"}`
     * `:time` - The time in milliseconds to apply the transition from `:transition`.
       Defaults to #{@default_transition_time}.
+    * `:blocking` - A boolean flag to block the UI during the transition. Defaults `true`.
 
   During the process, the following events will be dispatched to the hidden elements:
 
@@ -392,15 +426,17 @@ defmodule Phoenix.LiveView.JS do
 
   ## Examples
 
-      <div id="item">My Item</div>
+  ```heex
+  <div id="item">My Item</div>
 
-      <button phx-click={JS.hide(to: "#item")}>
-        hide!
-      </button>
+  <button phx-click={JS.hide(to: "#item")}>
+    hide!
+  </button>
 
-      <button phx-click={JS.hide(to: "#item", transition: "fade-out-scale")}>
-        hide fancy!
-      </button>
+  <button phx-click={JS.hide(to: "#item", transition: "fade-out-scale")}>
+    hide fancy!
+  </button>
+  ```
   """
   def hide(opts \\ [])
   def hide(%JS{} = js), do: hide(js, [])
@@ -408,14 +444,15 @@ defmodule Phoenix.LiveView.JS do
 
   @doc "See `hide/1`."
   def hide(js, opts) when is_list(opts) do
-    opts = validate_keys(opts, :hide, [:to, :transition, :time])
+    opts = validate_keys(opts, :hide, [:to, :transition, :time, :blocking])
     transition = transition_class_names(opts[:transition])
     time = opts[:time]
 
     put_op(js, "hide",
       to: opts[:to],
       transition: transition,
-      time: time
+      time: time,
+      blocking: opts[:blocking]
     )
   end
 
@@ -434,13 +471,16 @@ defmodule Phoenix.LiveView.JS do
       `{"ease-out duration-300", "opacity-0", "opacity-100"}`
     * `:time` - The time in milliseconds to apply the transition from `:transition`.
       Defaults to #{@default_transition_time}.
+    * `:blocking` - A boolean flag to block the UI during the transition. Defaults `true`.
 
   ## Examples
 
-      <div id="item">My Item</div>
-      <button phx-click={JS.add_class("highlight underline", to: "#item")}>
-        highlight!
-      </button>
+  ```heex
+  <div id="item">My Item</div>
+  <button phx-click={JS.add_class("highlight underline", to: "#item")}>
+    highlight!
+  </button>
+  ```
   """
   def add_class(names) when is_binary(names), do: add_class(%JS{}, names, [])
 
@@ -455,14 +495,15 @@ defmodule Phoenix.LiveView.JS do
 
   @doc "See `add_class/1`."
   def add_class(%JS{} = js, names, opts) when is_binary(names) and is_list(opts) do
-    opts = validate_keys(opts, :add_class, [:to, :transition, :time])
+    opts = validate_keys(opts, :add_class, [:to, :transition, :time, :blocking])
     time = opts[:time]
 
     put_op(js, "add_class",
       to: opts[:to],
       names: class_names(names),
       transition: transition_class_names(opts[:transition]),
-      time: time
+      time: time,
+      blocking: opts[:blocking]
     )
   end
 
@@ -481,13 +522,16 @@ defmodule Phoenix.LiveView.JS do
       `{"ease-out duration-300", "opacity-0", "opacity-100"}`
     * `:time` - The time in milliseconds to apply the transition from `:transition`.
       Defaults to #{@default_transition_time}.
+    * `:blocking` - A boolean flag to block the UI during the transition. Defaults `true`.
 
   ## Examples
 
-      <div id="item">My Item</div>
-      <button phx-click={JS.toggle_class("active", to: "#item")}>
-        toggle active!
-      </button>
+  ```heex
+  <div id="item">My Item</div>
+  <button phx-click={JS.toggle_class("active", to: "#item")}>
+    toggle active!
+  </button>
+  ```
   """
   def toggle_class(names) when is_binary(names), do: toggle_class(%JS{}, names, [])
 
@@ -500,14 +544,15 @@ defmodule Phoenix.LiveView.JS do
   end
 
   def toggle_class(%JS{} = js, names, opts) when is_binary(names) and is_list(opts) do
-    opts = validate_keys(opts, :toggle_class, [:to, :transition, :time])
+    opts = validate_keys(opts, :toggle_class, [:to, :transition, :time, :blocking])
     time = opts[:time]
 
     put_op(js, "toggle_class",
       to: opts[:to],
       names: class_names(names),
       transition: transition_class_names(opts[:transition]),
-      time: time
+      time: time,
+      blocking: opts[:blocking]
     )
   end
 
@@ -526,13 +571,16 @@ defmodule Phoenix.LiveView.JS do
       `{"ease-out duration-300", "opacity-0", "opacity-100"}`
     * `:time` - The time in milliseconds to apply the transition from `:transition`.
       Defaults to #{@default_transition_time}.
+    * `:blocking` - A boolean flag to block the UI during the transition. Defaults `true`.
 
   ## Examples
 
-      <div id="item">My Item</div>
-      <button phx-click={JS.remove_class("highlight underline", to: "#item")}>
-        remove highlight!
-      </button>
+  ```heex
+  <div id="item">My Item</div>
+  <button phx-click={JS.remove_class("highlight underline", to: "#item")}>
+    remove highlight!
+  </button>
+  ```
   """
   def remove_class(names) when is_binary(names), do: remove_class(%JS{}, names, [])
 
@@ -547,14 +595,15 @@ defmodule Phoenix.LiveView.JS do
 
   @doc "See `remove_class/1`."
   def remove_class(%JS{} = js, names, opts) when is_binary(names) and is_list(opts) do
-    opts = validate_keys(opts, :remove_class, [:to, :transition, :time])
+    opts = validate_keys(opts, :remove_class, [:to, :transition, :time, :blocking])
     time = opts[:time]
 
     put_op(js, "remove_class",
       to: opts[:to],
       names: class_names(names),
       transition: transition_class_names(opts[:transition]),
-      time: time
+      time: time,
+      blocking: opts[:blocking]
     )
   end
 
@@ -575,11 +624,18 @@ defmodule Phoenix.LiveView.JS do
       Defaults to the interacted element.
     * `:time` - The time in milliseconds to apply the transition from `:transition`.
       Defaults to #{@default_transition_time}.
+    * `:blocking` - A boolean flag to block the UI during the transition. Defaults `true`.
 
   ## Examples
 
-      <div id="item">My Item</div>
-      <button phx-click={JS.transition("shake", to: "#item")}>Shake!</button>
+  ```heex
+  <div id="item">My Item</div>
+  <button phx-click={JS.transition("shake", to: "#item")}>Shake!</button>
+
+  <div phx-mounted={JS.transition({"ease-out duration-300", "opacity-0", "opacity-100"}, time: 300)}>
+      duration-300 milliseconds matches time: 300 milliseconds
+  <div>
+  ```
   """
   def transition(transition) when is_binary(transition) or is_tuple(transition) do
     transition(%JS{}, transition, [])
@@ -598,13 +654,14 @@ defmodule Phoenix.LiveView.JS do
   @doc "See `transition/1`."
   def transition(%JS{} = js, transition, opts)
       when (is_binary(transition) or is_tuple(transition)) and is_list(opts) do
-    opts = validate_keys(opts, :transition, [:to, :time])
+    opts = validate_keys(opts, :transition, [:to, :time, :blocking])
     time = opts[:time]
 
     put_op(js, "transition",
       time: time,
       to: opts[:to],
-      transition: transition_class_names(transition)
+      transition: transition_class_names(transition),
+      blocking: opts[:blocking]
     )
   end
 
@@ -620,9 +677,11 @@ defmodule Phoenix.LiveView.JS do
 
   ## Examples
 
-      <button phx-click={JS.set_attribute({"aria-expanded", "true"}, to: "#dropdown")}>
-        show
-      </button>
+  ```heex
+  <button phx-click={JS.set_attribute({"aria-expanded", "true"}, to: "#dropdown")}>
+    show
+  </button>
+  ```
   """
   def set_attribute({attr, val}), do: set_attribute(%JS{}, {attr, val}, [])
 
@@ -650,9 +709,11 @@ defmodule Phoenix.LiveView.JS do
 
   ## Examples
 
-      <button phx-click={JS.remove_attribute("aria-expanded", to: "#dropdown")}>
-        hide
-      </button>
+  ```heex
+  <button phx-click={JS.remove_attribute("aria-expanded", to: "#dropdown")}>
+    hide
+  </button>
+  ```
   """
   def remove_attribute(attr), do: remove_attribute(%JS{}, attr, [])
 
@@ -683,13 +744,15 @@ defmodule Phoenix.LiveView.JS do
 
   ## Examples
 
-      <button phx-click={JS.toggle_attribute({"aria-expanded", "true", "false"}, to: "#dropdown")}>
-        toggle
-      </button>
+  ```heex
+  <button phx-click={JS.toggle_attribute({"aria-expanded", "true", "false"}, to: "#dropdown")}>
+    toggle
+  </button>
 
-      <button phx-click={JS.toggle_attribute({"open", "true"}, to: "#dialog")}>
-        toggle
-      </button>
+  <button phx-click={JS.toggle_attribute({"open", "true"}, to: "#dialog")}>
+    toggle
+  </button>
+  ```
 
   """
   def toggle_attribute({attr, val}), do: toggle_attribute(%JS{}, {attr, val}, [])
@@ -868,8 +931,10 @@ defmodule Phoenix.LiveView.JS do
 
   ## Examples
 
-      <div id="modal" phx-remove={JS.hide("#modal")}>...</div>
-      <button phx-click={JS.exec("phx-remove", to: "#modal")}>close</button>
+  ```heex
+  <div id="modal" phx-remove={JS.hide("#modal")}>...</div>
+  <button phx-click={JS.exec("phx-remove", to: "#modal")}>close</button>
+  ```
   """
   def exec(attr) when is_binary(attr) do
     exec(%JS{}, attr, [])
@@ -889,6 +954,11 @@ defmodule Phoenix.LiveView.JS do
     opts = validate_keys(opts, :exec, [:to])
     put_op(js, "exec", attr: attr, to: opts[:to])
   end
+
+  @doc """
+  Combines two JS commands, appending the second to the first.
+  """
+  def concat(%JS{ops: first}, %JS{ops: second}), do: %JS{ops: first ++ second}
 
   defp put_op(%JS{ops: ops} = js, kind, args) do
     args = drop_nil_values(args)
@@ -917,16 +987,32 @@ defmodule Phoenix.LiveView.JS do
   end
 
   defp validate_keys(opts, kind, allowed_keys) do
-    for key <- Keyword.keys(opts) do
-      if key not in allowed_keys do
+    Enum.map(opts, fn
+      {:to, {scope, _selector}} when scope not in [:closest, :inner, :document] ->
         raise ArgumentError, """
-        invalid option for #{kind}
-        Expected keys to be one of #{inspect(allowed_keys)}, got: #{inspect(key)}
+        invalid scope for :to option in #{kind}.
+        Valid scopes are :closest, :inner, :document. Got: #{inspect(scope)}
         """
-      end
-    end
 
-    opts
+      {:to, {:document, selector}} ->
+        {:to, selector}
+
+      {:to, {scope, selector}} ->
+        {:to, %{scope => selector}}
+
+      {:to, selector} when is_binary(selector) ->
+        {:to, selector}
+
+      {key, val} ->
+        if key not in allowed_keys do
+          raise ArgumentError, """
+          invalid option for #{kind}
+          Expected keys to be one of #{inspect(allowed_keys)}, got: #{inspect(key)}
+          """
+        end
+
+        {key, val}
+    end)
   end
 
   defp put_value(opts) do

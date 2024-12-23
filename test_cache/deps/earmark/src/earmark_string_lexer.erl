@@ -1,4 +1,4 @@
--file("/nix/store/r4qf88cdlzc4w6shq7n6nd0as0qrmapn-erlang-25.3.2.12/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 0).
+-file("/nix/store/p2awlg27zxv1y3ms4h3pfpdnhhbrrdgd-erlang-25.3.2.12/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 0).
 %% The source of this file is part of leex distribution, as such it
 %% has the same Copyright as the other files in the leex
 %% distribution. The Copyright is defined in the accompanying file
@@ -14,7 +14,7 @@
 %% User code. This is placed here to allow extra attributes.
 -file("src/earmark_string_lexer.xrl", 13).
 
--file("/nix/store/r4qf88cdlzc4w6shq7n6nd0as0qrmapn-erlang-25.3.2.12/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 14).
+-file("/nix/store/p2awlg27zxv1y3ms4h3pfpdnhhbrrdgd-erlang-25.3.2.12/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 14).
 
 format_error({illegal,S}) -> ["illegal characters ",io_lib:write_string(S)];
 format_error({user,S}) -> S.
@@ -375,4 +375,4 @@ yyaction_1(TokenChars, TokenLine) ->
 yyaction_2(TokenChars, TokenLine) ->
      { token, { backtix, TokenLine, TokenChars } } .
 
--file("/nix/store/r4qf88cdlzc4w6shq7n6nd0as0qrmapn-erlang-25.3.2.12/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 313).
+-file("/nix/store/p2awlg27zxv1y3ms4h3pfpdnhhbrrdgd-erlang-25.3.2.12/lib/erlang/lib/parsetools-2.4.1/include/leexinc.hrl", 313).

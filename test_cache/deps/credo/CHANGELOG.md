@@ -1,9 +1,26 @@
 # Changelog
 
-## 1.7.7-rc.0
+## 1.7.10
+
+- Maintenance release
+
+## 1.7.9
+
+- `Credo.Check.Refactor.ABCSize` fixed false positive for pin operator (`^`)
+- `Credo.Check.Readability.FunctionNames` fixed false positive for pow operator (`**`)
+- Fixed a bug in `Credo.Code.Parameters` when couting parameters for functions with guards
+
+## 1.7.8
+
+- `Credo.Check.Refactor.Apply` fixed false positive
+- `Credo.Check.Warning.IoInspect` fixed false positive
+- `Credo.Check.Warning.UnsafeToAtom` fixed false positive
+- `Credo.Check.Readability.FunctionNames` fixed false positive
+
+## 1.7.7
 
 - Fix compatibility & compiler warnings with Elixir 1.17
-- `Credo.Check.Design.SkipTestWithoutComment`, `Credo.Check.Refactor.PassAsyncInTestCases` and `Credo.Check.Warning.WrongTestFileExtension` now work for umrella apps
+- `Credo.Check.Design.SkipTestWithoutComment`, `Credo.Check.Refactor.PassAsyncInTestCases` and `Credo.Check.Warning.WrongTestFileExtension` now work for umbrella apps
 
 ## 1.7.6
 

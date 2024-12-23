@@ -3,7 +3,8 @@
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"Floki is a simple HTML parser that enables search for nodes using CSS selectors."},
               {modules,['Elixir.Enumerable.Floki.HTMLTree','Elixir.Floki',
-                        'Elixir.Floki.DeepText','Elixir.Floki.Entities',
+                        'Elixir.Floki.CSSEscape','Elixir.Floki.DeepText',
+                        'Elixir.Floki.Entities',
                         'Elixir.Floki.Entities.Codepoints',
                         'Elixir.Floki.FilterOut','Elixir.Floki.Finder',
                         'Elixir.Floki.FlatText',
@@ -42,4 +43,4 @@
                         'Elixir.String.Chars.Floki.Selector.PseudoClass',
                         floki_mochi_html,floki_selector_lexer]},
               {registered,[]},
-              {vsn,"0.36.2"}]}.
+              {vsn,"0.37.0"}]}.

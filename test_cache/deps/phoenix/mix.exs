@@ -8,7 +8,7 @@ defmodule Phoenix.MixProject do
     end
   end
 
-  @version "1.7.11"
+  @version "1.7.18"
   @scm_url "https://github.com/phoenixframework/phoenix"
 
   # If the elixir requirement is updated, we need to make the installer
@@ -90,9 +90,9 @@ defmodule Phoenix.MixProject do
       {:ex_doc, "~> 0.24", only: :docs},
       {:ecto, "~> 3.0", only: :docs},
       {:ecto_sql, "~> 3.10", only: :docs},
-      {:gettext, "~> 0.20", only: :docs},
+      {:gettext, "~> 0.26", only: :docs},
       {:telemetry_poller, "~> 1.0", only: :docs},
-      {:telemetry_metrics, "~> 0.6", only: :docs},
+      {:telemetry_metrics, "~> 1.0", only: :docs},
       {:makeup_eex, ">= 0.1.1", only: :docs},
       {:makeup_elixir, "~> 0.16", only: :docs},
       {:makeup_diff, "~> 0.1", only: :docs},

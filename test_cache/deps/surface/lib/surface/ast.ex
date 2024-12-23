@@ -93,6 +93,7 @@ defmodule Surface.AST.Meta do
 
   ## Properties
       * `:line` - the line from the source code where the parent was extracted
+      * `:column` - the column from the source code where the parent was extracted
       * `:module` - the component module (e.g. `Surface.Components.LivePatch`)
       * `:node_alias` - the alias used inside the source code (e.g. `LivePatch`)
       * `:file` - the file from which the source was extracted
@@ -332,7 +333,6 @@ defmodule Surface.AST.Slot do
 
   ## Properties
       * `:name` - the slot name
-      * `:index` - the index of the slotable entry assigned to this slot
       * `:for` - the slotable entry assigned for this slot
       * `:default` - a list of AST nodes representing the default content for this slot
       * `:arg` - quoted expression representing the argument for this slot
@@ -341,12 +341,11 @@ defmodule Surface.AST.Slot do
       * `:meta` - compilation meta data
       * `:directives` - directives associated with this slot
   """
-  defstruct [:name, :as, :for, :index, :arg, :generator_value, :context_put, :default, :meta, directives: []]
+  defstruct [:name, :as, :for, :arg, :generator_value, :context_put, :default, :meta, directives: []]
 
   @type t :: %__MODULE__{
           name: binary(),
           as: atom(),
-          index: any(),
           for: any(),
           directives: list(Surface.AST.Directive.t()),
           meta: Surface.AST.Meta.t(),

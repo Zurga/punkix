@@ -79,6 +79,9 @@ defmodule Decimal do
           | :rounded
           | :inexact
 
+  @type compare_result ::
+          :lt | :gt | :eq
+
   @typedoc """
   Rounding algorithm.
 
@@ -303,6 +306,43 @@ defmodule Decimal do
   end
 
   @doc """
+  Compares two numbers numerically using a threshold. If the first number added
+  to the threshold is greater than the second number, and the first number
+  subtracted by the threshold is smaller than the second number, then the two
+  numbers are considered equal.
+
+  ## Examples
+
+      iex> Decimal.compare("1.1", 1, "0.2")
+      :eq
+
+      iex> Decimal.compare("1.2", 1, "0.1")
+      :gt
+
+      iex> Decimal.compare("1.0", "1.2", "0.1")
+      :lt
+  """
+  @spec compare(decimal :: decimal(), decimal :: decimal(), threshold :: decimal()) ::
+          compare_result()
+
+  def compare(_, _, %Decimal{sign: -1}), do: raise(Error, reason: "threshold cannot be negative")
+
+  def compare(%Decimal{} = n1, %Decimal{} = n2, %Decimal{} = threshold) do
+    add_threshold = n1 |> Decimal.add(threshold)
+    sub_threshold = n1 |> Decimal.sub(threshold)
+    case1 = compare(add_threshold, n2)
+    case2 = compare(sub_threshold, n2)
+
+    cond do
+      (case1 == :gt or case1 == :eq) and (case2 == :lt or case2 == :eq) -> :eq
+      case1 == :gt -> :gt
+      case2 == :lt -> :lt
+    end
+  end
+
+  def compare(n1, n2, threshold), do: compare(decimal(n1), decimal(n2), decimal(threshold))
+
+  @doc """
   Compares two numbers numerically. If the first number is greater than the second
   `:gt` is returned, if less than `:lt` is returned, if both numbers are equal
   `:eq` is returned.
@@ -318,7 +358,7 @@ defmodule Decimal do
       :gt
 
   """
-  @spec compare(decimal, decimal) :: :lt | :gt | :eq
+  @spec compare(decimal, decimal) :: compare_result()
   def compare(%Decimal{coef: :inf, sign: sign}, %Decimal{coef: :inf, sign: sign}),
     do: :eq
 
@@ -391,11 +431,11 @@ defmodule Decimal do
     exp + coef_adjustment - 1
   end
 
-  def coef_length(0), do: 1
-  def coef_length(coef), do: coef_length(coef, 0)
+  defp coef_length(0), do: 1
+  defp coef_length(coef), do: coef_length(coef, 0)
 
-  def coef_length(0, length), do: length
-  def coef_length(coef, length), do: coef_length(Kernel.div(coef, 10), length + 1)
+  defp coef_length(0, length), do: length
+  defp coef_length(coef, length), do: coef_length(Kernel.div(coef, 10), length + 1)
 
   defp pad_num(%Decimal{coef: coef}, n) do
     coef * pow10(Kernel.max(n, 0) + 1)
@@ -447,7 +487,30 @@ defmodule Decimal do
   def eq?(num1, num2), do: compare(num1, num2) == :eq
 
   @doc """
-  Compares two numbers numerically and returns `true` if the the first argument
+  It compares the equality of two numbers. If the second number is within
+  the range of first - threshold and first + threshold, it returns true;
+  otherwise, it returns false.
+
+  ## Examples
+
+      iex> Decimal.eq?("1.0", 1, "0")
+      true
+
+      iex> Decimal.eq?("1.2", 1, "0.1")
+      false
+
+      iex> Decimal.eq?("1.2", 1, "0.2")
+      true
+
+      iex> Decimal.eq?(1, -1, "0.0")
+      false
+
+  """
+  @spec eq?(decimal :: decimal(), decimal :: decimal(), thresrold :: decimal()) :: boolean()
+  def eq?(num1, num2, thresrold), do: compare(num1, num2, thresrold) == :eq
+
+  @doc """
+  Compares two numbers numerically and returns `true` if the first argument
   is greater than the second, otherwise `false`. If one the operands is a
   quiet NaN this operation will always return `false`.
 
@@ -467,7 +530,7 @@ defmodule Decimal do
   def gt?(num1, num2), do: compare(num1, num2) == :gt
 
   @doc """
-  Compares two numbers numerically and returns `true` if the the first number is
+  Compares two numbers numerically and returns `true` if the first number is
   less than the second number, otherwise `false`. If one of the operands is a
   quiet NaN this operation will always return `false`.
 
@@ -485,6 +548,74 @@ defmodule Decimal do
   def lt?(%Decimal{coef: :NaN}, _num2), do: false
   def lt?(_num1, %Decimal{coef: :NaN}), do: false
   def lt?(num1, num2), do: compare(num1, num2) == :lt
+
+  @doc """
+  Compares two numbers numerically and returns `true` if
+  the first argument is greater than or equal the second,
+  otherwise `false`.
+
+  If one the operands is a quiet NaN this operation
+  will always return `false`.
+
+  ## Examples
+
+      iex> Decimal.gte?("1.3", "1.3")
+      true
+
+      iex> Decimal.gte?("1.3", "1.2")
+      true
+
+      iex> Decimal.gte?("1.2", "1.3")
+      false
+
+  """
+  doc_since("2.2.0")
+  @spec gte?(decimal, decimal) :: boolean
+
+  def gte?(%Decimal{coef: :NaN}, _num2), do: false
+  def gte?(_num1, %Decimal{coef: :NaN}), do: false
+
+  def gte?(num1, num2) do
+    case compare(num1, num2) do
+      :gt -> true
+      :eq -> true
+      _ -> false
+    end
+  end
+
+  @doc """
+  Compares two numbers numerically and returns `true` if
+  the first number is less than or equal the second number,
+  otherwise `false`.
+
+  If one of the operands is a quiet NaN this operation
+  will always return `false`.
+
+  ## Examples
+
+      iex> Decimal.lte?("1.1", "1.1")
+      true
+
+      iex> Decimal.lte?("1.1", "1.2")
+      true
+
+      iex> Decimal.lte?("1.4", "1.2")
+      false
+
+  """
+  doc_since("2.2.0")
+  @spec lte?(decimal, decimal) :: boolean
+
+  def lte?(%Decimal{coef: :NaN}, _num2), do: false
+  def lte?(_num1, %Decimal{coef: :NaN}), do: false
+
+  def lte?(num1, num2) do
+    case compare(num1, num2) do
+      :lt -> true
+      :eq -> true
+      _ -> false
+    end
+  end
 
   @doc """
   Divides two numbers.
@@ -1962,5 +2093,14 @@ end
 defimpl String.Chars, for: Decimal do
   def to_string(dec) do
     Decimal.to_string(dec)
+  end
+end
+
+# TODO: remove when we require Elixir 1.18
+if Code.ensure_loaded?(JSON.Encoder) and function_exported?(JSON.Encoder, :encode, 2) do
+  defimpl JSON.Encoder, for: Decimal do
+    def encode(decimal, _encoder) do
+      [?", Decimal.to_string(decimal), ?"]
+    end
   end
 end

@@ -247,7 +247,7 @@ defmodule Floki do
       \"\"\"
   """
 
-  @spec raw_html(html_tree | binary, keyword) :: binary
+  @spec raw_html(html_tree() | html_node() | binary(), keyword()) :: binary()
 
   defdelegate raw_html(html_tree, options \\ []), to: Floki.RawHTML
 
@@ -308,12 +308,7 @@ defmodule Floki do
 
   """
   @spec get_by_id(html_tree() | html_node(), String.t()) :: html_node() | nil
-  def get_by_id(html_tree_as_tuple, id)
-      when is_list(html_tree_as_tuple) or is_html_node(html_tree_as_tuple) do
-    html_tree_as_tuple
-    |> Finder.find(%Floki.Selector{id: id})
-    |> List.first()
-  end
+  defdelegate get_by_id(html_tree_as_tuple, id), to: Finder, as: :find_by_id
 
   @doc """
   Changes the attribute values of the elements matched by `selector`
@@ -795,4 +790,19 @@ defmodule Floki do
   def filter_out(elements, selector) do
     FilterOut.filter_out(elements, selector)
   end
+
+  @doc """
+  Escapes a string for use as a CSS identifier.
+
+  ## Examples
+
+      iex> Floki.css_escape("hello world")
+      "hello\\\\ world"
+
+      iex> Floki.css_escape("-123")
+      "-\\\\31 23"
+
+  """
+  @spec css_escape(String.t()) :: String.t()
+  def css_escape(value), do: Floki.CSSEscape.escape(value)
 end

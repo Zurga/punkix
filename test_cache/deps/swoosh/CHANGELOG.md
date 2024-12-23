@@ -1,5 +1,82 @@
 # Changelog
 
+## 1.17.5
+
+### 🐛 Bug Fixes
+
+- mua: fix mail.from @ruslandoga (#982)
+
+### 📝 Documentation
+
+- Adapters: Add documentation about setting the base\_url for ZeptoMail … @reimeri (#981)
+
+## 1.17.4
+
+### 🐛 Bug Fixes
+
+- mua: fix default message-id @ruslandoga (#978)
+
+### 🧰 Maintenance
+
+- mua: cleanup test @ruslandoga (#938)
+
+## 1.17.3
+
+### ✨ Features
+
+- feat(mailjet): add event\_payload to provider options @mrdotb (#965)
+- Handle direct URL specification on MSGraph.deliver @LetThereBeDwight (#967)
+- Complete Swoosh.X.TestAssertions @edgarlatorre (#924)
+- Add CSS labels to email detail elements @alexslade (#956)
+
+## 1.17.2
+
+### ✨ Features
+
+- fix: download attachment with the filename @RETFU (#957)
+
+## 1.17.1
+
+### 🐛 Bug Fixes
+
+- Update the MSGraph Adapter Dependency @LetThereBeDwight (#955)
+
+## 1.17.0
+
+A new adapter for Postal, thanks to @onvlt
+
+### ✨ Features
+
+- Implement Postal adapter @onvlt (#949)
+
+## 1.16.12
+
+### ✨ Features
+
+- Add toggle for text preview @andreicek (#947)
+
+## 1.16.11
+
+### ✨ Features
+
+- mua: add Date and Message-ID headers when missing @ruslandoga (#945)
+
+### 📝 Documentation
+
+- Write docs for functions in Mailer \_\_using\_\_ macro  @ivanhercaz (#946)
+- Explain how to recompile after installing gen\_smtp @aj-foster (#944)
+- Fix typos and improve language @preciz (#943)
+
+## 1.16.10
+
+### 🐛 Bug Fixes
+
+- mua: no mx when relay @ruslandoga (#934)
+
+### 📝 Documentation
+
+- mua: update docs @ruslandoga (#935)
+
 ## 1.16.9
 
 ### 🐛 Bug Fixes

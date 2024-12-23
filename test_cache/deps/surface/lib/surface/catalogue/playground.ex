@@ -55,6 +55,8 @@ defmodule Surface.Catalogue.Playground do
 
     quote do
       @config unquote(opts)
+      @after_compile unquote(__MODULE__)
+      @__use_line__ unquote(__CALLER__.line)
       @before_compile unquote(__MODULE__)
 
       use Surface.LiveView, unquote(opts)
@@ -125,34 +127,6 @@ defmodule Surface.Catalogue.Playground do
     props_data = Module.get_attribute(env.module, :props, [])
     slots_data = Module.get_attribute(env.module, :slots, [])
 
-    existing_props_data =
-      env.module
-      |> Module.get_attribute(:assigns, [])
-      |> Enum.find(fn %{name: name} -> name == :props end)
-
-    # TODO: Remove this validation in v0.9 and inject the `data props` code directly in `common_ast`
-    props_data_ast =
-      case existing_props_data do
-        %{line: line} ->
-          message = """
-          using `data props, :map, default: %{...}` has been deprecated in favor of `@props [...]`.
-
-          Example:
-
-            @props [
-              label: "My label",
-              color: "red",
-            ]
-          """
-
-          Surface.IOHelper.warn(message, env, line)
-
-        _ ->
-          quote do
-            data props, :keyword, default: unquote(Macro.escape(props_data))
-          end
-      end
-
     common_ast =
       quote do
         @moduledoc catalogue: [
@@ -161,7 +135,7 @@ defmodule Surface.Catalogue.Playground do
                      config: unquote(config)
                    ]
 
-        unquote(props_data_ast)
+        data props, :keyword, default: unquote(Macro.escape(props_data))
         data slots, :keyword, default: unquote(slots_data)
       end
 
@@ -194,6 +168,25 @@ defmodule Surface.Catalogue.Playground do
           unquote(__MODULE__).__handle_event__(event, value, socket)
         end
       end
+    end
+  end
+
+  def __after_compile__(env, _) do
+    case Module.get_attribute(env.module, :config)[:catalogue] do
+      nil ->
+        nil
+
+      module ->
+        case Code.ensure_compiled(module) do
+          {:module, _mod} ->
+            nil
+
+          {:error, _} ->
+            message =
+              "defined catalogue `#{inspect(module)}` could not be found"
+
+            Surface.IOHelper.compile_error(message, env.file, Module.get_attribute(env.module, :__use_line__))
+        end
     end
   end
 

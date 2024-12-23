@@ -206,6 +206,7 @@ defmodule Bandit.HTTP1.Socket do
 
     def read_data(%@for{} = socket, _opts), do: {:ok, <<>>, socket}
 
+    @dialyzer {:no_improper_lists, do_read_content_length_data!: 4}
     defp do_read_content_length_data!(socket, buffer, bytes_remaining, opts) do
       max_desired_bytes = Keyword.get(opts, :length, 8_000_000)
 
@@ -235,10 +236,12 @@ defmodule Bandit.HTTP1.Socket do
       end
     end
 
+    @dialyzer {:no_improper_lists, do_read_chunked_data!: 5}
     defp do_read_chunked_data!(socket, buffer, body, read_size, read_timeout) do
       case :binary.split(buffer, "\r\n") do
-        ["0", _] ->
-          {IO.iodata_to_binary(body), buffer}
+        ["0", "\r\n" <> rest] ->
+          # We should be reading (and ignoring) trailers here
+          {IO.iodata_to_binary(body), rest}
 
         [chunk_size, rest] ->
           chunk_size = String.to_integer(chunk_size, 16)
@@ -288,7 +291,7 @@ defmodule Bandit.HTTP1.Socket do
       case ThousandIsland.Socket.recv(socket, 0, read_timeout) do
         {:ok, chunk} -> chunk
         {:error, :timeout} -> <<>>
-        {:error, reason} -> request_error!(reason)
+        {:error, reason} -> socket_error!(reason)
       end
     end
 
@@ -313,15 +316,17 @@ defmodule Bandit.HTTP1.Socket do
           end
 
         {:error, :timeout} ->
-          already_read
+          request_error!("Body read timeout", :request_timeout)
 
         {:error, reason} ->
-          request_error!(reason)
+          socket_error!(reason)
       end
     end
 
     def send_headers(%@for{write_state: :unsent} = socket, status, headers, body_disposition) do
       resp_line = "#{socket.version} #{status} #{Plug.Conn.Status.reason_phrase(status)}\r\n"
+
+      headers = maybe_add_keepalive_header(status, headers, socket)
 
       case body_disposition do
         :raw ->
@@ -344,6 +349,13 @@ defmodule Bandit.HTTP1.Socket do
           %{socket | write_state: :unsent}
       end
     end
+
+    # RFC 9112§9.3
+    defp maybe_add_keepalive_header(status, headers, %@for{version: :"HTTP/1.0", keepalive: true})
+         when status not in 100..199,
+         do: [{"connection", "keep-alive"} | headers]
+
+    defp maybe_add_keepalive_header(_status, headers, _socket), do: headers
 
     defp encode_headers(headers) do
       headers
@@ -369,7 +381,7 @@ defmodule Bandit.HTTP1.Socket do
 
       case ThousandIsland.Socket.sendfile(socket.socket, path, offset, length) do
         {:ok, _bytes_written} -> %{socket | write_state: :sent}
-        {:error, reason} -> request_error!(reason)
+        {:error, reason} -> socket_error!(reason)
       end
     end
 
@@ -382,7 +394,7 @@ defmodule Bandit.HTTP1.Socket do
         {:error, reason} ->
           # Prevent error handlers from possibly trying to send again
           send(self(), {:plug_conn, :sent})
-          request_error!(reason)
+          socket_error!(reason)
       end
     end
 
@@ -396,6 +408,8 @@ defmodule Bandit.HTTP1.Socket do
     end
 
     def supported_upgrade?(_socket, protocol), do: protocol == :websocket
+
+    def send_on_error(%@for{}, %Bandit.TransportError{}), do: :ok
 
     def send_on_error(%@for{} = socket, error) do
       receive do
@@ -416,6 +430,11 @@ defmodule Bandit.HTTP1.Socket do
     @spec request_error!(term(), Plug.Conn.status()) :: no_return()
     defp request_error!(reason, plug_status \\ :bad_request) do
       raise Bandit.HTTPError, message: to_string(reason), plug_status: plug_status
+    end
+
+    @spec socket_error!(term()) :: no_return()
+    defp socket_error!(reason) do
+      raise Bandit.TransportError, message: "Unrecoverable error: #{reason}", error: reason
     end
   end
 end

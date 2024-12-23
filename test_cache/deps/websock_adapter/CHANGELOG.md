@@ -1,3 +1,15 @@
+## 0.5.8 (12 Nov 2024)
+
+### Enhancements
+
+* Improve handling of crashes during WebSock.init/1 calls (#20)
+
+## 0.5.7 (9 Aug 2024)
+
+### Enhancements
+
+* Support use within Plug.Adapters.Test.Conn based tests
+
 ## 0.5.6 (25 Mar 2024)
 
 ### Enhancements

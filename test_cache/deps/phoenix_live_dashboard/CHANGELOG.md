@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v0.8.5 (2024-11-14)
+
+* Provide a mechanism for user extensible LiveView hooks
+* Add Erlang/OTP 27 Process label support
+
+## v0.8.4 (2024-06-21)
+
+* Add immutable directive to cache-control header
+* Wrap log lines in request logger page
+* Fix deprecation warnings on LiveView release candidate
+
 ## v0.8.3 (2023-10-28)
 
 * Address deprecation warnings from Phoenix.LiveView and Phoenix.HTML

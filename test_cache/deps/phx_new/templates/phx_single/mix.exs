@@ -37,12 +37,12 @@ defmodule <%= @app_module %>.MixProject do
   defp deps do
     [
       <%= @phoenix_dep %>,<%= if @ecto do %>
-      {:phoenix_ecto, "~> 4.4"},
+      {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
       {<%= inspect @adapter_app %>, ">= 0.0.0"},<% end %><%= if @html do %>
-      {:phoenix_html, "~> 4.0"},
+      {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.20.2"},
+      {:phoenix_live_view, "~> 1.0.0"},
       {:floki, ">= 0.30.0", only: :test},<% end %><%= if @dashboard do %>
       {:phoenix_live_dashboard, "~> 0.8.3"},<% end %><%= if @javascript do %>
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},<% end %><%= if @css do %>
@@ -56,9 +56,9 @@ defmodule <%= @app_module %>.MixProject do
        depth: 1},<% end %><%= if @mailer do %>
       {:swoosh, "~> 1.5"},
       {:finch, "~> 0.13"},<% end %>
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},<%= if @gettext do %>
-      {:gettext, "~> 0.20"},<% end %>
+      {:gettext, "~> 0.26"},<% end %>
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {<%= inspect @web_adapter_app %>, "<%= @web_adapter_vsn %>"}

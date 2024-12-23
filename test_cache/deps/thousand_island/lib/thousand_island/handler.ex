@@ -32,16 +32,19 @@ defmodule ThousandIsland.Handler do
 
         # ...handle_data and other Handler callbacks
 
-        def handle_cast(msg, from, {socket, state}) do
+        @impl GenServer
+        def handle_call(msg, from, {socket, state}) do
           # Do whatever you'd like with msg & from
           {:reply, :ok, {socket, state}, socket.read_timeout}
         end
 
+        @impl GenServer
         def handle_cast(msg, {socket, state}) do
           # Do whatever you'd like with msg
           {:noreply, {socket, state}, socket.read_timeout}
         end
 
+        @impl GenServer
         def handle_info(msg, {socket, state}) do
           # Do whatever you'd like with msg
           {:noreply, {socket, state}, socket.read_timeout}
@@ -153,11 +156,14 @@ defmodule ThousandIsland.Handler do
   consisting of the configured handler and genserver opts. This function is expected to return a
   conventional `GenServer.on_start()` style tuple. Note that this newly created process is not
   passed the connection socket immediately.
-  2. The socket will be passed to the new process via a message of the form
-  `{:thousand_island_ready, socket, server_config, acceptor_span, start_time}`.
-  3. Once the process receives the socket, it must call `ThousandIsland.Socket.handshake/1` with the socket as the sole
-  argument in order to finalize the setup of the socket.
-  4. The socket is now ready to use.
+  2. The raw `t:ThousandIsland.Transport.socket()` socket will be passed to the new process via a
+  message of the form `{:thousand_island_ready, raw_socket, server_config, acceptor_span,
+  start_time}`.
+  3. Your implenentation must turn this into a `to:ThousandIsland.Socket.t()` socket by using the
+  `ThousandIsland.Socket.new/3` call.
+  4. Your implementation must then call `ThousandIsland.Socket.handshake/1` with the socket as the
+  sole argument in order to finalize the setup of the socket.
+  5. The socket is now ready to use.
 
   In addition to this process, there are several other considerations to be aware of:
 
@@ -487,7 +493,8 @@ defmodule ThousandIsland.Handler do
               %{}
           end
 
-        metadata = if reason in [:shutdown, :local_closed], do: %{}, else: %{error: reason}
+        metadata =
+          if reason in [:shutdown, :local_closed, :peer_closed], do: %{}, else: %{error: reason}
 
         _ = ThousandIsland.Socket.close(socket)
         ThousandIsland.Telemetry.stop_span(socket.span, measurements, metadata)
@@ -549,6 +556,7 @@ defmodule ThousandIsland.Handler do
     end
   end
 
+  @doc false
   defmacro add_handle_info_fallback(_module) do
     quote do
       def handle_info({msg, _raw_socket, _data}, _state) when msg in [:tcp, :ssl] do

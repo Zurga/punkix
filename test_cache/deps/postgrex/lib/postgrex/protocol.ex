@@ -347,8 +347,12 @@ defmodule Postgrex.Protocol do
     status = new_status(opts, prepare: prepare)
 
     case prepare do
-      true -> parse_describe_close(s, status, query)
-      false -> parse_describe_flush(s, status, query)
+      true ->
+        parse_describe_close(s, status, query)
+
+      false ->
+        comment = Keyword.get(opts, :comment)
+        parse_describe_flush(s, status, query, comment)
     end
   end
 
@@ -363,11 +367,12 @@ defmodule Postgrex.Protocol do
     else
       prepare = Keyword.get(opts, :postgrex_prepare, false)
       status = new_status(opts, prepare: prepare)
+      comment = Keyword.get(opts, :comment)
 
       result =
         case prepare do
           true -> close_parse_describe(s, status, query)
-          false -> close_parse_describe_flush(s, status, query)
+          false -> close_parse_describe_flush(s, status, query, comment)
         end
 
       with {:ok, query, s} <- result do
@@ -955,7 +960,7 @@ defmodule Postgrex.Protocol do
   defp set_search_path_recv(s, status, buffer) do
     case msg_recv(s, :infinity, buffer) do
       {:ok, msg_row_desc(fields: fields), buffer} ->
-        {[@text_type_oid], ["search_path"]} = columns(fields)
+        {[@text_type_oid], ["search_path"], _} = columns(fields)
         set_search_path_recv(s, status, buffer)
 
       {:ok, msg_data_row(), buffer} ->
@@ -1014,7 +1019,7 @@ defmodule Postgrex.Protocol do
        ) do
     case msg_recv(s, :infinity, buffer) do
       {:ok, msg_row_desc(fields: fields), buffer} ->
-        {[@text_type_oid], ["transaction_read_only"]} = columns(fields)
+        {[@text_type_oid], ["transaction_read_only"], _} = columns(fields)
         check_target_server_type_recv(s, status, buffer)
 
       {:ok, msg_data_row(values: values), buffer} ->
@@ -1204,9 +1209,6 @@ defmodule Postgrex.Protocol do
 
       {:disconnect, err, s} ->
         {:disconnect, err, s}
-
-      {:error, %Postgrex.Error{} = err, s, buffer} ->
-        error_ready(s, status, err, buffer)
     end
   end
 
@@ -1314,10 +1316,6 @@ defmodule Postgrex.Protocol do
 
       {:disconnect, err, s} ->
         {:disconnect, err, s}
-
-      {:error, %Postgrex.Error{} = err, s, buffer} ->
-        status = new_status([], mode: :transaction)
-        error_ready(s, status, err, buffer)
     end
   end
 
@@ -1418,9 +1416,9 @@ defmodule Postgrex.Protocol do
     parse_describe(s, status, query)
   end
 
-  defp parse_describe_flush(s, %{mode: :transaction} = status, query) do
+  defp parse_describe_flush(s, %{mode: :transaction} = status, query, comment) do
     %{buffer: buffer} = s
-    msgs = parse_describe_msgs(query, [msg_flush()])
+    msgs = parse_describe_comment_msgs(query, comment, [msg_flush()])
 
     with :ok <- msg_send(%{s | buffer: nil}, msgs, buffer),
          {:ok, %Query{ref: ref} = query, %{postgres: postgres} = s, buffer} <-
@@ -1442,11 +1440,12 @@ defmodule Postgrex.Protocol do
   defp parse_describe_flush(
          %{postgres: :transaction, buffer: buffer} = s,
          %{mode: :savepoint} = status,
-         query
+         query,
+         comment
        ) do
     msgs =
       [msg_query(statement: "SAVEPOINT postgrex_query")] ++
-        parse_describe_msgs(query, [msg_flush()])
+        parse_describe_comment_msgs(query, comment, [msg_flush()])
 
     with :ok <- msg_send(%{s | buffer: nil}, msgs, buffer),
          {:ok, _, %{buffer: buffer} = s} <- recv_transaction(s, status, buffer),
@@ -1466,7 +1465,7 @@ defmodule Postgrex.Protocol do
     end
   end
 
-  defp parse_describe_flush(%{postgres: postgres} = s, %{mode: :savepoint}, _)
+  defp parse_describe_flush(%{postgres: postgres} = s, %{mode: :savepoint}, _, _)
        when postgres in [:idle, :error] do
     transaction_error(s, postgres)
   end
@@ -1530,11 +1529,13 @@ defmodule Postgrex.Protocol do
     transaction_error(s, postgres)
   end
 
-  defp close_parse_describe_flush(s, %{mode: :transaction} = status, query) do
+  defp close_parse_describe_flush(s, %{mode: :transaction} = status, query, comment) do
     %Query{name: name} = query
     %{buffer: buffer} = s
 
-    msgs = [msg_close(type: :statement, name: name)] ++ parse_describe_msgs(query, [msg_flush()])
+    msgs =
+      [msg_close(type: :statement, name: name)] ++
+        parse_describe_comment_msgs(query, comment, [msg_flush()])
 
     with :ok <- msg_send(%{s | buffer: nil}, msgs, buffer),
          {:ok, s, buffer} <- recv_close(s, status, buffer),
@@ -1558,7 +1559,8 @@ defmodule Postgrex.Protocol do
   defp close_parse_describe_flush(
          %{postgres: :transaction, buffer: buffer} = s,
          %{mode: :savepoint} = status,
-         query
+         query,
+         comment
        ) do
     %Query{name: name} = query
 
@@ -1566,7 +1568,7 @@ defmodule Postgrex.Protocol do
       [
         msg_query(statement: "SAVEPOINT postgrex_query"),
         msg_close(type: :statement, name: name)
-      ] ++ parse_describe_msgs(query, [msg_flush()])
+      ] ++ parse_describe_comment_msgs(query, comment, [msg_flush()])
 
     with :ok <- msg_send(%{s | buffer: nil}, msgs, buffer),
          {:ok, _, %{buffer: buffer} = s} <- recv_transaction(s, status, buffer),
@@ -1588,9 +1590,19 @@ defmodule Postgrex.Protocol do
     end
   end
 
-  defp close_parse_describe_flush(%{postgres: postgres} = s, %{mode: :savepoint}, _)
+  defp close_parse_describe_flush(%{postgres: postgres} = s, %{mode: :savepoint}, _, _)
        when postgres in [:idle, :error] do
     transaction_error(s, postgres)
+  end
+
+  defp parse_describe_comment_msgs(query, comment, tail) when is_binary(comment) do
+    statement = [query.statement, "/*", comment, "*/"]
+    query = %{query | statement: statement}
+    parse_describe_msgs(query, tail)
+  end
+
+  defp parse_describe_comment_msgs(query, _comment, tail) do
+    parse_describe_msgs(query, tail)
   end
 
   defp parse_describe_msgs(query, tail) do
@@ -1611,8 +1623,9 @@ defmodule Postgrex.Protocol do
        )
        when ref == nil or protocol_types != query_types do
     with {:ok, s, buffer} <- recv_parse(s, status, buffer),
-         {:ok, param_oids, result_oids, columns, s, buffer} <- recv_describe(s, status, buffer) do
-      describe(s, query, param_oids, result_oids, columns, buffer)
+         {:ok, param_oids, result_oids, result_mods, columns, s, buffer} <-
+           recv_describe(s, status, buffer) do
+      describe(s, query, param_oids, result_oids, result_mods, columns, buffer)
     else
       {:error, %Postgrex.Error{} = error, s, buffer} ->
         {:error, %{error | query: query.statement}, s, buffer}
@@ -1626,13 +1639,13 @@ defmodule Postgrex.Protocol do
     %Query{param_oids: param_oids, result_oids: result_oids, columns: columns} = query
 
     with {:ok, s, buffer} <- recv_parse(s, status, buffer),
-         {:ok, ^param_oids, ^result_oids, ^columns, s, buffer} <-
+         {:ok, ^param_oids, ^result_oids, _, ^columns, s, buffer} <-
            recv_describe(s, status, param_oids, buffer) do
       query_put(s, query)
       {:ok, query, s, buffer}
     else
-      {:ok, ^param_oids, new_result_oids, new_columns, s, buffer} ->
-        redescribe(s, query, new_result_oids, new_columns, buffer)
+      {:ok, ^param_oids, new_result_oids, new_result_mods, new_columns, s, buffer} ->
+        redescribe(s, query, new_result_oids, new_result_mods, new_columns, buffer)
 
       {:error, %Postgrex.Error{}, _, _} = error ->
         error
@@ -1662,14 +1675,14 @@ defmodule Postgrex.Protocol do
   defp recv_describe(s, status, param_oids \\ [], buffer) do
     case msg_recv(s, :infinity, buffer) do
       {:ok, msg_no_data(), buffer} ->
-        {:ok, param_oids, nil, nil, s, buffer}
+        {:ok, param_oids, nil, nil, nil, s, buffer}
 
       {:ok, msg_parameter_desc(type_oids: param_oids), buffer} ->
         recv_describe(s, status, param_oids, buffer)
 
       {:ok, msg_row_desc(fields: fields), buffer} ->
-        {result_oids, columns} = columns(fields)
-        {:ok, param_oids, result_oids, columns, s, buffer}
+        {result_oids, columns, result_mods} = columns(fields)
+        {:ok, param_oids, result_oids, result_mods, columns, s, buffer}
 
       {:ok, msg_too_many_parameters(len: len, max_len: max), buffer} ->
         msg = "postgresql protocol can not handle #{len} parameters, the maximum is #{max}"
@@ -1688,10 +1701,10 @@ defmodule Postgrex.Protocol do
     end
   end
 
-  defp describe(s, query, param_oids, result_oids, columns, buffer) do
+  defp describe(s, query, param_oids, result_oids, result_mods, columns, buffer) do
     case describe_params(s, query, param_oids) do
       {:ok, query} ->
-        redescribe(s, query, result_oids, columns, buffer)
+        redescribe(s, query, result_oids, result_mods, columns, buffer)
 
       {:reload, oids} ->
         reload_describe_result(s, oids, result_oids, buffer)
@@ -1701,8 +1714,8 @@ defmodule Postgrex.Protocol do
     end
   end
 
-  defp redescribe(s, query, result_oids, columns, buffer) do
-    with {:ok, query} <- describe_result(s, query, result_oids, columns) do
+  defp redescribe(s, query, result_oids, result_mods, columns, buffer) do
+    with {:ok, query} <- describe_result(s, query, result_oids, result_mods, columns) do
       query_put(s, query)
       {:ok, query, s, buffer}
     else
@@ -1715,8 +1728,9 @@ defmodule Postgrex.Protocol do
   end
 
   defp describe_params(%{types: types}, query, param_oids) do
-    with {:ok, param_info} <- fetch_type_info(param_oids, types),
-         {param_formats, param_types} = Enum.unzip(param_info) do
+    with {:ok, param_info} <- fetch_type_info(param_oids, types) do
+      {param_formats, param_types} = Enum.unzip(param_info)
+
       query = %Query{
         query
         | param_oids: param_oids,
@@ -1745,7 +1759,7 @@ defmodule Postgrex.Protocol do
     end
   end
 
-  defp describe_result(%{types: types}, query, nil, nil) do
+  defp describe_result(%{types: types}, query, nil, nil, nil) do
     query = %Query{
       query
       | ref: make_ref(),
@@ -1759,9 +1773,18 @@ defmodule Postgrex.Protocol do
     {:ok, query}
   end
 
-  defp describe_result(%{types: types}, query, result_oids, columns) do
-    with {:ok, result_info} <- fetch_type_info(result_oids, types),
-         {result_formats, result_types} = Enum.unzip(result_info) do
+  defp describe_result(%{types: types}, query, result_oids, result_mods, columns) do
+    with {:ok, result_info} <- fetch_type_info(result_oids, types) do
+      {result_formats, result_types} = Enum.unzip(result_info)
+
+      result_types =
+        result_types
+        |> Enum.zip(result_mods)
+        |> Enum.map(fn
+          {{extension, sub_oids, sub_types}, mod} -> {extension, sub_oids, sub_types, mod}
+          {extension, mod} -> {extension, mod}
+        end)
+
       query = %Query{
         query
         | ref: make_ref(),
@@ -2068,7 +2091,7 @@ defmodule Postgrex.Protocol do
 
       _ ->
         # flush awaiting execute or declare
-        parse_describe_flush(s, status, query)
+        parse_describe_flush(s, status, query, nil)
     end
   end
 
@@ -2094,7 +2117,7 @@ defmodule Postgrex.Protocol do
   defp handle_prepare_execute(%Query{name: ""} = query, params, opts, s) do
     status = new_status(opts)
 
-    case parse_describe_flush(s, status, query) do
+    case parse_describe_flush(s, status, query, nil) do
       {:ok, query, s} ->
         bind_execute_close(s, status, query, params)
 
@@ -2106,7 +2129,7 @@ defmodule Postgrex.Protocol do
   defp handle_prepare_execute(%Query{} = query, params, opts, s) do
     status = new_status(opts)
 
-    case close_parse_describe_flush(s, status, query) do
+    case close_parse_describe_flush(s, status, query, nil) do
       {:ok, query, s} ->
         bind_execute(s, status, query, params)
 
@@ -2385,7 +2408,7 @@ defmodule Postgrex.Protocol do
   defp handle_prepare_bind(%Query{name: ""} = query, params, res, opts, s) do
     status = new_status(opts)
 
-    case parse_describe_flush(s, status, query) do
+    case parse_describe_flush(s, status, query, nil) do
       {:ok, query, s} ->
         bind(s, status, query, params, res)
 
@@ -2397,7 +2420,7 @@ defmodule Postgrex.Protocol do
   defp handle_prepare_bind(%Query{} = query, params, res, opts, s) do
     status = new_status(opts)
 
-    case close_parse_describe_flush(s, status, query) do
+    case close_parse_describe_flush(s, status, query, nil) do
       {:ok, query, s} ->
         bind(s, status, query, params, res)
 
@@ -2967,14 +2990,6 @@ defmodule Postgrex.Protocol do
 
       {:disconnect, err, s} ->
         {:disconnect, err, s}
-
-      {:error, %Postgrex.Error{} = err, s, buffer} ->
-        # We convert {:error, err, state} to {:error, state}
-        # so that DBConnection will disconnect during handle_begin/handle_rollback
-        # and will attempt to rollback during handle_commit
-        with {:error, _err, s} <- error_ready(s, status, err, buffer) do
-          {:error, s}
-        end
     end
   end
 
@@ -3186,8 +3201,8 @@ defmodule Postgrex.Protocol do
 
   defp columns(fields) do
     fields
-    |> Enum.map(fn row_field(type_oid: oid, name: name) -> {oid, name} end)
-    |> :lists.unzip()
+    |> Enum.map(fn row_field(type_oid: oid, type_mod: mod, name: name) -> {oid, name, mod} end)
+    |> :lists.unzip3()
   end
 
   defp column_names(fields) do
@@ -3256,7 +3271,7 @@ defmodule Postgrex.Protocol do
         disconnect(s, :tcp, "async_recv", reason, :active_once)
     after
       timeout ->
-        disconnect(s, :tcp, "async_recv", :timeout, :active_one)
+        disconnect(s, :tcp, "async_recv", :timeout, :active_once)
     end
   end
 

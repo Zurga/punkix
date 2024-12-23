@@ -1,8 +1,12 @@
 defmodule Surface.Catalogue.Examples do
+  @moduledoc since: "0.8.0"
   @moduledoc ~S'''
-  A generic LiveView to create multiple examples for catalogue tools.
+  A generic LiveView to create multiple stateless examples for the Surface Catalogue.
 
   Each example must be a function component defined with the module attribute `@example`.
+
+  > **NOTE**: If your examples require manipulating state (data) through `handle_event` callbacks,
+  > use `Surface.Catalogue.LiveExample` instead.
 
   ## Options
 
@@ -33,9 +37,9 @@ defmodule Surface.Catalogue.Examples do
       has no effect when direction is "vertical".
 
     * `assert` - Optional. When using `catalogue_test/1`, generates simple `=~` assertions for
-      the given text or list of texts. This option is available only for Examples, not Playgrounds.
+      the given text or list of texts.
 
-  When defined at the module level, i.e. passing to `use Surface.Catalogue.Example, ...`, the
+  When defined at the module level, i.e. passing to `use Surface.Catalogue.Examples, ...`, the
   options apply to all examples. Aside from `subject` and `catalogue`, options can be overridden
   at the function level using the `@example` module attribute.
 
@@ -92,6 +96,8 @@ defmodule Surface.Catalogue.Examples do
     Module.register_attribute(__CALLER__.module, :__examples__, accumulate: true)
 
     quote do
+      @after_compile unquote(__MODULE__)
+      @__use_line__ unquote(__CALLER__.line)
       @before_compile unquote(__MODULE__)
       @on_definition unquote(__MODULE__)
 
@@ -141,6 +147,25 @@ defmodule Surface.Catalogue.Examples do
                    config: unquote(config),
                    examples_configs: unquote(examples_configs)
                  ]
+    end
+  end
+
+  def __after_compile__(env, _) do
+    case Module.get_attribute(env.module, :__example_config__)[:catalogue] do
+      nil ->
+        nil
+
+      module ->
+        case Code.ensure_compiled(module) do
+          {:module, _mod} ->
+            nil
+
+          {:error, _} ->
+            message =
+              "defined catalogue `#{inspect(module)}` could not be found"
+
+            Surface.IOHelper.compile_error(message, env.file, Module.get_attribute(env.module, :__use_line__))
+        end
     end
   end
 

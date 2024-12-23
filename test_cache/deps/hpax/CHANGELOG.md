@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.1
+
+  * Fix some issues with dynamic table resizing. You should not need to do anything to your code, it should Just Work™. If you want to read more, [this issue](https://github.com/elixir-mint/hpax/issues/18) has all the context.
+
+## v1.0.0
+
+  * Silence warnings on Elixir 1.17+.
+  * Require Elixir 1.12+.
+
 ## v0.2.0
 
   * Add `HPAX.new/2`, which supports a list of options. For now, the only option

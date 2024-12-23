@@ -1,7 +1,18 @@
+if File.exists?("blend/premix.exs") do
+  Code.compile_file("blend/premix.exs")
+else
+  defmodule Blend.Premix do
+    def patch_project(project), do: project
+    def patch_deps(deps), do: deps
+  end
+end
+
 defmodule Surface.Catalogue.MixProject do
   use Mix.Project
 
-  @version "0.6.2"
+  @version "0.6.3"
+  @source_url "https://github.com/surface-ui/surface_catalogue"
+  @homepage_url "https://surface-ui.org"
 
   def project do
     [
@@ -9,17 +20,24 @@ defmodule Surface.Catalogue.MixProject do
       version: @version,
       elixir: "~> 1.13",
       description: "An initial prototype of the Surface Catalogue",
+      start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers() ++ [:surface],
-      start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      docs: docs(),
       aliases: aliases(),
       xref: [exclude: Surface.Catalogue.Playground],
+      deps: deps(),
+      preferred_cli_env: [docs: :docs],
+      # Docs
+      name: "Surface Catalogue",
+      source_url: @source_url,
+      homepage_url: @homepage_url,
+      docs: docs(),
       package: package()
     ]
+    |> Blend.Premix.patch_project()
   end
 
+  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       mod: {Surface.Catalogue.Application, []},
@@ -27,12 +45,17 @@ defmodule Surface.Catalogue.MixProject do
     ]
   end
 
+  defp elixirc_paths(:dev), do: ["lib"] ++ catalogues()
+  defp elixirc_paths(:test), do: ["lib", "test/support"] ++ catalogues()
+  defp elixirc_paths(_), do: ["lib"]
+
   def catalogues do
     ["priv/catalogue"] ++ surface_catalogue_path()
   end
 
   defp surface_catalogue_path() do
-    Enum.find(deps(), &(elem(&1, 0) == :surface))
+    deps()
+    |> List.keyfind!(:surface, 0)
     |> surface_dep_opts()
     |> surface_catalogue_path()
   end
@@ -42,7 +65,7 @@ defmodule Surface.Catalogue.MixProject do
   defp surface_catalogue_path(opts) do
     path =
       case opts[:path] do
-        nil -> "deps/surface"
+        nil -> Mix.Project.deps_path() |> Path.relative() |> Path.join("/surface")
         surface_dep_path -> Path.expand(surface_dep_path)
       end
 
@@ -54,46 +77,60 @@ defmodule Surface.Catalogue.MixProject do
   defp surface_dep_opts({:surface, _req}), do: []
   defp surface_dep_opts(_), do: nil
 
-  defp elixirc_paths(:dev), do: ["lib"] ++ catalogues()
-  defp elixirc_paths(:test), do: ["lib", "test/support"] ++ catalogues()
-  defp elixirc_paths(_), do: ["lib"]
-
   defp aliases do
     [
       dev: "run --no-halt dev.exs"
     ]
   end
 
+  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:jason, "~> 1.0"},
-      {:html_entities, "~> 0.4"},
-      {:plug_cowboy, "~> 2.0", optional: Mix.env() != :dev},
-      {:esbuild, "~> 0.2", runtime: Mix.env() == :dev},
-      {:floki, ">= 0.35.3", only: :test},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:surface, "~> 0.10"},
       {:earmark, "~> 1.4.21"},
-      {:ex_doc, ">= 0.31.1", only: :docs},
-      {:makeup_elixir, "~> 0.16.0"}
+      {:makeup_elixir, "~> 0.16.0"},
+      {:html_entities, "~> 0.4"},
+      {:jason, "~> 1.0", only: :dev},
+      {:plug_cowboy, "~> 2.3", only: :dev},
+      {:esbuild, "~> 0.2", only: :dev},
+      {:blend, "~> 0.4.0", only: :dev},
+      {:floki, ">= 0.35.3", only: :test},
+      {:phoenix_live_reload, "~> 1.2", optional: true, only: [:prod, :dev]},
+      {:ex_doc, ">= 0.31.1", only: :docs}
     ]
+    |> Blend.Premix.patch_deps()
   end
 
   defp docs do
     [
+      main: "readme",
       source_ref: "v#{@version}",
-      source_url: "https://github.com/surface-ui/surface_catalogue",
-      nest_modules_by_prefix: [Surface.Catalogue]
+      nest_modules_by_prefix: [Surface.Catalogue],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE.md"
+      ]
     ]
   end
 
   defp package do
     %{
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/surface-ui/surface_catalogue"},
-      files:
-        ~w(assets lib priv) ++
-          ~w(CHANGELOG.md LICENSE.md mix.exs README.md)
+      links: %{
+        Website: @homepage_url,
+        Changelog: "https://hexdocs.pm/surface_catalogue/changelog.html",
+        GitHub: @source_url
+      },
+      files: ~w(
+          README.md
+          CHANGELOG.md
+          LICENSE.md
+          mix.exs
+          lib
+          assets
+          priv/catalogue
+        )
     }
   end
 end

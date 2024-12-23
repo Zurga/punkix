@@ -1,17 +1,17 @@
 defmodule Phoenix.LiveView.MixProject do
   use Mix.Project
 
-  @version "0.20.15"
+  @version "1.0.1"
 
   def project do
     [
       app: :phoenix_live_view,
       version: @version,
-      elixir: "~> 1.13",
+      elixir: "~> 1.14.1 or ~> 1.15",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       test_options: [docs: true],
-      test_coverage: [summary: [threshold: 85]],
+      test_coverage: [summary: [threshold: 85], ignore_modules: coverage_ignore_modules()],
       xref: [exclude: [Floki]],
       package: package(),
       deps: deps(),
@@ -21,14 +21,15 @@ defmodule Phoenix.LiveView.MixProject do
       homepage_url: "http://www.phoenixframework.org",
       description: """
       Rich, real-time user experiences with server-rendered HTML
-      """,
-      preferred_cli_env: [
-        docs: :docs
-      ]
+      """
     ]
   end
 
-  defp elixirc_paths(:e2e), do: ["lib", "test/support"]
+  def cli do
+    [preferred_envs: [docs: :docs]]
+  end
+
+  defp elixirc_paths(:e2e), do: ["lib", "test/support", "test/e2e/support"]
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
@@ -51,11 +52,23 @@ defmodule Phoenix.LiveView.MixProject do
       {:jason, "~> 1.0", optional: true},
       {:floki, "~> 0.36", optional: true},
       {:ex_doc, "~> 0.29", only: :docs},
-      {:makeup_eex, ">= 0.1.1", only: :docs},
-      {:makeup_diff, "~> 0.1", only: :docs},
+      {:makeup_elixir, "~> 1.0.1 or ~> 1.1", only: :docs},
+      {:makeup_diff, "~> 0.1.1", only: :docs},
+      # TODO: change me when makeup_lexers is not needed any more
+      # {:makeup_eex, "~> 1.0", only: :docs},
+      {:makeup_eex,
+       github: "SteffenDE/makeup_eex",
+       ref: "5cfc91389dbdfad885734bc8050af61840eab019",
+       only: :docs,
+       override: true},
+      # TODO: remove me when makeup_lexers is not needed any more
+      {:makeup_lexers, github: "SteffenDE/makeup_lexers", only: :docs},
       {:html_entities, ">= 0.0.0", only: :test},
-      {:phoenix_live_reload, "~> 1.4.1", only: :test},
-      {:bandit, "~> 1.5", only: :e2e}
+      {:phoenix_live_reload, "~> 1.4", only: :test},
+      {:phoenix_html_helpers, "~> 1.0", only: :test},
+      {:bandit, "~> 1.5", only: :e2e},
+      {:ecto, "~> 3.11", only: :e2e},
+      {:phoenix_ecto, "~> 4.5", only: :e2e}
     ]
   end
 
@@ -196,6 +209,14 @@ defmodule Phoenix.LiveView.MixProject do
     [
       "assets.build": ["esbuild module", "esbuild cdn", "esbuild cdn_min", "esbuild main"],
       "assets.watch": ["esbuild module --watch"]
+    ]
+  end
+
+  defp coverage_ignore_modules do
+    [
+      ~r/Phoenix\.LiveViewTest\.Support\..*/,
+      ~r/Phoenix\.LiveViewTest\.E2E\..*/,
+      ~r/Inspect\..*/
     ]
   end
 end

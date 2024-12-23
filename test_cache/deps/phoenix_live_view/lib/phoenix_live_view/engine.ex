@@ -77,7 +77,7 @@ defmodule Phoenix.LiveView.Comprehension do
 
   @doc false
   def __mark_consumable__(%Phoenix.LiveView.LiveStream{} = stream) do
-    %Phoenix.LiveView.LiveStream{stream | consumable?: true}
+    %{stream | consumable?: true}
   end
 
   def __mark_consumable__(collection), do: collection
@@ -242,7 +242,9 @@ defmodule Phoenix.LiveView.Engine do
   `Phoenix.LiveView` also tracks changes across live
   templates. Therefore, if your view has this:
 
-      <%= render "form.html", assigns %>
+  ```heex
+  {render("form.html", assigns)}
+  ```
 
   Phoenix will be able to track what is static and dynamic
   across templates, as well as what changed. A rendered
@@ -255,7 +257,9 @@ defmodule Phoenix.LiveView.Engine do
   which live template was rendered. For example,
   imagine this code:
 
-      <%= if something?, do: render("one.html", assigns), else: render("other.html", assigns) %>
+  ```heex
+  <%= if something?, do: render("one.html", assigns), else: render("other.html", assigns) %>
+  ```
 
   To solve this, all `Phoenix.LiveView.Rendered` structs
   also contain a fingerprint field that uniquely identifies
@@ -268,10 +272,12 @@ defmodule Phoenix.LiveView.Engine do
   Another optimization done by live templates is to
   track comprehensions. If your code has this:
 
-      <%= for point <- @points do %>
-        x: <%= point.x %>
-        y: <%= point.y %>
-      <% end %>
+  ```heex
+  <%= for point <- @points do %>
+    x: {point.x}
+    y: {point.y}
+  <% end %>
+  ```
 
   Instead of rendering all points with both static and
   dynamic parts, it returns a `Phoenix.LiveView.Comprehension`
@@ -1136,14 +1142,14 @@ defmodule Phoenix.LiveView.Engine do
 
           def add(assigns) do
             result = assigns.a + assigns.b
-            ~H"the result is: <%= result %>"
+            ~H"the result is: {result}"
           end
 
       You must do:
 
           def add(assigns) do
             assigns = assign(assigns, :result, assigns.a + assigns.b)
-            ~H"the result is: <%= @result %>"
+            ~H"the result is: {@result}"
           end
       """
 
@@ -1276,7 +1282,10 @@ defmodule Phoenix.LiveView.Engine do
   end
 
   defp recur_changed_assign([{:access, head}], %Form{} = form1, %Form{} = form2) do
-    Form.input_changed?(form1, form2, head)
+    # Phoenix.HTML does not know about LiveView's _unused_ input tracking,
+    # therefore we also need to check if the input's unused state changed
+    Form.input_changed?(form1, form2, head) or
+      Phoenix.Component.used_input?(form1[head]) !== Phoenix.Component.used_input?(form2[head])
   end
 
   defp recur_changed_assign([{:access, head} | tail], assigns, changed) do

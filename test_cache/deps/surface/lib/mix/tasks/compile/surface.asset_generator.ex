@@ -12,6 +12,16 @@ defmodule Mix.Tasks.Compile.Surface.AssetGenerator do
   @hooks_extension "#{@hooks_tag}.{#{@supported_hooks_extensions}}"
 
   def run(components, opts \\ []) do
+    generate_assets? = Keyword.get(opts, :generate_assets, true)
+
+    if generate_assets? do
+      do_run(components, opts)
+    else
+      []
+    end
+  end
+
+  defp do_run(components, opts) do
     components = Enum.sort(components, :desc)
     hooks_output_dir = Keyword.get(opts, :hooks_output_dir, @default_hooks_output_dir)
     css_output_file = Keyword.get(opts, :css_output_file, @default_css_output_file)
@@ -143,7 +153,6 @@ defmodule Mix.Tasks.Compile.Surface.AssetGenerator do
       File.write!(dest_file, content)
     end
 
-    # TODO: implement disgnostics, if needed
     []
   end
 
@@ -263,7 +272,7 @@ defmodule Mix.Tasks.Compile.Surface.AssetGenerator do
           namespace = Regex.replace(~r/#{@hooks_tag}.*$/, dest_file, "")
           var = "c#{index}"
           hook = ~s[ns(#{var}, "#{namespace}")]
-          imp = ~s[import * as #{var} from "./#{namespace}.hooks"]
+          imp = ~s[import * as #{var} from "./#{dest_file}"]
           {[hook | hooks], [imp | imports]}
       end
 
@@ -317,7 +326,6 @@ defmodule Mix.Tasks.Compile.Surface.AssetGenerator do
   end
 
   defp warning(message, file, line) do
-    # TODO: Provide column information in diagnostic once we depend on Elixir v1.13+
     %Diagnostic{
       message: message,
       file: file,

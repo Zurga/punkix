@@ -196,7 +196,6 @@ defmodule Surface.Compiler.EExEngine do
          %AST.Slot{
            name: provided_name,
            as: slot_as,
-           index: index_ast,
            for: slot_for_ast,
            arg: arg_expr,
            generator_value: generator_value_ast,
@@ -207,12 +206,6 @@ defmodule Surface.Compiler.EExEngine do
          buffer,
          state
        ) do
-    slot_index =
-      case index_ast do
-        %AST.AttributeExpr{value: expr} -> expr
-        %AST.Literal{value: value} -> value
-      end
-
     slot_for =
       case slot_for_ast do
         %AST.AttributeExpr{value: expr} -> expr
@@ -232,7 +225,7 @@ defmodule Surface.Compiler.EExEngine do
         slot_assign = {:@, [], [{slot_name, [], nil}]}
 
         quote do
-          Enum.at(List.wrap(unquote(slot_assign)), unquote(slot_index))
+          Enum.at(List.wrap(unquote(slot_assign)), 0)
         end
       end
 
@@ -293,7 +286,7 @@ defmodule Surface.Compiler.EExEngine do
     slot_props = build_slot_props(component, buffer, state, context_var)
     static_props_map = {:%{}, [], slot_props ++ static_props}
 
-    quote do
+    quote line: meta.line do
       Phoenix.LiveView.TagEngine.component(
         &apply(unquote(module_expr), unquote(fun_expr), [&1]),
         Map.merge(
@@ -324,7 +317,7 @@ defmodule Surface.Compiler.EExEngine do
     slot_props = build_slot_props(component, buffer, state, context_var)
     static_props_map = {:%{}, [], slot_props ++ static_props}
 
-    quote do
+    quote line: meta.line do
       Phoenix.LiveView.TagEngine.component(
         &(unquote(Macro.var(fun, __MODULE__)) / 1),
         Map.merge(
@@ -360,7 +353,7 @@ defmodule Surface.Compiler.EExEngine do
     # we pass the module, otherwise, we pass `nil`.
     module_for_build_assigns = if fun == :render, do: module
 
-    quote do
+    quote line: meta.line do
       Phoenix.LiveView.TagEngine.component(
         &(unquote(module).unquote(fun) / 1),
         Map.merge(
@@ -391,7 +384,7 @@ defmodule Surface.Compiler.EExEngine do
     slot_props = build_slot_props(component, buffer, state, context_var)
     static_props_map = {:%{}, [], static_props ++ slot_props}
 
-    quote do
+    quote line: meta.line do
       Phoenix.LiveView.TagEngine.component(
         &unquote(module).render/1,
         Map.merge(
@@ -422,7 +415,7 @@ defmodule Surface.Compiler.EExEngine do
     slot_props = build_slot_props(component, buffer, state, context_var)
     static_props_map = {:%{}, [], slot_props ++ static_props}
 
-    quote do
+    quote line: meta.line do
       Phoenix.LiveView.TagEngine.component(
         &unquote(module).render/1,
         Map.merge(
@@ -453,7 +446,7 @@ defmodule Surface.Compiler.EExEngine do
     slot_props = build_slot_props(component, buffer, state, context_var)
     static_props_map = {:%{}, [], [{:module, module} | slot_props] ++ static_props}
 
-    quote do
+    quote line: meta.line do
       Phoenix.LiveView.TagEngine.component(
         &Phoenix.Component.live_component/1,
         Map.merge(
@@ -488,7 +481,7 @@ defmodule Surface.Compiler.EExEngine do
     slot_props = build_slot_props(component, buffer, state, context_var)
     static_props_map = {:%{}, [], [{:module, module_expr} | slot_props] ++ static_props}
 
-    quote do
+    quote line: meta.line do
       Phoenix.LiveView.TagEngine.component(
         &Phoenix.Component.live_component/1,
         Map.merge(
@@ -881,14 +874,15 @@ defmodule Surface.Compiler.EExEngine do
            meta:
              %AST.Meta{
                module: mod,
-               line: line
+               line: line,
+               column: col
              } = meta
          } = component
          | nodes
        ])
        when not is_nil(mod) do
     %{attributes: attributes, directives: directives, meta: %{node_alias: node_alias}} = component
-    store_component_call(meta.caller.module, node_alias, mod, attributes, directives, line, :compile)
+    store_component_call(meta.caller.module, node_alias, mod, attributes, directives, line, col, :compile)
     [to_dynamic_nested_html(children) | to_dynamic_nested_html(nodes)]
   end
 
@@ -966,12 +960,12 @@ defmodule Surface.Compiler.EExEngine do
         {requires, Map.put(by_name, name, Enum.reverse(slot_entries))}
       end)
 
-    %{caller: caller, node_alias: node_alias, line: line} = component.meta
+    %{caller: caller, node_alias: node_alias, line: line, column: col} = component.meta
     %{props: props, directives: directives} = component
 
     if type != AST.FunctionComponent do
       dep_type = if is_atom(mod) and function_exported?(mod, :transform, 1), do: :compile, else: :export
-      store_component_call(caller.module, node_alias, mod, props, directives, line, dep_type)
+      store_component_call(caller.module, node_alias, mod, props, directives, line, col, dep_type)
     end
 
     [requires, %{component | slot_entries: slot_entries_by_name} | to_dynamic_nested_html(nodes)]
@@ -983,7 +977,17 @@ defmodule Surface.Compiler.EExEngine do
        ])
        when not is_nil(module) do
     %{attributes: attributes, directives: directives} = component
-    store_component_call(meta.caller.module, node_alias, module, attributes, directives, meta.line, :compile)
+
+    store_component_call(
+      meta.caller.module,
+      node_alias,
+      module,
+      attributes,
+      directives,
+      meta.line,
+      meta.column,
+      :compile
+    )
 
     [
       ~S(<span style="color: red; border: 2px solid red; padding: 3px"> Error: ),
@@ -1139,7 +1143,7 @@ defmodule Surface.Compiler.EExEngine do
     |> Macro.var(nil)
   end
 
-  defp store_component_call(module, node_alias, component, props, directives, line, dep_type)
+  defp store_component_call(module, node_alias, component, props, directives, line, col, dep_type)
        when dep_type in [:compile, :export] do
     # No need to store dynamic modules
     if !match?(%Surface.AST.AttributeExpr{}, component) do
@@ -1149,6 +1153,7 @@ defmodule Surface.Compiler.EExEngine do
         props: map_attrs(props),
         directives: map_attrs(directives),
         line: line,
+        column: col,
         dep_type: dep_type
       }
 
@@ -1159,10 +1164,10 @@ defmodule Surface.Compiler.EExEngine do
   defp map_attrs(attrs) do
     Enum.map(attrs, fn
       %AST.Attribute{} = attr ->
-        %{name: attr.name, root: attr.root, line: attr.meta.line}
+        %{name: attr.name, root: attr.root, line: attr.meta.line, column: attr.meta.column}
 
       %AST.Directive{} = attr ->
-        %{name: attr.name, line: attr.meta.line}
+        %{name: attr.name, line: attr.meta.line, column: attr.meta.column}
     end)
   end
 

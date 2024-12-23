@@ -1,3 +1,57 @@
+## 1.6.1 (6 Dec 2024)
+
+### Enhancements
+
+* Add deflate support when sending chunked responses (#429)
+
+### Fixes
+
+* Bring in updated HPAX to fix HTTP/2 error cases seen in AWS load balancing
+  environments (#392)
+* Improve handle of pipelined HTTP/1.1 requests (#437)
+* Improve error handling when dealing with socket errors (#433)
+
+### Changes
+
+* Use `Plug.Call.inform/2` to send websocket upgrades (#428)
+
+## 1.6.0 (18 Nov 2024)
+
+### Enhancements
+
+* Add framework for supporting optimized native code on various hot paths (#394,
+  thanks @alisinabh!)
+* Pass conn and exception data as logger metadata (#417 & #420, thanks @grzuy!)
+* Loosen hpax dependency requirements
+* Add `log_client_closures` http option, defaulting to false (#397, thanks @goncalotomas!)
+* Handle plugs that throw a result (#411, thanks @grzuy!)
+
+### Fixes
+
+* Improve content-length send logic per RFC9110§8.6/8.7
+* Explicitly signal keepalives in HTTP/1.0 requests
+
+### Changes
+
+* Fix typo & clarify docs
+* Update security policy
+
+## 1.5.7 (1 Aug 2024)
+
+### Changes
+
+* Timeouts encountered while reading a request body will now result in a `408
+  Request Timeout` being returned to the client by way of a `Bandit.HTTPError`
+  being raised. Previously, a `:more` tuple was returned (#385, thanks
+  @martosaur!)
+
+## 1.5.6 (1 Aug 2024)
+
+### Fixes
+
+* Improve handling of the end of stream condition for HTTP/2 requests that send
+  a body which isn't read by the Plug (#387, thanks @fekle!)
+
 ## 1.5.5 (19 Jun 2024)
 
 ### Changes
