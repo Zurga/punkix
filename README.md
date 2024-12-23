@@ -27,15 +27,15 @@ TODO Installer
 - [x] remove all Tailwind
 - [x] create end-to-end Test
 
-TODO WEB
-- [ ] Change inputs
-- [ ] Add FormComponent abstraction
-- [ ] Add changeset validation in FormComponent
-- [ ] Make index/show pages subscribe to PubSub events
+TODO Live
+- [x] Change inputs
+- [x] Add SchemaComponent abstraction
+- [x] Add changeset validation in FormComponent
+- [-] Make index/show pages subscribe to PubSub events
 
 TODO Context
-- [ ] VBT style core functions for modifying data
-- [ ] Optional pubsub hook
+- [x] VBT style core functions for modifying data
+- [x] Optional pubsub hook
 - [x] remove changeset from schema
  
 TODO Generators
