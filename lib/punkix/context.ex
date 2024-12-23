@@ -39,26 +39,6 @@ defmodule Punkix.Context do
     end)
   end
 
-  def assocs_context_aliasses(schema) do
-    [base_app | _] = Module.split(schema.module)
-
-    base = "alias #{base_app}."
-
-    contexts =
-      schema
-      |> Schema.belongs_assocs()
-      |> Enum.map(& &1.context)
-      |> Enum.uniq()
-
-    case contexts do
-      [context] ->
-        base <> context
-
-      _ ->
-        base <> "{#{Enum.join(contexts, ", ")}}"
-    end
-  end
-
   def build_assocs(schema) do
     schema
     |> Schema.belongs_assocs()
