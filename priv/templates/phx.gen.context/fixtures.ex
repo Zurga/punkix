@@ -7,13 +7,11 @@
   Generate a <%= schema.singular %>.
   """
   def <%= schema.singular %>_fixture(attrs \\ %{}) do
-<%= for assoc <- Punkix.Context.required_assocs(context.schema) do %>
-    {<%= assoc.field %>_attrs, attrs} = Map.pop(attrs, :<%= assoc.field %>, %{})
-    <%= assoc.field %> = <%= String.downcase(assoc.schema) %>_fixture(<%= assoc.field %>_attrs)<% end %>
     <%= schema.singular %>_attrs = 
       <%= Punkix.Context.args_to_params(schema, :create) %> 
-      |> Map.merge(attrs)
-    {:ok, <%= schema.singular %>} = <%= inspect context.module %>.create_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(Punkix.Context.required_assocs_as_arguments(schema), schema) %>)
+      |> Map.merge(attrs)<%= for assoc <- Punkix.Context.required_assocs(context.schema) do %>
+      |> Map.put_new_lazy(:<%= assoc.field %>, &<%= String.downcase(assoc.schema) %>_fixture/0)<% end %>
+    {:ok, <%= schema.singular %>} = <%= inspect context.module %>.create_<%= schema.singular %>(<%= schema.singular %>_attrs)
 
     <%= schema.singular %>
   end

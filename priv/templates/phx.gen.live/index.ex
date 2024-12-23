@@ -9,7 +9,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :<%= schema.collection %>, <%= inspect context.alias %>.list_<%= schema.plural %>())}
+    {:ok, stream(socket, :<%= schema.collection %>, list_<%= schema.plural %>(socket))}
   end
 
   @impl true
@@ -27,7 +27,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:page_title, "New <%= schema.human_singular %>")
-    |> assign(:<%= schema.singular %>, %<%= inspect schema.alias %>{})
+    |> assign(:<%= schema.singular %>, %<%= inspect schema.alias %>{<%= Punkix.Schema.belongs_assocs(schema) |> Enum.map_join(", ", &"#{&1.field}: nil") %>})
   end
 
   defp apply_action(socket, :index, _params) do
@@ -42,7 +42,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       socket
       |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
       |> put_flash(:info, "<%= schema.human_singular %> created successfully")
-      |> push_patch(to: ~p"/<%= schema.route_prefix %>")}
+      |> push_patch(to: ~p"<%= schema.route_prefix %>")}
   end
 
   @impl true
@@ -51,11 +51,15 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       socket
       |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>) 
       |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
-      |> push_patch(to: ~p"/<%= schema.route_prefix %>")}
+      |> push_patch(to: ~p"<%= schema.route_prefix %>")}
   end
 
   @impl true
   def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:deleted, <%= schema.singular %>}}, socket) do
     {:noreply, stream_delete(socket, :<%= schema.collection %>, <%= schema.singular %>)}
+  end
+
+  defp list_<%= schema.plural %>(_socket) do
+    <%= inspect(context.alias) %>.list_<%= schema.plural %>()
   end
 end

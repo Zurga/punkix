@@ -21,4 +21,12 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   defp page_title(:show), do: "Show <%= schema.human_singular %>"
   defp page_title(:edit), do: "Edit <%= schema.human_singular %>"
+
+  @impl true
+  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:updated, <%= schema.singular %>}}, socket) do
+    {:noreply, 
+      socket
+      |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
+      |> assign(:<%= schema.singular %>, <%= schema.singular %>)}
+  end
 end

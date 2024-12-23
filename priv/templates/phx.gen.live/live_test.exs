@@ -40,7 +40,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
     test "updates <%= schema.singular %> in listing", %{conn: conn, <%= schema.singular %>: <%= schema.singular %>} do
       start(conn, ~p"<%= schema.route_prefix %>")
-      |> click("#<%= schema.plural %>-#{<%= schema.singular %>.id} a", "Edit")
+      |> click(~s{a[href="/<%= schema.plural %>/#{<%= schema.singular %>.id}/edit"]})
       |> assert_visible("Edit <%= schema.human_singular %>")
       |> change_form("#<%= schema.singular %>-form", <%= schema.singular %>_form: @invalid_attrs)
       |> assert_visible("<%= Mix.Phoenix.Schema.failed_render_change_message(schema) %>")

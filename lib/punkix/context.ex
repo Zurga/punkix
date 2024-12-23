@@ -1,19 +1,33 @@
 defmodule Punkix.Context do
   alias TypedEctoSchema.EctoTypeMapper
+  alias Punkix.Schema
 
-  def context_fun_args(schema), do: context_fun_args("", schema)
+  def create_args(schema) do
+    schema_attrs(schema)
+    |> add_opts(schema)
+  end
 
-  def context_fun_args(argument, schema) do
+  def update_args(schema),
+    do:
+      "#{schema.singular}_id, #{schema_attrs(schema)}"
+      |> add_opts(schema)
+
+  def store_args(schema),
+    do:
+      "#{schema.singular}, #{schema_attrs(schema)}"
+      |> add_opts(schema)
+
+  def schema_attrs(schema) do
     "#{schema.singular}_attrs"
-    |> maybe_prepend(argument)
   end
 
   # TODO add fixtures in tests
-  def assocs_aliasses(schema) do
+  def assocs_schema_aliasses(schema) do
     [base_app | _] = Module.split(schema.module)
 
-    schema.assocs
-    |> Enum.group_by(&context_from_alias(&1))
+    schema
+    |> Schema.belongs_assocs()
+    |> Enum.group_by(& &1.context)
     |> Enum.map_join("\n", fn {context, assocs} ->
       base = "alias #{base_app}.Schemas.#{context}."
 
@@ -25,11 +39,31 @@ defmodule Punkix.Context do
     end)
   end
 
+  def assocs_context_aliasses(schema) do
+    [base_app | _] = Module.split(schema.module)
+
+    base = "alias #{base_app}."
+
+    contexts =
+      schema
+      |> Schema.belongs_assocs()
+      |> Enum.map(& &1.context)
+      |> Enum.uniq()
+
+    case contexts do
+      [context] ->
+        base <> context
+
+      _ ->
+        base <> "{#{Enum.join(contexts, ", ")}}"
+    end
+  end
+
   def build_assocs(schema) do
-    schema.assocs
-    |> Enum.filter(&(&1.assoc_fun == :belongs_to))
+    schema
+    |> Schema.belongs_assocs()
     |> Enum.map_join(", ", fn assoc ->
-      "#{assoc.reverse}: #{assoc.field}"
+      "#{assoc.reverse}: #{schema_attrs(schema)}[:#{assoc.field}]"
     end)
   end
 
@@ -37,9 +71,7 @@ defmodule Punkix.Context do
     [base_app, _, schema_context | _] = Module.split(schema.module)
 
     required_assocs(schema)
-    |> Enum.map_join("\n", fn assoc ->
-      context = context_from_alias(assoc)
-
+    |> Enum.map_join("\n", fn %{context: context} = _assoc ->
       if context != schema_context do
         "  import #{base_app}.#{context}Fixtures"
       end
@@ -60,16 +92,39 @@ defmodule Punkix.Context do
   end
 
   def context_fun_spec(%{assocs: _assocs} = schema, :create) do
-    struct_args =
-      required_assocs(schema)
-      |> Enum.map_join(",", &"#{&1.schema}.t()")
+    schema_spec = schema_spec_types(schema)
 
-    context_fun_spec(struct_args, schema)
+    belongs_to_assocs =
+      schema
+      |> Schema.belongs_assocs()
+      |> assocs_spec()
+
+    wrap_in_map([schema_spec, belongs_to_assocs])
   end
 
   def context_fun_spec(schema), do: context_fun_spec("", schema)
 
   def context_fun_spec(argument, schema) do
+    schema
+    |> schema_spec_types()
+    |> wrap_in_map()
+    |> maybe_prepend(argument)
+  end
+
+  defp wrap_in_map(input) when is_list(input) do
+    input
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+    |> Enum.join(", ")
+    |> wrap_in_map()
+  end
+
+  defp wrap_in_map(input) when is_binary(input) do
+    "%{#{input}}"
+  end
+
+  defp assocs_spec(assocs), do: Enum.map_join(assocs, ", ", &":#{&1.field} => #{&1.schema}.t()")
+
+  defp schema_spec_types(schema) do
     required_fields = Enum.map(Mix.Phoenix.Schema.required_fields(schema), &elem(&1, 0))
 
     Enum.map_join(
@@ -89,8 +144,6 @@ defmodule Punkix.Context do
         "optional(:#{name}) => #{spec_type}"
       end
     )
-    |> then(&"%{#{&1}}")
-    |> maybe_prepend(argument)
   end
 
   def args_as_attributes(struct, schema), do: args_as_attributes("", struct, schema)
@@ -123,12 +176,19 @@ defmodule Punkix.Context do
 
   def spec_alias(module), do: Module.split(module) |> Enum.reverse() |> hd()
 
+  def maybe_prepend(args, list) when is_list(list) do
+    maybe_prepend(args, Enum.join(list, ", "))
+  end
+
   def maybe_prepend("", argument), do: argument
   def maybe_prepend(args, ""), do: args
   def maybe_prepend(other_args, argument), do: "#{argument}, #{other_args}"
 
-  defp context_from_alias(%{alias: alias}) do
-    [context | _] = String.split(alias, ".")
-    context
+  def add_opts(_schema) do
+    "preloads \\\\ nil"
+  end
+
+  def add_opts(args, _schema) do
+    args <> ", preloads \\\\ nil"
   end
 end

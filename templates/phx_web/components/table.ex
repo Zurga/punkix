@@ -37,7 +37,7 @@ defmodule <%= @web_namespace %>.Components.Table do
         <tbody id={"#{@id}_container"} phx-update={(@stream && "stream") || ""}>
           {#if @stream}
             <tr
-              {=id}
+              id={"#{id}-row"}
               :for={{id, _} = item <- @data}
             >
               <td :for={col <- @cols}>

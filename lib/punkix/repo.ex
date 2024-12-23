@@ -1,5 +1,6 @@
 defmodule Punkix.Repo do
   import Ecto.Query, except: [preload: 2]
+  import Phoenix.PubSub, only: [broadcast: 3]
 
   def authorize(condition), do: validate(condition, :unauthorized)
 
@@ -22,12 +23,29 @@ defmodule Punkix.Repo do
   def validate(true, _), do: :ok
   def validate(false, reason), do: {:error, reason}
 
-  def with_assocs(assocs) do
-    for {key, struct} <- assocs, reduce: %{} do
+  def with_assocs(struct, assocs) do
+    for {key, assoc_struct} <- assocs, reduce: %{} do
       acc ->
-        Ecto.build_assoc(struct, key, acc)
+        if not is_nil(assoc_struct) do
+          Ecto.build_assoc(assoc_struct, key, acc)
+        else
+          acc
+        end
     end
+    |> then(&if(map_size(&1), do: struct, else: &1))
   end
+
+  def maybe_broadcast(ok_or_error, type, pubsub, topic_fun \\ &schema_topic/1)
+
+  def maybe_broadcast({:error, _} = result, _type, _pubsub, _topic_fun), do: result
+
+  def maybe_broadcast({:ok, schema}, type, pubsub, topic_fun),
+    do: broadcast(pubsub, topic_fun.(schema), {type, schema})
+
+  def maybe_broadcast(schema, type, pubsub, topic_fun),
+    do: broadcast(pubsub, topic_fun.(schema), {type, schema})
+
+  defp schema_topic(schema), do: apply(schema, :__schema__, [:source])
 
   defmacro __using__(opts) do
     # Copied from Sasa Juric's medium posts where he describes their Core module
@@ -43,12 +61,13 @@ defmodule Punkix.Repo do
         do: nil_to_error(get_by(schema, condition, opts))
 
       def maybe_preload(result, nil), do: result
+
+      def maybe_preload({:ok, struct}, preloads), do: {:ok, preload(struct, preloads)}
       def maybe_preload({:error, _} = result, _), do: result
 
       def maybe_preload(structs, preloads) when is_list(structs),
         do: for(result <- structs, do: maybe_preload(result, preloads))
 
-      def maybe_preload({:ok, struct}, preloads), do: {:ok, preload(struct, preloads)}
       def maybe_preload(struct, preloads), do: preload(struct, preloads)
 
       def transact(fun, opts \\ []) do
@@ -71,7 +90,8 @@ defmodule Punkix.Repo do
       defdelegate authorize(condition), to: Punkix.Repo
       defdelegate nil_to_error(result), to: Punkix.Repo
       defdelegate validate(valid, reason), to: Punkix.Repo
-      defdelegate with_assocs(assocs), to: Punkix.Repo
+      defdelegate with_assocs(struct, assocs), to: Punkix.Repo
+      defdelegate maybe_broadcast(schema, type, pubsub, topic_fun), to: Punkix.Repo
     end
   end
 

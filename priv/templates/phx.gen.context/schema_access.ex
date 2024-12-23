@@ -1,6 +1,6 @@
 
   alias <%= inspect schema.module %>
-  <%= Punkix.Context.assocs_aliasses(schema) %>
+  <%= Punkix.Context.assocs_schema_aliasses(schema) %>
   @<%= schema.singular %>_preloads [<%= Enum.map_join(schema.assocs, ", ", &"#{&1.field}: []") %>]
   @doc """
   Returns the list of <%= schema.plural %>.
@@ -13,7 +13,7 @@
 
   """
   @spec list_<%= schema.plural %>(nil | []) :: [<%= inspect schema.alias %>.t()]
-  def list_<%= schema.plural %>(preloads \\ nil) do
+  def list_<%= schema.plural %>(<%= Punkix.Context.add_opts(schema) %>) do
     Repo.all(<%= inspect schema.alias %>)
     |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
   end
@@ -35,12 +35,7 @@
   """
   @spec get_<%= schema.singular %>(<%= Punkix.spec_alias(schema.alias) %>.id() | String.t(), nil | []) :: 
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, :not_found}
-  def get_<%= schema.singular %>(id, preloads \\ nil)
-
-  def get_<%= schema.singular %>(id, preloads) when is_binary(id), 
-    do: get_<%= schema.singular %>(String.to_integer(id), preloads)
-
-  def get_<%= schema.singular %>(id, preloads) do
+  def get_<%= schema.singular %>(<%= Punkix.Context.add_opts("id", schema) %>) do
     Repo.fetch_one(<%= inspect schema.alias %>, id) 
     |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
   end
@@ -57,11 +52,15 @@
       {:error, %Ecto.Changeset{}}
 
   """
+  # TODO
+  # Create function to build from assocs with map as argument.
   @spec create_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec(schema, :create) %>, nil | []) :: 
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, Ecto.Changeset.t()}
-  def create_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(Punkix.Context.required_assocs_as_arguments(schema), schema) %>, preloads \\ nil) do
-    <%= if Punkix.Context.required_assocs(schema) != [] do %>Repo.with_assocs(<%= Punkix.Context.build_assocs(schema) %>)<% else %> %<%= inspect schema.alias %>{}<% end %>
-    |> store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema) %>, preloads)
+  def create_<%= schema.singular %>(<%= Punkix.Context.create_args(schema) %>) do
+    %<%= inspect schema.alias %>{}<%= if Punkix.Schema.belongs_assocs(schema) != [] do %>
+    |> Repo.with_assocs(<%= Punkix.Context.build_assocs(schema) %>)<% end %>
+    |> store_<%= schema.singular %>(<%= Punkix.Context.schema_attrs(schema) %>, preloads)
+    |> Repo.maybe_broadcast(:create, <%= context.base_module %>.PubSub)
   end
 
   @doc """
@@ -78,9 +77,10 @@
   """
   @spec update_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec("#{inspect schema.alias}.id()", schema) %>, nil | []) :: 
     {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
-  def update_<%= schema.singular %>(<%= Punkix.Context.context_fun_args("#{schema.singular}_id", schema) %>, preloads \\ nil) do
+  def update_<%= schema.singular %>(<%= Punkix.Context.update_args(schema) %>) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
-      store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.context_fun_args(schema) %>, preloads)
+      store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.schema_attrs(schema) %>, preloads)
+      |> Repo.maybe_broadcast(:update, <%= context.base_module %>.PubSub)
     end
   end
 
@@ -101,15 +101,16 @@
   def delete_<%= schema.singular %>(<%= schema.singular %>_id) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
       Repo.delete(<%= schema.singular %>)
+      |> Repo.maybe_broadcast(:delete, <%= context.base_module %>.PubSub)
     end
   end
 
   @doc false
-  defp store_<%= schema.singular %>(<%= Punkix.Context.context_fun_args(schema.singular, schema) %>, preloads) do
-    <%= schema.singular %>
-    |> change(<%= Punkix.Context.context_fun_args(schema) %>)
-    |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])
-<%= for k <- schema.uniques do %>    |> unique_constraint(<%= inspect k %>)
-<% end %>    |> Repo.insert_or_update()
+  defp store_<%= schema.singular %>(<%= Punkix.Context.store_args(schema) %>, preloads) do
+    changeset = <%= schema.singular %>
+    |> change(<%= Punkix.Context.schema_attrs(schema) %>)
+    |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])<%= for k <- schema.uniques do %>
+    |> unique_constraint(<%= inspect k %>)<% end %>
+    |> Repo.insert_or_update()
     |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
   end

@@ -35,6 +35,7 @@
     {=@<%= schema.singular %>}
     id={@<%= schema.singular %>.id || :new}
     title={@page_title}
-    action={@live_action}
+    action={@live_action}<%= for assoc <- Punkix.Context.required_assocs(schema) do %>
+    {=@<%= assoc.plural %>}<% end %>
   />
 </Modal>

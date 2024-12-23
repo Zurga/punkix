@@ -50,8 +50,8 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     [
       ~s|scope "/#{schema.plural}" do\n|,
       ~s|  live_session :#{schema.plural},|,
-      ~s|    session: %{"topics" => ~w/#{Enum.map_join(schema.assocs, " ", & &1.field)}},\n|,
-      ~s|    on_mount: #{inspect(schema.alias)}Live.LiveSession do\n|,
+      ~s| session: %{"topics" => ~w/#{Enum.map_join(schema.assocs, " ", & &1.plural)}/},\n|,
+      ~s|    on_mount: #{schema.web_namespace}.#{inspect(schema.alias)}Live.LiveSession do\n|,
       ~s|    live "/", #{inspect(schema.alias)}Live.Index, :index\n|,
       ~s|    live "/new", #{inspect(schema.alias)}Live.Index, :new\n|,
       ~s|    live "/:id/edit", #{inspect(schema.alias)}Live.Index, :edit\n|,
@@ -76,6 +76,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
         type in types && name
       end)
     end)
+    |> then(&if schema.assocs == [], do: &1, else: ["Select" | &1])
     |> Enum.uniq()
     |> Enum.sort()
     |> Enum.join(", ")
@@ -85,32 +86,41 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     end
   end
 
-  @doc false
-  def inputs(%Schema{} = schema) do
-    schema.attrs
-    |> Enum.reject(fn
-      {_, {:references, _}} ->
-        true
+  def inputs(schema) do
+    attr_inputs(schema) ++
+      (Punkix.Schema.belongs_assocs(schema)
+       |> Enum.map(fn
+         %{field: field, plural: plural, schema: assoc_schema} ->
+           """
+           <Select
+             field={#{inspect(field)}_id}
+             options={@#{plural} |> Enum.map(&{"#{assoc_schema} \#{&1.id}", &1.id})}
+           />
+           """
+       end))
+  end
 
+  @doc false
+  def attr_inputs(%Schema{attrs: attrs} = schema) do
+    attrs
+    |> Enum.reject(fn
       {_key, type} ->
         type == :map
     end)
     |> Enum.map(fn
       {key, {:array, _} = type} ->
-        ~s"""
+        """
         <Select
           field={#{inspect(key)}}
           multiple
-          label="#{label(key)}"
           options={#{inspect(default_options(type))}}
         />
         """
 
       {key, {:enum, _}} ->
-        ~s"""
+        """
         <Select
           field={#{inspect(key)}}
-          label="#{label(key)}"
           prompt="Choose a value"
           options={Ecto.Enum.values(#{inspect(schema.module)}, #{inspect(key)})}
         />

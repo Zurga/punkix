@@ -13,7 +13,7 @@ defmodule Punkix.Schema do
 
     Extra information for a `references` field
     can be given in a generator is the following:
-     - schema
+     - reverse
      - through, for `has_one` and `has_many`
      - foreign_key
      - on_replace, defaults to `:update` 
@@ -22,14 +22,27 @@ defmodule Punkix.Schema do
     They can be specified in the following format: key;value.
 
     # Examples
-    `mix punkix.gen.context Persons Person persons name:string articles:references:articles,schema:Articles.Article,foreign_key:writer_id
-    `mix punkix.gen.context Articles Article articles title:string content:string writer_id:references:persons,schema:Persons.Person.articles,on_replace:delete
+    `mix punkix.gen.context Persons Person persons name:string articles:references:articles,reverse:Articles.Article.writer,foreign_key:writer_id
+    `mix punkix.gen.context Articles Article articles title:string content:string writer_id:references:persons,reverse:Persons.Person.articles,on_replace:delete
     """
-    alias Surface.Catalogue.Examples
 
-    defstruct ~w/alias field key assoc_table assoc_fun schema foreign_key on_replace on_delete required reverse/a
+    defstruct [
+      :alias,
+      :field,
+      :key,
+      :assoc_table,
+      :assoc_fun,
+      :schema,
+      :foreign_key,
+      :on_replace,
+      :on_delete,
+      :required,
+      :reverse,
+      :context,
+      :plural
+    ]
 
-    def new({field, key, _, s}) do
+    def new({field, key, plural, s}) do
       {assoc_fun, field} =
         cond do
           Punkix.Schema.is_belongs_to?(key) ->
@@ -42,8 +55,13 @@ defmodule Punkix.Schema do
       [references | opts] = String.split(to_string(s), ",")
       assoc_table = String.split(references, ":") |> Enum.at(-1)
 
+      context =
+        Punkix.Schema.find_key(opts, :reverse)
+        |> String.split(".")
+        |> Enum.at(0)
+
       {alias, reverse} =
-        Punkix.Schema.find_key(opts, :schema, "")
+        Punkix.Schema.find_key(opts, :reverse, "")
         |> String.split(".")
         |> Enum.reduce({"", nil}, fn input, {alias, reverse} ->
           if String.capitalize(input) == input do
@@ -79,7 +97,9 @@ defmodule Punkix.Schema do
         foreign_key: foreign_key,
         on_replace: on_replace,
         required: required,
-        reverse: reverse
+        reverse: reverse,
+        context: context,
+        plural: assoc_table
       }
     end
 
@@ -145,6 +165,10 @@ defmodule Punkix.Schema do
     end
   end
 
+  def set_assocs(%{assocs: assocs} = schema) do
+    %{schema | assocs: Enum.map(assocs, &Punkix.Schema.Assoc.new/1)}
+  end
+
   def format_assocs(schema) do
     Enum.map_join(schema.assocs, "\n", &Assoc.format/1)
   end
@@ -177,5 +201,37 @@ defmodule Punkix.Schema do
 
   def is_belongs_to?(key) do
     key |> to_string() |> String.ends_with?("_id")
+  end
+
+  def belongs_assocs(schema) do
+    for %{assoc_fun: :belongs_to} = assoc <- schema.assocs do
+      assoc
+    end
+  end
+
+  def optional_fields(schema) do
+    field =
+      schema.optionals
+      |> Enum.map(&elem(&1, 0))
+
+    assoc_fields =
+      belongs_assocs(schema)
+      |> Enum.reject(& &1.required)
+      |> Enum.map(& &1.key)
+
+    field ++ assoc_fields
+  end
+
+  def required_fields(schema) do
+    fields =
+      Mix.Phoenix.Schema.required_fields(schema)
+      |> Enum.map(&elem(&1, 0))
+
+    assoc_fields =
+      belongs_assocs(schema)
+      |> Enum.filter(& &1.required)
+      |> Enum.map(& &1.key)
+
+    fields ++ assoc_fields
   end
 end

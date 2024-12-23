@@ -13,4 +13,20 @@ defmodule Punkix.GenLiveTest do
       gen_live(project_path, project_name)
     end)
   end
+
+  test "router instructions" do
+    app_name = "Test"
+
+    schema =
+      "Persons Person persons name:string description:string articles:references:articles,reverse:Articles.Article.writer,foreign_key:writer_id"
+      |> String.split(" ")
+      |> Mix.Tasks.Phx.Gen.Context.build([])
+      |> then(&(elem(&1, 1) |> Map.put(:web_namespace, app_name <> "Web")))
+      |> Punkix.Schema.set_assocs()
+
+    schema
+    |> Mix.Tasks.Punkix.Gen.Live.live_route_instructions()
+    |> Enum.join("")
+    |> IO.puts()
+  end
 end

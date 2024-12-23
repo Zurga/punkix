@@ -9,29 +9,33 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     use Ecto.Schema
     import Ecto.Changeset
 
-    @valid_fields ~w/<%= Enum.map_join(schema.attrs, " ", &elem(&1, 0)) %>/a
-    @required_fields ~w/<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), " ", &elem(&1, 0)) %>/a
+    @optional ~w/<%= Enum.join(Punkix.Schema.optional_fields(schema), " ") %>/a
+    @required ~w/<%= Enum.join(Punkix.Schema.required_fields(schema), " ") %>/a
+    @all @optional ++ @required
   
     embedded_schema do<%= for {key, type} <- schema.attrs, type != :map and is_atom(type) == true do %>
-      field <%= inspect(key) %>, <%= inspect(type) %><% end %>
+      field <%= inspect(key) %>, <%= inspect(type) %><% end %><%= for assoc <- Punkix.Schema.belongs_assocs(schema) do %>
+      field <%= inspect(assoc.key) %>, :integer<% end %>
     end
 
     def changeset(<%= schema.singular %>, attrs \\ %{}) do
       <%= schema.singular %>
-      |> to_form_struct(__MODULE__, @valid_fields)
-      |> cast(attrs, @valid_fields)
-      |> validate_required(@required_fields)
+      |> to_form_struct(__MODULE__, @all)
+      |> cast(attrs, @all)
+      |> validate_required(@required)
     end
 
     def change(struct, attrs, action) do
       with {:ok, <%= schema.singular %>} <- changeset(struct, attrs) |> apply_action(action) do
-        {:ok, Map.take(<%= schema.singular %>, @valid_fields)}
+        {:ok, Map.take(<%= schema.singular %>, @all)}
       end
     end
   end
 
   prop title, :string
-  prop <%= schema.singular %>, :any
+  prop <%= schema.singular %>, :any<%= for assoc <- Punkix.Schema.belongs_assocs(schema) do %>
+  prop <%= assoc.plural %>, :any
+  <% end %>
   prop action, :atom, default: :new
   slot buttons
   data presentation, :atom, from_context: {__MODULE__, :presentation}
@@ -118,6 +122,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     end
     {:noreply, socket}
   end
+
   @impl true
   def handle_event("delete", _, socket) do
     {:ok, <%= schema.singular %>} = <%= inspect context.alias %>.delete_<%= schema.singular %>(~a[<%= schema.singular %>].id)
@@ -125,10 +130,11 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     {:noreply, socket}
   end 
 
-
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :changeset, changeset)
   end
 
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
+  defp notify_parent(msg) do 
+    #send(self(), {__MODULE__, msg})
+  end
 end
