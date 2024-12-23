@@ -35,18 +35,16 @@ defmodule Punkix.ContextTest do
 
   describe "*_args/1" do
     test "create_args", %{schema: schema} do
-      assert Context.create_args(schema) == "article_attrs, preloads \\ nil"
+      assert Context.create_args(schema) == "article_attrs, preloads \\\\ nil"
     end
 
     test "update_args", %{schema: schema} do
-      assert Context.update_args(schema) == "article_id, article_attrs, preloads \\ nil"
+      assert Context.update_args(schema) == "article_id, article_attrs, preloads \\\\ nil"
     end
   end
 
   describe "build_assocs/2" do
     test "assocs are retrieved from schema_attrs", %{schema: schema} do
-      schema = Map.put(schema, :assocs, Enum.map(schema.assocs, &Punkix.Schema.Assoc.new/1))
-
       assert Context.build_assocs(schema) == "articles: article_attrs[:category]"
     end
   end
