@@ -12,3 +12,5 @@ config :esbuild,
   version: "0.12.15",
   module: esbuild.(~w(--format=esm --sourcemap --outfile=../priv/static/punkix.esm.js)),
   main: esbuild.(~w(--format=cjs --sourcemap --outfile=../priv/static/punkix.cjs.js))
+
+import_config "#{config_env()}.exs"

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+BRANCH_NAME="master"  # or whatever branch you're using
+NIX_FILE="default.nix"
+
+# Get the latest commit hash
+COMMIT_HASH=$(git rev-parse HEAD)
+# Fetch the new SHA256 hash
+  # Update the default.nix file with the new SHA256 hash
+sed -i -e "s/commit = .*;/commit = \"$COMMIT_HASH\";/" "$NIX_FILE"
+

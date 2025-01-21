@@ -7,14 +7,14 @@ defmodule Punkix.MixProject do
       version: "0.1.0",
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
-      elixirc_paths: elixirc_paths(Mix.env()),
+      elixirc_paths: IO.inspect(elixirc_paths(Mix.env()), label: :elixir_rc),
       deps: deps(),
       aliases: aliases(),
       compilers: Mix.compilers() ++ [:surface]
     ]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(env) when env in ~w/test dev/a, do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
   # Run "mix help compile.app" to learn about applications.
   def application do
@@ -37,6 +37,12 @@ defmodule Punkix.MixProject do
       {:surface_form_helpers, "~> 0.2.0"},
       {:esbuild, "~> 0.2", only: [:dev, :test]},
       {:exflect, "~> 1.0.0"},
+      {:ecto_watch, "~> 0.12.2"},
+      {:ecto_sql, "~> 3.11"},
+      {:cachex, "~> 4.0.3"},
+      {:deep_merge, "~> 1.0.0"},
+      {:postgrex, "~> 0.19"},
+      {:pathex, "~> 2.6"},
       {:plug_cowboy, "~> 2.0", only: :dev},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_ecto, "~> 4.6.2", only: :dev}

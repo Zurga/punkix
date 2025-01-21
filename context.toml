@@ -1,0 +1,14 @@
+[[Accounts]]
+[Article]
+_table = "articles"
+name = {type = "string", default = "Test"}
+writer = {type = "belongs_to", schema = "Persons.Person"}
+
+[[Persons]]
+[Person]
+_table = "persons"
+name = {type = "string", default = "Test"}
+articles = {type = "has_many", schema = "Accounts.Articles"}
+
+[OtherPerson]
+_table = "other_person"
