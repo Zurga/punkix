@@ -13,6 +13,44 @@ defmodule Punkix.Repo do
     from(q in query, where: ^conditions)
   end
 
+  def get_schema([value | _]), do: get_schema(value)
+  def get_schema(value), do: value.__struct__
+
+  def find_preloads([]), do: []
+  def find_preloads([value | _]), do: find_preloads(value)
+  def find_preloads(value), do: do_find_preloads(get_schema(value), value)
+
+  def do_find_preloads(struct, value, keys \\ [])
+
+  def do_find_preloads(_struct, value, keys) when is_struct(value, Ecto.Association.NotLoaded),
+    do: keys
+
+  def do_find_preloads(struct, value, keys) when is_struct(value) do
+    Enum.map(
+      struct.__schema__(:associations),
+      fn key ->
+        new_value =
+          case Map.get(value, key) do
+            [new_value | _] when is_struct(new_value) ->
+              new_value
+
+            new_value
+            when is_struct(new_value) and not is_struct(new_value, Ecto.Association.NotLoaded) ->
+              new_value
+
+            _ ->
+              :continue
+          end
+
+        if new_value != :continue do
+          [{key, do_find_preloads(new_value.__struct__, new_value)} | keys]
+        else
+          keys
+        end
+      end
+    )
+  end
+
   def nil_to_error(result) do
     case result do
       nil -> {:error, :not_found}
