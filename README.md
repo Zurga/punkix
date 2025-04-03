@@ -1,8 +1,10 @@
 # Punkix
 
-An opionated Phoenix installer and generator. It uses Surface as the templating engine, 
+An opinionated Phoenix installer and generator. It uses Surface as the templating engine, 
 does not use Tailwind and has basic semantic html in the generated components. The generators
-re-use as much of the code that the Phoenix generators as possible to ease mainainability.
+re-use as much of the code that the Phoenix generators as possible to ease mainainability. The Context and Schema generators handle associations correctly and Live generators will include necessary assocs in the FormComponent.
+
+The context modules are written in the style presented by Sasa Juric in his series of blog posts TODO link them. Event around Ecto rows are not sent explicitly by the context functions, but emitted using EctoWatch. This ensures that all database changes are propagated through the system. A seperate caching layer is applied on top with EctoSync, which also provides an easy to use API to keep assigns and Ecto rows in sync.
 
 ## Installation
 
