@@ -1,6 +1,10 @@
 # Punkix
 
+<<<<<<< Updated upstream
 An opinionated Phoenix installer and generator. It uses Surface as the templating engine, 
+=======
+An opionated Phoenix installer and generator. It uses Phoenix as the templating engine, 
+>>>>>>> Stashed changes
 does not use Tailwind and has basic semantic html in the generated components. The generators
 re-use as much of the code that the Phoenix generators as possible to ease mainainability. The Context and Schema generators handle associations correctly and Live generators will include necessary assocs in the FormComponent.
 

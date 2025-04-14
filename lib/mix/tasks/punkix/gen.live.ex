@@ -37,7 +37,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     test_live = Path.join([test_prefix, "live", web_path])
 
     [
-      {:eex, "live_session.ex", Path.join(web_live, "#{schema.singular}_live_session.ex")},
+      {:eex, "assigns.ex", Path.join(web_live, "assigns.ex")},
       {:eex, "show.ex", Path.join(web_live, "show.ex")},
       {:eex, "index.ex", Path.join(web_live, "index.ex")},
       {:eex, "schema_component.ex", Path.join(web_live, "#{schema.singular}_component.ex")},
@@ -50,15 +50,11 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
   def live_route_instructions(schema) do
     [
       ~s|scope "/#{schema.plural}" do\n|,
-      ~s|  live_session :#{schema.plural},|,
-      ~s| session: %{"topics" => ~w/#{Enum.map_join(schema.assocs, " ", & &1.plural)}/},\n|,
-      ~s|    on_mount: #{schema.web_namespace}.#{inspect(schema.alias)}Live.LiveSession do\n|,
-      ~s|    live "/", #{inspect(schema.alias)}Live.Index, :index\n|,
-      ~s|    live "/new", #{inspect(schema.alias)}Live.Index, :new\n|,
-      ~s|    live "/:id/edit", #{inspect(schema.alias)}Live.Index, :edit\n|,
-      ~s|    live "/:id", #{inspect(schema.alias)}Live.Show, :show\n|,
-      ~s|    live "/:id/show/edit", #{inspect(schema.alias)}Live.Show, :edit\n|,
-      ~s|  end\n|,
+      ~s|  live "/", #{inspect(schema.alias)}Live.Index, :index\n|,
+      ~s|  live "/new", #{inspect(schema.alias)}Live.Index, :new\n|,
+      ~s|  live "/:id/edit", #{inspect(schema.alias)}Live.Index, :edit\n|,
+      ~s|  live "/:id", #{inspect(schema.alias)}Live.Show, :show\n|,
+      ~s|  live "/:id/show/edit", #{inspect(schema.alias)}Live.Show, :edit\n|,
       ~s|end|
     ]
   end
