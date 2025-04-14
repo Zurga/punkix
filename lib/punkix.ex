@@ -8,6 +8,19 @@ defmodule Punkix do
       def add_punkix(paths) do
         List.insert_at(paths, 1, :punkix)
       end
+
+      patch(EEx)
+      replace(EEx, :eval_file, 3, :eval_file)
+
+      def eval_file(source, binding, _) do
+        unformatted = EEx.eval_file(source, binding)
+
+        if String.ends_with?(source, ".ex") do
+          Code.format_string!(unformatted)
+        else
+          unformatted
+        end
+      end
     end
   end
 
