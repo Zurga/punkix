@@ -23,7 +23,8 @@ defmodule Bandit.InitialHandler do
     case {state.http_1_enabled, state.http_2_enabled, alpn_protocol(socket), sniff_wire(socket)} do
       {_, _, _, :likely_tls} ->
         Logger.warning("Connection that looks like TLS received on a clear channel",
-          domain: [:bandit]
+          domain: [:bandit],
+          plug: state.plug
         )
 
         {:close, state}
@@ -56,18 +57,29 @@ defmodule Bandit.InitialHandler do
     end
   end
 
-  # Returns the protocol as suggested by received data, if possible
+  # Returns the protocol as suggested by received data, if possible.
+  # We do this in two phases so that we don't hang on *really* short HTTP/1
+  # requests that are less than 24 bytes
   @spec sniff_wire(ThousandIsland.Socket.t()) ::
           Bandit.HTTP2.Handler
           | :likely_tls
           | {:no_match, binary()}
           | {:error, :closed | :timeout | :inet.posix()}
   defp sniff_wire(socket) do
-    case ThousandIsland.Socket.recv(socket, 24) do
-      {:ok, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"} -> Bandit.HTTP2.Handler
-      {:ok, <<22::8, 3::8, minor::8, _::binary>>} when minor in [1, 3] -> :likely_tls
+    case ThousandIsland.Socket.recv(socket, 3) do
+      {:ok, "PRI" = buffer} -> sniff_wire_for_http2(socket, buffer)
+      {:ok, <<22::8, 3::8, minor::8>>} when minor in [1, 3] -> :likely_tls
       {:ok, data} -> {:no_match, data}
       {:error, :timeout} -> {:no_match, <<>>}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp sniff_wire_for_http2(socket, buffer) do
+    case ThousandIsland.Socket.recv(socket, 21) do
+      {:ok, " * HTTP/2.0\r\n\r\nSM\r\n\r\n"} -> Bandit.HTTP2.Handler
+      {:ok, data} -> {:no_match, buffer <> data}
+      {:error, :timeout} -> {:no_match, buffer}
       {:error, error} -> {:error, error}
     end
   end

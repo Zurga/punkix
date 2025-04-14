@@ -1,5 +1,6 @@
 {application,floki,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"Floki is a simple HTML parser that enables search for nodes using CSS selectors."},
               {modules,['Elixir.Enumerable.Floki.HTMLTree','Elixir.Floki',
@@ -43,4 +44,4 @@
                         'Elixir.String.Chars.Floki.Selector.PseudoClass',
                         floki_mochi_html,floki_selector_lexer]},
               {registered,[]},
-              {vsn,"0.37.0"}]}.
+              {vsn,"0.37.1"}]}.

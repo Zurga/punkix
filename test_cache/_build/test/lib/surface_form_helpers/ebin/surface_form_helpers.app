@@ -1,5 +1,6 @@
 {application,surface_form_helpers,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,surface,phoenix_html,
                              phoenix_html_helpers]},
               {description,"Surface wrappers for Phoenix.HTML.Form functions"},

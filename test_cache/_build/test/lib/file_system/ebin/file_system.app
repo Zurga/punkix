@@ -1,5 +1,6 @@
 {application,file_system,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"An Elixir file system change watcher wrapper based on FS, the native file\nsystem listener.\n"},
               {modules,['Elixir.FileSystem','Elixir.FileSystem.Backend',
@@ -9,4 +10,4 @@
                         'Elixir.FileSystem.Backends.FSWindows',
                         'Elixir.FileSystem.Worker']},
               {registered,[]},
-              {vsn,"1.0.1"}]}.
+              {vsn,"1.1.0"}]}.

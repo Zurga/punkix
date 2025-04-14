@@ -1,5 +1,6 @@
 {application,makeup,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,eex,nimble_parsec]},
               {description,"Syntax highlighter for source code in the style of Pygments.\n"},
               {modules,['Elixir.Makeup','Elixir.Makeup.Application',

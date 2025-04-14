@@ -1,5 +1,6 @@
 {application,flop,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,ecto,nimble_options]},
               {description,"Filtering, ordering and pagination with Ecto."},
               {modules,['Elixir.Flop','Elixir.Flop.Adapter',

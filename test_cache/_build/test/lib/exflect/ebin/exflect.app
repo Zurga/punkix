@@ -1,5 +1,6 @@
 {application,exflect,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,tools]},
               {description,"An inflection library for singularization/pluralization of English words."},
               {modules,['Elixir.Exflect','Elixir.Exflect.Detect',

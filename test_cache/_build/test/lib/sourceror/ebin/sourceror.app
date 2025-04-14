@@ -1,5 +1,6 @@
 {application,sourceror,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"sourceror"},
               {modules,['Elixir.Inspect.Sourceror.Zipper','Elixir.Sourceror',
@@ -12,4 +13,4 @@
                         'Elixir.Sourceror.Zipper',
                         'Elixir.Sourceror.Zipper.Inspect']},
               {registered,[]},
-              {vsn,"1.0.3"}]}.
+              {vsn,"1.7.1"}]}.

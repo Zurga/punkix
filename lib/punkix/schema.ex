@@ -42,7 +42,7 @@ defmodule Punkix.Schema do
       :plural
     ]
 
-    def new({field, key, plural, s}) do
+    def new({field, key, _plural, s}) do
       {assoc_fun, field} =
         cond do
           Punkix.Schema.is_belongs_to?(key) ->

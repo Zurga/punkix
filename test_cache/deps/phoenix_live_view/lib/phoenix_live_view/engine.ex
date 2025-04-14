@@ -153,10 +153,6 @@ defmodule Phoenix.LiveView.Rendered do
       Phoenix.HTML.Safe.to_iodata(struct)
     end
 
-    def to_iodata(nil) do
-      raise "cannot convert .heex/.leex template with change tracking to iodata"
-    end
-
     def to_iodata(other) do
       other
     end
@@ -294,9 +290,12 @@ defmodule Phoenix.LiveView.Engine do
         ]
       }
 
-  This allows live templates to drastically optimize
-  the data sent by comprehensions, as the static parts
-  are emitted only once, regardless of the number of items.
+  This allows live templates to send the static parts only once,
+  regardless of the number of items. On the other hand, keep in
+  mind the collection itself is not "diffed" across renders.
+  If one entry in the comprehension changes, the whole collection
+  is sent again. Consider using `Phoenix.LiveComponent` and
+  `Phoenix.LiveView.stream/4` to optimize those cases.
 
   The list of dynamics is always a list of iodatas or components,
   as we don't perform change tracking inside the comprehensions
@@ -1299,6 +1298,7 @@ defmodule Phoenix.LiveView.Engine do
   defp recur_changed_assign([], head, assigns, changed) do
     case {assigns, changed} do
       {%{^head => value}, %{^head => value}} -> false
+      {m1, m2} when not is_map_key(m1, head) and not is_map_key(m2, head) -> false
       {_, %{^head => value}} when is_map(value) -> value
       {_, _} -> true
     end

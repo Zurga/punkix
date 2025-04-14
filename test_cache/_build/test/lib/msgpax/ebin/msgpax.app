@@ -1,5 +1,6 @@
 {application,msgpax,
-             [{optional_applications,[plug]},
+             [{config_mtime,1744621395},
+              {optional_applications,[plug]},
               {applications,[kernel,stdlib,elixir,plug]},
               {description,"A high-performance and comprehensive library for serializing and deserializing Elixir terms using the MessagePack format."},
               {modules,['Elixir.Inspect.Msgpax.Bin',

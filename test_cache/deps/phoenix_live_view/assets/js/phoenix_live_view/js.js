@@ -46,12 +46,9 @@ let JS = {
   // commands
 
   exec_exec(e, eventType, phxEvent, view, sourceEl, el, {attr, to}){
-    let nodes = to ? DOM.all(document, to) : [sourceEl]
-    nodes.forEach(node => {
-      let encodedJS = node.getAttribute(attr)
-      if(!encodedJS){ throw new Error(`expected ${attr} to contain JS command on "${to}"`) }
-      view.liveSocket.execJS(node, encodedJS, eventType)
-    })
+    let encodedJS = el.getAttribute(attr)
+    if(!encodedJS){ throw new Error(`expected ${attr} to contain JS command on "${to}"`) }
+    view.liveSocket.execJS(el, encodedJS, eventType)
   },
 
   exec_dispatch(e, eventType, phxEvent, view, sourceEl, el, {event, detail, bubbles}){
@@ -65,7 +62,7 @@ let JS = {
     let pushOpts = {loading, value, target, page_loading: !!page_loading}
     let targetSrc = eventType === "change" && dispatcher ? dispatcher : sourceEl
     let phxTarget = target || targetSrc.getAttribute(view.binding("target")) || targetSrc
-    view.withinTargets(phxTarget, (targetView, targetCtx) => {
+    const handler = (targetView, targetCtx) => {
       if(!targetView.isConnected()){ return }
       if(eventType === "change"){
         let {newCid, _target} = args
@@ -78,7 +75,14 @@ let JS = {
       } else {
         targetView.pushEvent(eventType, sourceEl, targetCtx, event || phxEvent, data, pushOpts, callback)
       }
-    })
+    }
+    // in case of formRecovery, targetView and targetCtx are passed as argument
+    // as they are looked up in a template element, not the real DOM
+    if(args.targetView && args.targetCtx){
+      handler(args.targetView, args.targetCtx)
+    } else {
+      view.withinTargets(phxTarget, handler)
+    }
   },
 
   exec_navigate(e, eventType, phxEvent, view, sourceEl, el, {href, replace}){
@@ -90,22 +94,36 @@ let JS = {
   },
 
   exec_focus(e, eventType, phxEvent, view, sourceEl, el){
-    window.requestAnimationFrame(() => ARIA.attemptFocus(el))
+    ARIA.attemptFocus(el)
+    // in case the JS.focus command is in a JS.show/hide/toggle chain, for show we need
+    // to wait for JS.show to have updated the element's display property (see exec_toggle)
+    // but that run in nested animation frames, therefore we need to use them here as well
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => ARIA.attemptFocus(el))
+    })
   },
 
   exec_focus_first(e, eventType, phxEvent, view, sourceEl, el){
-    window.requestAnimationFrame(() => ARIA.focusFirstInteractive(el) || ARIA.focusFirst(el))
+    ARIA.focusFirstInteractive(el) || ARIA.focusFirst(el)
+    // if you wonder about the nested animation frames, see exec_focus
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => ARIA.focusFirstInteractive(el) || ARIA.focusFirst(el))
+    })
   },
 
   exec_push_focus(e, eventType, phxEvent, view, sourceEl, el){
-    window.requestAnimationFrame(() => focusStack.push(el || sourceEl))
+    focusStack.push(el || sourceEl)
   },
 
   exec_pop_focus(_e, _eventType, _phxEvent, _view, _sourceEl, _el){
-    window.requestAnimationFrame(() => {
-      const el = focusStack.pop()
-      if(el){ el.focus() }
-    })
+    const el = focusStack.pop()
+    if(el){
+      el.focus()
+      // if you wonder about the nested animation frames, see exec_focus
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => el.focus())
+      })
+    }
   },
 
   exec_add_class(e, eventType, phxEvent, view, sourceEl, el, {names, transition, time, blocking}){
@@ -191,11 +209,19 @@ let JS = {
         if(eventType === "remove"){ return }
         let onStart = () => {
           this.addOrRemoveClasses(el, inStartClasses, outClasses.concat(outStartClasses).concat(outEndClasses))
-          let stickyDisplay = display || this.defaultDisplay(el)
-          DOM.putSticky(el, "toggle", currentEl => currentEl.style.display = stickyDisplay)
+          const stickyDisplay = display || this.defaultDisplay(el)
           window.requestAnimationFrame(() => {
+            // first add the starting + active class, THEN make the element visible
+            // otherwise if we toggled the visibility earlier css animations
+            // would flicker, as the element becomes visible before the active animation
+            // class is set (see https://github.com/phoenixframework/phoenix_live_view/issues/3456)
             this.addOrRemoveClasses(el, inClasses, [])
-            window.requestAnimationFrame(() => this.addOrRemoveClasses(el, inEndClasses, inStartClasses))
+            // addOrRemoveClasses uses a requestAnimationFrame itself, therefore we need to move the putSticky
+            // into the next requestAnimationFrame...
+            window.requestAnimationFrame(() => {
+              DOM.putSticky(el, "toggle", currentEl => currentEl.style.display = stickyDisplay)
+              this.addOrRemoveClasses(el, inEndClasses, inStartClasses)
+            })
           })
         }
         let onEnd = () => {

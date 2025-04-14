@@ -10,17 +10,17 @@ A backwards-compatible shim can be used to maintain `phx-feedback-for` in your e
 2. Import it into your `assets/js/app.js`.
 3. Add a new `dom` option to your `LiveSocket` constructor, or wrap the existing value:
 
-```javascript
-import {Socket} from "phoenix";
-import {LiveSocket} from "phoenix_live_view"
-import phxFeedbackDom from "./phx_feedback_dom"
+   ```javascript
+   import {Socket} from "phoenix";
+   import {LiveSocket} from "phoenix_live_view"
+   import phxFeedbackDom from "./phx_feedback_dom"
 
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
-let liveSocket = new LiveSocket("/live", Socket, {
-  params: {_csrf_token: csrfToken},
-  dom: phxFeedbackDom({})
-})
-```
+   let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
+   let liveSocket = new LiveSocket("/live", Socket, {
+     params: {_csrf_token: csrfToken},
+     dom: phxFeedbackDom({})
+   })
+   ```
 
 Additionally, the `phx-page-loading` attribute has been removed in favor of using the `page_loading: true`
 option to `Phoenix.LiveView.JS.push/2` as needed.
@@ -43,51 +43,51 @@ First, ensure that you are using the latest versions of `:phoenix_ecto` and `:ph
 
 #### Core components
 
-1. Adjust the core components to omit the `phx-feedback-for` attribute and the `phx-no-feedback` classes.
-This shows one example for the textarea input, but there are more cases that need to be adjusted accordingly:
+1.  Adjust the core components to omit the `phx-feedback-for` attribute and the `phx-no-feedback` classes.
+    This shows one example for the textarea input, but there are more cases that need to be adjusted accordingly:
 
-```diff
-   def input(%{type: "textarea"} = assigns) do
-     ~H"""
--    <div phx-feedback-for={@name}>
-+    <div>
-       <.label for={@id}><%= @label %></.label>
-       <textarea
-         id={@id}
-         name={@name}
-         class={[
--          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
--          "min-h-[6rem] phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-+          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 min-h-[6rem]",
-           @errors == [] && "border-zinc-300 focus:border-zinc-400",
-           @errors != [] && "border-rose-400 focus:border-rose-400"
-         ]}
-```
-The following regex could be used to find and replace the relevant `phx-no-feedback` classes: `/phx-no-feedback:[\w\-\d:]+/`.
+    ```diff
+       def input(%{type: "textarea"} = assigns) do
+         ~H"""
+    -    <div phx-feedback-for={@name}>
+    +    <div>
+           <.label for={@id}><%= @label %></.label>
+           <textarea
+             id={@id}
+             name={@name}
+             class={[
+    -          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
+    -          "min-h-[6rem] phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
+    +          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 min-h-[6rem]",
+               @errors == [] && "border-zinc-300 focus:border-zinc-400",
+               @errors != [] && "border-rose-400 focus:border-rose-400"
+             ]}
+    ```
+    The following regex could be used to find and replace the relevant `phx-no-feedback` classes: `/phx-no-feedback:[\w\-\d:]+/`.
 
-2. Filter the errors in the initial function for `Phoenix.HTML.FormField`s:
+2.  Filter the errors in the initial function for `Phoenix.HTML.FormField`s:
 
-```diff
-   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
-+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+    ```diff
+       def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    +    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
-     assigns
-     |> assign(field: nil, id: assigns.id || field.id)
--    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
-+    |> assign(:errors, Enum.map(errors, &translate_error(&1)))
-     |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
-     |> assign_new(:value, fn -> field.value end)
-     |> input()
-   end
-```
+         assigns
+         |> assign(field: nil, id: assigns.id || field.id)
+    -    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+    +    |> assign(:errors, Enum.map(errors, &translate_error(&1)))
+         |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
+         |> assign_new(:value, fn -> field.value end)
+         |> input()
+       end
+    ```
 
-3. You can remove the phx-no-feedback tailwind variant helper from your `tailwind.config.js`:
+3.  You can remove the phx-no-feedback tailwind variant helper from your `tailwind.config.js`:
 
-```diff
-    //
--   plugin(({addVariant}) => addVariant("phx-no-feedback", [".phx-no-feedback&", ".phx-no-feedback &"])),
-    plugin(({addVariant}) => addVariant("phx-click-loading", [".phx-click-loading&", ".phx-click-loading &"])),
-```
+    ```diff
+        //
+    -   plugin(({addVariant}) => addVariant("phx-no-feedback", [".phx-no-feedback&", ".phx-no-feedback &"])),
+        plugin(({addVariant}) => addVariant("phx-click-loading", [".phx-click-loading&", ".phx-click-loading &"])),
+    ```
 
 #### phx.gen.auth
 
@@ -96,26 +96,115 @@ Because of the way the current password is checked in previous variants of the c
 password is not visible when migrating to `used_input?`. To make this work, two changes need to be made to the
 generated user module:
 
-1. add a new virtual field `:current_password` to the schema:
+1.  add a new virtual field `:current_password` to the schema:
 
-```diff
-    field :hashed_password, :string, redact: true
-+   field :current_password, :string, virtual: true, redact: true
-```
+    ```diff
+        field :hashed_password, :string, redact: true
+    +   field :current_password, :string, virtual: true, redact: true
+    ```
 
-2. cast the `current_password` field in the `validate_current_password` function:
+2.  cast the `current_password` field in the `validate_current_password` function:
 
-```diff
-   def validate_current_password(changeset, password) do
-+    changeset = cast(changeset, %{current_password: password}, [:current_password])
-+
-     if valid_password?(changeset.data, password) do
-```
+    ```diff
+       def validate_current_password(changeset, password) do
+    +    changeset = cast(changeset, %{current_password: password}, [:current_password])
+    +
+         if valid_password?(changeset.data, password) do
+    ```
+
+## 1.0.9 (2025-03-26)
+
+### Bug fixes
+* Fix testing uploads inside nested LiveViews with LiveViewTest ([#3732](https://github.com/phoenixframework/phoenix_live_view/issues/3732))
+
+## 1.0.8 (2025-03-26)
+
+### Bug fixes 
+* Regression: ensure `_target` is sent as `["undefined"]` when an input has no name ([#3727](https://github.com/phoenixframework/phoenix_live_view/issues/3727))
+* Fix stream items from disconnected render not being removed when rendered inside a nested stream ([#3730](https://github.com/phoenixframework/phoenix_live_view/pull/3730))
+
+### Enhancements
+* Add `Phoenix.LiveViewTest.refute_redirected/1` to assert that no redirect took place ([#3729](https://github.com/phoenixframework/phoenix_live_view/pull/3729))
+
+## 1.0.7 (2025-03-21)
+
+### Bug fixes
+* Fix `_target` parameter being sent incorrectly ([#3719](https://github.com/phoenixframework/phoenix_live_view/pull/3720)).
+
+## 1.0.6 (2025-03-20)
+
+### Bug fixes
+* Fix race condition where patches were discarded when a new navigation was already pending ([#3710](https://github.com/phoenixframework/phoenix_live_view/pull/3710))
+* Fix phx-debounce="blur" re-sending events for subsequent blurs ([#3689](https://github.com/phoenixframework/phoenix_live_view/issues/3689))
+* Fix `code_change` callback not returning the new channel state ([#3712](https://github.com/phoenixframework/phoenix_live_view/pull/3712))
+* Fix LiveViews not being able to reconnect without a full page reload after a deployment that changed the router ([#3715](https://github.com/phoenixframework/phoenix_live_view/pull/3715))
+
+### Enhancements
+* Improve performance of large forms ([#3696](https://github.com/phoenixframework/phoenix_live_view/pull/3696))
+* Ensure `JS.push` values are sent on form events ([#3674](https://github.com/phoenixframework/phoenix_live_view/pull/3674))
+* Allow to skip persistent_id generation in `Phoenix.Component.inputs_for/1` ([#3677](https://github.com/phoenixframework/phoenix_live_view/pull/3677))
+* Delay `phx-disconnected` binding to prevent brief flash of "Attempting to reconnect" message for short disconnects ([#3680](https://github.com/phoenixframework/phoenix_live_view/pull/3680)). This can be configured by passing the `disconnectedTimeout` option to the LiveSocket constructor.
+
+## 1.0.5 (2025-02-27)
+
+### Bug fixes
+* Fix `JS.exec` failing when a selector is passed ([#3678](https://github.com/phoenixframework/phoenix_live_view/pull/3678))
+* Fix race conditions when testing a live upload that redirects in the progress callback ([#3676](https://github.com/phoenixframework/phoenix_live_view/pull/3676))
+* Fix streams in sticky LiveView being reset under some circumstances when another LiveView also contains a stream ([#3681](https://github.com/phoenixframework/phoenix_live_view/issues/3681))
+* Fix recursively locked elements not being correctly patched on unlock ([#3684](https://github.com/phoenixframework/phoenix_live_view/issues/3684))
+* Fix JS.show/hide/toggle behavior while also fixing JS.focus() on Mobile Safari ([#3692](https://github.com/phoenixframework/phoenix_live_view/pull/3692))
+
+### Enhancements
+* Detect infinite patch redirect loops and raise an error ([#3670](https://github.com/phoenixframework/phoenix_live_view/pull/3670))
+
+## 1.0.4 (2025-02-04)
+
+### Bug fixes
+* Fix elements with `phx-remove` inside sticky LiveViews being unintentionally removed on navigation ([#3658](https://github.com/phoenixframework/phoenix_live_view/issues/3658))
+* Fix `phx-click-loading` not being removed from links in sticky LiveViews ([#3656](https://github.com/phoenixframework/phoenix_live_view/issues/3656))
+* Fix `Phoenix.LiveView.JS.focus/2` and `Phoenix.LiveView.JS.focus_first/2` not properly focusing elements on Mobile Safari ([#3563](https://github.com/phoenixframework/phoenix_live_view/issues/3563))
+
+## 1.0.3 (2025-01-28)
+
+### Bug fixes
+* Fix regression where browser back/forward buttons used `patch` instead of `navigate`, failing to update the page ([#3529](https://github.com/phoenixframework/phoenix_live_view/issues/3529))
+* Fix client hooks inside streams that contain nested LiveViews ([#3530](https://github.com/phoenixframework/phoenix_live_view/issues/3530))
+* Fix LiveComponents in nested LiveViews not updating under certain conditions ([#3626](https://github.com/phoenixframework/phoenix_live_view/issues/3626))
+* Fix client-side hooks not being cleared properly ([#3628](https://github.com/phoenixframework/phoenix_live_view/issues/3628))
+* Fix LiveUpload from client hook not auto uploading when immediately followed by form event ([#3647](https://github.com/phoenixframework/phoenix_live_view/issues/3647))
+* Fix inputs being cleared in some cases when patching locked trees ([#3647](https://github.com/phoenixframework/phoenix_live_view/issues/3647))
+* Fix client hooks with dynamic IDs not being destroyed properly when parts of the DOM are locked ([#3651](https://github.com/phoenixframework/phoenix_live_view/issues/3651))
+
+### Enhancements
+* Allow to configure if duplicate IDs / other detected errors should warn or raise by passing `on_error` to `Phoenix.LiveViewTest.live/3` / `Phoenix.LiveViewTest.live_isolated/3` ([#3653](https://github.com/phoenixframework/phoenix_live_view/pull/3653))
+* Also detect duplicate LiveComponents that are added dynamically to the page in LiveViewTest ([#3653](https://github.com/phoenixframework/phoenix_live_view/pull/3653))
+* Log an error in the JavaScript console when detecting a stream container with missing `phx-update="stream"` attribute ([#3645](https://github.com/phoenixframework/phoenix_live_view/pull/3645))
+* Update documentation to mention `:fun` and `{:fun, arity}` as valid attribute types for `Phoenix.Component.attr/3` ([#3635](https://github.com/phoenixframework/phoenix_live_view/pull/3635))
+* Update documentation to mention ways for [dynamically rendering function components](https://hexdocs.pm/phoenix_live_view/1.0.3/Phoenix.Component.html#module-dynamic-component-rendering) ([#3632](https://github.com/phoenixframework/phoenix_live_view/pull/3632))
+* Update documentation to mention `{:inner, selector}` and `{:closest, selector}` as [valid options for `to`](https://hexdocs.pm/phoenix_live_view/1.0.3/Phoenix.LiveView.JS.html#module-dom-selectors) in JS commands ([#3638](https://github.com/phoenixframework/phoenix_live_view/pull/3638))
+
+## 1.0.2 (2025-01-09)
+
+### Bug fixes
+* Fix inconsistency between `mix format` and `mix format --check-formatted` with new curly interpolation syntax ([#3590](https://github.com/phoenixframework/phoenix_live_view/issues/3590))
+* Fix unnecessary compile time dependencies when using `attr` / `on_mount` / `live` ([#3592](https://github.com/phoenixframework/phoenix_live_view/issues/3592))
+* Fix crash when testing LiveViews with embedded XML (e.g. SVGs) ([#3594](https://github.com/phoenixframework/phoenix_live_view/issues/3594))
+* Fix type warning when using `follow_redirect` ([#3581](https://github.com/phoenixframework/phoenix_live_view/issues/3581))
+* Prevent `phx-trigger-action` from clashing with locked forms ([#3591](https://github.com/phoenixframework/phoenix_live_view/issues/3591))
+* Fix form recovery sending wrong event name when using JS commands in `phx-change` ([#3607](https://github.com/phoenixframework/phoenix_live_view/issues/3607))
+
+### Enhancements
+* Deduplicate items on `stream/4` / `steam_insert/4` ([#3599](https://github.com/phoenixframework/phoenix_live_view/pull/3599))
+* Restore scroll position on initial navigation ([#3572](https://github.com/phoenixframework/phoenix_live_view/pull/3572))
+* Change-track non existing keys in maps ([#3584](https://github.com/phoenixframework/phoenix_live_view/pull/3584))
+* Only warn instead of raising when detecting a duplicate ID in LiveViewTest ([#3603](https://github.com/phoenixframework/phoenix_live_view/pull/3603))
 
 ## 1.0.1 (2024-12-13)
 
 ### Bug fixes
+* Raise when duplicate DOM IDs are found when rendering a LiveView during tests to avoid undefined behaviour
 * Fix live session verification causing logged errors, push_patch failures, and failed mounts when a cold deploy occurs
+* Fix a bug where the `live_session`'s `on_mount` hooks would be called for sticky live views on connected mount. Now a `sticky` live view is consistently marked as `:not_mounted_at_router`
 
 ## 1.0.0 (2024-12-03) 🚀
 

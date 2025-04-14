@@ -3,7 +3,7 @@ defmodule PhoenixHTML.Mixfile do
 
   # Also change package.json version
   @source_url "https://github.com/phoenixframework/phoenix_html"
-  @version "4.1.1"
+  @version "4.2.1"
 
   def project do
     [
@@ -34,7 +34,7 @@ defmodule PhoenixHTML.Mixfile do
     [
       {:ex_doc, ">= 0.0.0", only: :docs},
       {:makeup_eex, ">= 0.1.1", only: :docs},
-      {:makeup_diff, "~> 0.1", only: :docs}
+      {:makeup_syntect, "~> 0.1.0", only: :docs}
     ]
   end
 

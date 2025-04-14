@@ -28,7 +28,7 @@ There is probably some tension in this list.
 
 ### So, what do I want?
 
-* #### Surface for the LiveView stuff
+* #### Phoenix for the LiveView stuff
 * #### Seperate modules defining MyAppWeb.{Component, LiveComponent, LiveView, FormComponent, etc...}
 * #### Ecto `embedded_schema` as FormComponent backend
 * #### More responsibility for the FormComponents

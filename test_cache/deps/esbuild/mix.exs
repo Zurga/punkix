@@ -1,14 +1,14 @@
 defmodule Esbuild.MixProject do
   use Mix.Project
 
-  @version "0.8.2"
+  @version "0.9.0"
   @source_url "https://github.com/phoenixframework/esbuild"
 
   def project do
     [
       app: :esbuild,
       version: @version,
-      elixir: "~> 1.11",
+      elixir: "~> 1.14",
       deps: deps(),
       description: "Mix tasks for installing and invoking esbuild",
       package: [
@@ -38,7 +38,6 @@ defmodule Esbuild.MixProject do
 
   defp deps do
     [
-      {:castore, ">= 0.0.0"},
       {:jason, "~> 1.4"},
       {:ex_doc, ">= 0.0.0", only: :docs}
     ]

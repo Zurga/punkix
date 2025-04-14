@@ -328,8 +328,8 @@ defmodule Phoenix.Component do
 
       def unordered_list(assigns) do
         ~H"""
-        <ul :for={entry <- @entries}>
-          <li>{render_slot(@inner_block, entry)}</li>
+        <ul>
+          <li :for={entry <- @entries}>{render_slot(@inner_block, entry)}</li>
         </ul>
         """
       end
@@ -428,8 +428,8 @@ defmodule Phoenix.Component do
       def table(assigns) do
         ~H"""
         <table>
-          <tr :for={col <- @column}>
-            <th>{col.label}</th>
+          <tr>
+            <th :for={col <- @column}>{col.label}</th>
           </tr>
           <tr :for={row <- @rows}>
             <td :for={col <- @column}>{render_slot(col, row)}</td>
@@ -541,6 +541,82 @@ defmodule Phoenix.Component do
       config :phoenix_live_view, debug_heex_annotations: true
 
   Changing this configuration will require `mix clean` and a full recompile.
+
+  ## Dynamic Component Rendering
+
+  Sometimes you might need to decide at runtime which component to render.
+  Because function components are just regular functions, we can leverage
+  Elixir's `apply/3` function to dynamically call a module and/or function passed
+  in as an assign.
+
+  For example, using the following function component definition:
+
+  ```elixir
+  attr :module, :atom, required: true
+  attr :function, :atom, required: true
+  # any shared attributes
+  attr :shared, :string, required: true
+
+  # any shared slots
+  slot :named_slot, required: true
+  slot :inner_block, required: true
+
+  def dynamic_component(assigns) do
+    {mod, assigns} = Map.pop(assigns, :module)
+    {func, assigns} = Map.pop(assigns, :function)
+
+    apply(mod, func, [assigns])
+  end
+  ```
+
+  Then you can use the `dynamic_component` function like so:
+
+  ```heex
+  <.dynamic_component
+    module={MyAppWeb.MyModule}
+    function={:my_function}
+    shared="Yay Elixir!"
+  >
+    <p>Howdy from the inner block!</p>
+    <:named_slot>
+      <p>Howdy from the named slot!</p>
+    </:named_slot>
+  </.dynamic_component>
+  ```
+
+  This will call the `MyAppWeb.MyModule.my_function/1` function passing in the remaining assigns.
+
+  ```elixir
+  defmodule MyAppWeb.MyModule do
+    attr :shared, :string, required: true
+
+    slot :named_slot, required: true
+    slot :inner_block, required: true
+
+    def my_function(assigns) do
+      ~H"""
+      <p>Dynamic component with shared assigns: {@shared}</p>
+      {render_slot(@inner_block)}
+      {render_slot(@named_slot)}
+      """
+    end
+  end
+  ```
+
+  Resulting in the following HTML:
+
+  ```html
+  <p>Dynamic component with shared assigns: Yay Elixir!</p>
+  <p>Howdy from the inner block!</p>
+  <p>Howdy from the named slot!</p>
+  ```
+
+  Note that to get the most out of `Phoenix.Component`'s compile-time validations, it is beneficial to
+  define such a `dynamic_component` for a specific set of components sharing the same API, instead of
+  defining it for the general case.
+  In this example, we defined our `dynamic_component` to expect an assign called `shared`, as well as
+  two slots that all components we want to use with it must implement.
+  The called `my_function` component's attribute and slot definitions cannot be validated through the apply call.
   '''
 
   ## Functions
@@ -607,16 +683,15 @@ defmodule Phoenix.Component do
   </div>
   ```
 
-  The following attribute values have special meaning:
+  The following attribute values have special meaning on HTML tags:
 
   * `true` - if a value is `true`, the attribute is rendered with no value at all.
     For example, `<input required={true}>` is the same as `<input required>`;
 
   * `false` or `nil` - if a value is `false` or `nil`, the attribute is omitted.
-    Some attributes may be rendered with an empty value, for optimization
-    purposes, if it has the same effect as omitting. For example,
-    `<checkbox checked={false}>` renders to `<checkbox>` while,
-    `<div class={false}>` renders to `<div class="">`;
+    Note the `class` and `style` attributes will be rendered as empty strings,
+    instead of ommitted, which has the same effect as not rendering them, but
+    allows for rendering optimizations.
 
   * `list` (only for the `class` attribute) - each element of the list is processed
     as a different class. `nil` and `false` elements are discarded.
@@ -632,6 +707,7 @@ defmodule Phoenix.Component do
 
   In this case, the expression inside `{...}` must be either a keyword list or
   a map containing the key-value pairs representing the dynamic attributes.
+  If using a map, ensure your keys are atoms.
 
   ### Interpolating blocks
 
@@ -640,7 +716,7 @@ defmodule Phoenix.Component do
 
     * Curly braces cannot be used inside `<script>` and `<style>` tags,
       as that would make writing JS and CSS quite tedious. You can also
-      fully disable curly braces interpolation by in a given tag and
+      fully disable curly braces interpolation in a given tag and
       its children by adding the `phx-no-curly-interpolation` attribute
 
     * it does not support multiline block constructs, such as `if`,
@@ -870,6 +946,9 @@ defmodule Phoenix.Component do
 
   * When rendering a LiveView inside a regular (non-live) controller/view.
 
+  Most other cases for shared functionality, including state management and user interactions, can be
+  [achieved with function components or LiveComponents](welcome.html#compartmentalize-state-markup-and-events-in-liveview)
+
   ## Options
 
   * `:session` - a map of binary keys with extra session data to be serialized and sent
@@ -935,6 +1014,11 @@ defmodule Phoenix.Component do
   Beware if you set this to `:body`, as any content injected inside the body
   (such as `Phoenix.LiveReload` features) will be discarded once the LiveView
   connects
+
+  ## Testing
+
+  Note that `render_click/1` and other testing functions will send events to the root LiveView, and you will want to
+  `find_live_child/2` to interact with nested LiveViews in your live tests.
   """
   def live_render(conn_or_socket, view, opts \\ [])
 
@@ -987,8 +1071,8 @@ defmodule Phoenix.Component do
       def table(assigns) do
         ~H"""
         <table>
-          <tr :for={col <- @col}>
-            <th>{col.label}</th>
+          <tr>
+            <th :for={col <- @col}>{col.label}</th>
           </tr>
           <tr :for={row <- @rows}>
             <td :for={col <- @col}>{render_slot(col, row)}</td>
@@ -1879,7 +1963,7 @@ defmodule Phoenix.Component do
 
   | Name            | Description                                                          |
   |-----------------|----------------------------------------------------------------------|
-  | `:any`          | any term                                                             |
+  | `:any`          | any term (including `nil`)                                           |
   | `:string`       | any binary string                                                    |
   | `:atom`         | any atom (including `true`, `false`, and `nil`)                      |
   | `:boolean`      | any boolean                                                          |
@@ -1887,8 +1971,12 @@ defmodule Phoenix.Component do
   | `:float`        | any float                                                            |
   | `:list`         | any list of any arbitrary types                                      |
   | `:map`          | any map of any arbitrary types                                       |
+  | `:fun`          | any function                                                         |
+  | `{:fun, arity}` | any function of arity                                                |
   | `:global`       | any common HTML attributes, plus those defined by `:global_prefixes` |
   | A struct module | any module that defines a struct with `defstruct/1`                  |
+
+  Note only `:any` and `:atom` expect the value to be set to `nil`.
 
   ### Options
 
@@ -1975,8 +2063,8 @@ defmodule Phoenix.Component do
   '''
   @doc type: :macro
   defmacro attr(name, type, opts \\ []) do
-    type = Macro.expand_literals(type, __CALLER__)
-    opts = Macro.expand_literals(opts, __CALLER__)
+    type = Macro.expand_literals(type, %{__CALLER__ | function: {:attr, 3}})
+    opts = Macro.expand_literals(opts, %{__CALLER__ | function: {:attr, 3}})
 
     quote bind_quoted: [name: name, type: type, opts: opts] do
       Phoenix.Component.Declarative.__attr__!(
@@ -2068,13 +2156,13 @@ defmodule Phoenix.Component do
   ## Examples
 
   ```heex
-  <.live_title default="Welcome" prefix="MyApp – ">
+  <.live_title default="Welcome" prefix="MyApp · ">
     {assigns[:page_title]}
   </.live_title>
   ```
 
   ```heex
-  <.live_title default="Welcome" suffix="- MyApp">
+  <.live_title default="Welcome" suffix=" · MyApp">
     {assigns[:page_title]}
   </.live_title>
   ```
@@ -2089,7 +2177,7 @@ defmodule Phoenix.Component do
     default: nil,
     doc:
       "The default title to use if the inner block is empty on regular or connected mounts." <>
-        "*Note*: empty titles, such as `nil` or an empty string, fallsback to the default value."
+        " *Note*: empty titles, such as `nil` or an empty string, fall back to the default value."
   )
 
   attr.(:suffix, :string, default: nil, doc: "A suffix added after the content of `inner_block`.")
@@ -2547,7 +2635,7 @@ defmodule Phoenix.Component do
   >
   > # Helper function to calculate remaining time
   > defp calculate_remaining(changeset) do
-  >   total = Ecto.Changeset.get_field(changeset)
+  >   total = Ecto.Changeset.get_field(changeset, :total)
   >   activities = Ecto.Changeset.get_embed(changeset, :activities)
   >
   >   Enum.reduce(activities, total, fn activity, acc ->
@@ -2631,6 +2719,14 @@ defmodule Phoenix.Component do
     """
   )
 
+  attr.(:skip_persistent_id, :boolean,
+    default: false,
+    doc: """
+    Skip the automatic rendering of hidden _persistent_id fields used for reordering
+    inputs.
+    """
+  )
+
   attr.(:options, :list,
     default: [],
     doc: """
@@ -2653,11 +2749,42 @@ defmodule Phoenix.Component do
       |> Keyword.merge(assigns.options)
 
     forms = parent_form.impl.to_form(parent_form.source, parent_form, field_name, options)
+
+    forms =
+      case assigns do
+        %{skip_persistent_id: true} ->
+          forms
+
+        _ ->
+          apply_persistent_id(
+            parent_form,
+            forms,
+            field_name,
+            options
+          )
+      end
+
+    assigns = assign(assigns, :forms, forms)
+
+    ~H"""
+    <%= for finner <- @forms do %>
+      <%= if !@skip_hidden do %>
+        <%= for {name, value_or_values} <- finner.hidden,
+                name = name_for_value_or_values(finner, name, value_or_values),
+                value <- List.wrap(value_or_values) do %>
+          <input type="hidden" name={name} value={value} />
+        <% end %>
+      <% end %>
+      {render_slot(@inner_block, finner)}
+    <% end %>
+    """
+  end
+
+  defp apply_persistent_id(parent_form, forms, field_name, options) do
     seen_ids = for f <- forms, vid = f.params[@persistent_id], into: %{}, do: {vid, true}
-    acc = {seen_ids, 0}
 
     {forms, _} =
-      Enum.map_reduce(forms, acc, fn
+      Enum.map_reduce(forms, {seen_ids, 0}, fn
         %Phoenix.HTML.Form{params: params} = form, {seen_ids, index} ->
           id =
             case params do
@@ -2686,20 +2813,7 @@ defmodule Phoenix.Component do
           {new_form, {Map.put(seen_ids, id, true), index + 1}}
       end)
 
-    assigns = assign(assigns, :forms, forms)
-
-    ~H"""
-    <%= for finner <- @forms do %>
-      <%= if !@skip_hidden do %>
-        <%= for {name, value_or_values} <- finner.hidden,
-                name = name_for_value_or_values(finner, name, value_or_values),
-                value <- List.wrap(value_or_values) do %>
-          <input type="hidden" name={name} value={value} />
-        <% end %>
-      <% end %>
-      {render_slot(@inner_block, finner)}
-    <% end %>
-    """
+    forms
   end
 
   defp next_id(idx, %{} = seen_ids) do

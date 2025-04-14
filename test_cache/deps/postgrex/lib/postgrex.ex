@@ -52,7 +52,6 @@ defmodule Postgrex do
           | {:prepare, :named | :unnamed}
           | {:transactions, :strict | :naive}
           | {:types, module}
-          | {:search_path, [String.t()]}
           | {:disconnect_on_error_codes, [atom]}
           | DBConnection.start_option()
 
@@ -68,7 +67,8 @@ defmodule Postgrex do
   @timeout 15_000
 
   @comment_validation_error Postgrex.Error.exception(
-                              message: "`:comment` option cannot contain sequence \"*/\""
+                              message:
+                                "`:comment` option cannot contain null bytes and \"*/\" sequence"
                             )
 
   ### PUBLIC API ###
@@ -83,11 +83,9 @@ defmodule Postgrex do
 
     * `:hostname` - Server hostname (default: PGHOST env variable, then localhost);
     * `:port` - Server port (default: PGPORT env variable, then 5432);
-    * `:endpoints` - A list of endpoints (host and port pairs, with an optional
-      extra_opts keyword list);
-      Postgrex will try each endpoint in order, one by one, until the connection succeeds;
-      The syntax is `[{host1, port1},{host2, port2},{host3, port3}]` or
-      `[{host1, port1, extra_opt1: value},{host2, port2, extra_opt2: value}}]`;
+    * `:endpoints` - A list of endpoints (host and port pairs) which Postgrex will attempt
+      to connect in order, until one succeeds.
+      The syntax is `[{host1, port1}, {host2, port2}, {host3, port3}]`.
       This option takes precedence over `:hostname+:port`;
     * `:socket_dir` - Connect to PostgreSQL via UNIX sockets in the given directory;
       The socket name is derived based on the port. This is the preferred method
@@ -160,14 +158,6 @@ defmodule Postgrex do
     * `:types` - The types module to use, see `Postgrex.Types.define/3`, this
       option is only required when using custom encoding or decoding (default:
       `Postgrex.DefaultTypes`);
-
-    * `:search_path` - A list of strings used to set the search path for the connection.
-      This is useful when, for instance, an extension like `citext` is installed in a
-      separate schema. If that schema is not in the connection's search path, Postgrex
-      might not be able to recognize the extension's data type. When this option is `nil`,
-      the search path is not modified. (default: `nil`).
-      See the [PostgreSQL docs](https://www.postgresql.org/docs/current/ddl-schemas.html#DDL-SCHEMAS-PATH)
-      for more details.
 
     * `:disable_composite_types` - Set to `true` to disable composite types support.
       This is useful when using Postgrex against systems that do not support composite types
@@ -336,7 +326,7 @@ defmodule Postgrex do
         true
 
       comment when is_binary(comment) ->
-        if String.contains?(comment, "*/") do
+        if String.contains?(comment, [<<0>>, "*/"]) do
           raise @comment_validation_error
         else
           false

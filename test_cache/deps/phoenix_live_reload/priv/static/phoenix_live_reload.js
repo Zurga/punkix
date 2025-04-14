@@ -114,7 +114,10 @@ class LiveReloader {
     this.channel.push("full_path", {rel_path: file, app: app})
       .receive("ok", ({full_path}) => {
         console.log("full path", full_path)
-        let url = this.editorURL.replace("__FILE__", full_path).replace("__LINE__", line)
+        let url = this.editorURL
+          .replace("__RELATIVEFILE__", file)  
+          .replace("__FILE__", full_path)
+          .replace("__LINE__", line)
         window.open(url, "_self")
       })
       .receive("error", reason => console.error("failed to resolve full path", reason))
@@ -126,8 +129,25 @@ class LiveReloader {
 
   log(level, str){
     let levelColor = level === "debug" ? "darkcyan" : "inherit"
-    let consoleFunc = level === "error" ? level : "log"
-    console[consoleFunc](`%c📡 ${str}`, `color: ${levelColor};`)
+    let consoleFunc = this.logFunc(level)
+    this.logMsg(consoleFunc, str, levelColor)
+  }
+
+  logMsg(fun, str, color) {
+    fun(`%c📡 ${str}`, `color: ${color};`)
+  }
+  
+  logFunc(level){
+    switch(level) {
+      case "debug":
+        return console.debug;
+      case "info":
+        return console.info;
+      case "warning":
+        return console.warn;
+      default:
+        return console.error;
+    }
   }
 
   closestCallerFileLine(node){

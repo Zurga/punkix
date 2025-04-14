@@ -1,5 +1,6 @@
 {application,phoenix_live_dashboard,
-             [{optional_applications,[ecto_psql_extras,ecto_mysql_extras,
+             [{config_mtime,1744621395},
+              {optional_applications,[ecto_psql_extras,ecto_mysql_extras,
                                       ecto_sqlite3_extras,ecto]},
               {applications,[kernel,stdlib,elixir,logger,mime,
                              phoenix_live_view,telemetry_metrics,
@@ -51,5 +52,5 @@
                         'Elixir.Phoenix.LiveDashboard.TitleBarComponent',
                         'Elixir.Phoenix.LiveDashboard.Web']},
               {registered,[]},
-              {vsn,"0.8.5"},
+              {vsn,"0.8.6"},
               {mod,{'Elixir.Phoenix.LiveDashboard.Application',[]}}]}.

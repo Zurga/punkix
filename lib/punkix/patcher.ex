@@ -43,6 +43,7 @@ defmodule Punkix.Patcher do
       for {module, _} <- modules_and_modifications, into: %{} do
         {module, namespace(module, env.module)}
       end
+      |> IO.inspect()
 
     modules_and_binary =
       for {module, modifications} <- modules_and_modifications, into: %{} do

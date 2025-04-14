@@ -1,5 +1,6 @@
 {application,mint,
-             [{optional_applications,[castore]},
+             [{config_mtime,1744621395},
+              {optional_applications,[castore]},
               {applications,[kernel,stdlib,elixir,logger,ssl,castore,hpax]},
               {description,"Small and composable HTTP client."},
               {modules,['Elixir.Mint.Application','Elixir.Mint.Core.Conn',
@@ -16,5 +17,5 @@
                         'Elixir.Mint.TunnelProxy','Elixir.Mint.Types',
                         'Elixir.Mint.UnsafeProxy',mint_shims]},
               {registered,[]},
-              {vsn,"1.6.2"},
+              {vsn,"1.7.1"},
               {mod,{'Elixir.Mint.Application',[]}}]}.

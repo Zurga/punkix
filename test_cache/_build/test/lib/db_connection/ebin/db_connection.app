@@ -1,5 +1,6 @@
 {application,db_connection,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,telemetry]},
               {description,"Database connection behaviour for database transactions and connection pooling\n"},
               {modules,['Elixir.DBConnection','Elixir.DBConnection.App',

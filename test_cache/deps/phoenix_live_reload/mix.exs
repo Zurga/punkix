@@ -1,7 +1,7 @@
 defmodule PhoenixLiveReload.Mixfile do
   use Mix.Project
 
-  @version "1.5.3"
+  @version "1.6.0"
 
   def project do
     [
@@ -16,10 +16,7 @@ defmodule PhoenixLiveReload.Mixfile do
 
       # Docs
       name: "Phoenix Live-Reload",
-      docs: [
-        source_ref: "v#{@version}",
-        source_url: "https://github.com/phoenixframework/phoenix_live_reload"
-      ]
+      docs: docs()
     ]
   end
 
@@ -44,8 +41,20 @@ defmodule PhoenixLiveReload.Mixfile do
       {:ex_doc, "~> 0.29", only: :docs},
       {:makeup_eex, ">= 0.1.1", only: :docs},
       {:makeup_diff, "~> 0.1", only: :docs},
-      {:file_system, "~> 0.3 or ~> 1.0"},
+      {:file_system, "~> 0.2.10 or ~> 1.0"},
       {:jason, "~> 1.0", only: :test}
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: [
+        "README.md",
+        "CHANGELOG.md"
+      ],
+      source_ref: "v#{@version}",
+      source_url: "https://github.com/phoenixframework/phoenix_live_reload"
     ]
   end
 end

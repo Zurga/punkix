@@ -21,16 +21,6 @@ defmodule Sourceror do
         }
 
   @type position :: keyword
-  @type range :: %{
-          start: position,
-          end: position
-        }
-
-  @type patch :: %{
-          optional(:preserve_indentation) => boolean,
-          range: range,
-          change: String.t() | (String.t() -> String.t())
-        }
 
   @type traversal_function :: (Macro.t(), TraversalState.t() -> {Macro.t(), TraversalState.t()})
 
@@ -45,8 +35,16 @@ defmodule Sourceror do
   with pre 1.13 Elixir versions.
   """
   defmacro string_to_quoted!(string, opts) do
-    quote bind_quoted: [code_module: @code_module, string: string, opts: opts] do
+    map_literal_fix? = Version.match?(System.version(), "< 1.17.0")
+
+    quote bind_quoted: [
+            code_module: @code_module,
+            string: string,
+            opts: opts,
+            map_literal_fix?: map_literal_fix?
+          ] do
       code_module.string_to_quoted_with_comments!(string, opts)
+      |> Sourceror.map_literal_fix(map_literal_fix?)
     end
   end
 
@@ -55,9 +53,42 @@ defmodule Sourceror do
   with pre 1.13 Elixir versions.
   """
   defmacro string_to_quoted(string, opts) do
-    quote bind_quoted: [code_module: @code_module, string: string, opts: opts] do
+    map_literal_fix? = Version.match?(System.version(), "< 1.17.0")
+
+    quote bind_quoted: [
+            code_module: @code_module,
+            string: string,
+            opts: opts,
+            map_literal_fix?: map_literal_fix?
+          ] do
       code_module.string_to_quoted_with_comments(string, opts)
+      |> Sourceror.map_literal_fix(map_literal_fix?)
     end
+  end
+
+  @doc false
+  def map_literal_fix(result, false),
+    do: result
+
+  def map_literal_fix({:error, reason}, _),
+    do: {:error, reason}
+
+  def map_literal_fix({:ok, quoted, comments}, true) do
+    {quoted, comments} = map_literal_fix({quoted, comments}, true)
+    {:ok, quoted, comments}
+  end
+
+  def map_literal_fix({quoted, comments}, true) do
+    quoted =
+      Macro.postwalk(quoted, fn
+        {:%{}, meta, args} ->
+          {:%{}, Keyword.replace(meta, :column, meta[:column] - 1), args}
+
+        quoted ->
+          quoted
+      end)
+
+    {quoted, comments}
   end
 
   @doc """
@@ -462,7 +493,10 @@ defmodule Sourceror do
   end
 
   @doc """
-  Returns the start position of a node.
+  Returns the start metadata position of a node.
+
+  Note that this position is the literal contents of the metadata found
+  in the node. For accurate start positions, use `get_range/1`.
 
       iex> quoted = Sourceror.parse_string!(" :foo")
       iex> Sourceror.get_start_position(quoted)
@@ -513,6 +547,9 @@ defmodule Sourceror do
   Returns the end position of the quoted expression. It recursively checks for
   `end`, `closing` and `end_of_expression` positions. If none is found, the
   default value is returned(defaults to `[line: 1, column: 1]`).
+
+  Note that this position is the literal contents of the metadata found
+  in the node. For accurate end positions, use `get_range/1`.
 
       iex> quoted = ~S"\""
       ...> A.{
@@ -642,15 +679,13 @@ defmodule Sourceror do
   This function is most useful when used after `Sourceror.parse_string/1`,
   before any kind of modification to the AST.
 
-  The range is a map with `:start` and `:end` positions.
-
       iex> quoted = ~S"\""
       ...> def foo do
       ...>   :ok
       ...> end
       ...> "\"" |> Sourceror.parse_string!()
       iex> Sourceror.get_range(quoted)
-      %{start: [line: 1, column: 1], end: [line: 3, column: 4]}
+      %Sourceror.Range{start: [line: 1, column: 1], end: [line: 3, column: 4]}
 
       iex> quoted = ~S"\""
       ...> Foo.{
@@ -658,7 +693,7 @@ defmodule Sourceror do
       ...> }
       ...> "\"" |> Sourceror.parse_string!()
       iex> Sourceror.get_range(quoted)
-      %{start: [line: 1, column: 1], end: [line: 3, column: 2]}
+      %Sourceror.Range{start: [line: 1, column: 1], end: [line: 3, column: 2]}
 
   ## Options
 
@@ -671,10 +706,10 @@ defmodule Sourceror do
   ...> "\""
   ...> |> Sourceror.parse_string!()
   ...> |> Sourceror.get_range(include_comments: true)
-  %{start: [line: 1, column: 1], end: [line: 2, column: 11]}
+  %Sourceror.Range{start: [line: 1, column: 1], end: [line: 2, column: 11]}
   ```
   """
-  @spec get_range(Macro.t()) :: range | nil
+  @spec get_range(Macro.t()) :: Sourceror.Range.t() | nil
   def get_range(quoted, opts \\ []) do
     Sourceror.Range.get_range(quoted, opts)
   end
@@ -771,9 +806,9 @@ defmodule Sourceror do
       ...>   raise "Not allowed!"
       ...> end
       ...> "\""
-      iex> patch = %{
+      iex> patch = %Sourceror.Patch{
       ...>   change: "unless allowed? do\\n  raise \\"Not allowed!\\"\\nend",
-      ...>   range: %{start: [line: 1, column: 1], end: [line: 3, column: 4]}
+      ...>   range: %Sourceror.Range{start: [line: 1, column: 1], end: [line: 3, column: 4]}
       ...> }
       iex> Sourceror.patch_string(original, [patch])
       ~S"\""
@@ -788,9 +823,9 @@ defmodule Sourceror do
       iex> original = ~S"\""
       ...> hello :world
       ...> "\""
-      iex> patch = %{
+      iex> patch = %Sourceror.Patch{
       ...>   change: &String.upcase/1,
-      ...>   range: %{start: [line: 1, column: 7], end: [line: 1, column: 13]}
+      ...>   range: %Sourceror.Range{start: [line: 1, column: 7], end: [line: 1, column: 13]}
       ...> }
       iex> Sourceror.patch_string(original, [patch])
       ~S"\""
@@ -807,9 +842,9 @@ defmodule Sourceror do
       ...>   end)
       ...> end
       ...> "\""
-      iex> patch = %{
+      iex> patch = %Sourceror.Patch{
       ...>   change: "bar do\\n  :replacement\\nend",
-      ...>   range: %{start: [line: 2, column: 9], end: [line: 4, column: 6]}
+      ...>   range: %Sourceror.Range{start: [line: 2, column: 9], end: [line: 4, column: 6]}
       ...> }
       iex> Sourceror.patch_string(original, [patch])
       ~S"\""
@@ -830,9 +865,9 @@ defmodule Sourceror do
       ...>   end)
       ...> end
       ...> "\""
-      iex> patch = %{
+      iex> patch = %Sourceror.Patch{
       ...>   change: "bar do\\n  :replacement\\nend",
-      ...>   range: %{start: [line: 2, column: 9], end: [line: 4, column: 6]},
+      ...>   range: %Sourceror.Range{start: [line: 2, column: 9], end: [line: 4, column: 6]},
       ...>   preserve_indentation: false
       ...> }
       iex> Sourceror.patch_string(original, [patch])
@@ -844,7 +879,7 @@ defmodule Sourceror do
       end
       "\""
   """
-  @spec patch_string(String.t(), [patch]) :: String.t()
+  @spec patch_string(String.t(), [Sourceror.Patch.t()]) :: String.t()
   def patch_string(string, patches) do
     patches = Enum.sort_by(patches, &{&1.range.start[:line], &1.range.start[:column]}, &>=/2)
 
@@ -855,6 +890,20 @@ defmodule Sourceror do
 
     do_patch_string(lines, patches, [], length(lines))
     |> Enum.join()
+  end
+
+  @doc """
+  A convenience utility function for stripping all meta data out of
+  a quoted expression. This is useful when debugging for readability of very large
+  ASTs.
+  """
+  @spec strip_meta(quoted :: Macro.t()) :: Macro.t()
+  def strip_meta(quoted) do
+    Macro.prewalk(quoted, [], fn
+      {name, _meta, args}, acc -> {{name, {}, args}, acc}
+      other, acc -> {other, acc}
+    end)
+    |> elem(0)
   end
 
   defp do_patch_string(lines, [], seen, _), do: Enum.reverse(lines) ++ seen

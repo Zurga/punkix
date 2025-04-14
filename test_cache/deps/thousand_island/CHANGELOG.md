@@ -1,3 +1,35 @@
+## 1.3.12 (21 Mar 2025)
+
+### Fixes
+
+* Do not kill off acceptors when encountering an `:einval` socket status (#162,
+  thanks @marschro!)
+
+## 1.3.11 (23 Feb 2025)
+
+### Fixes
+
+* Properly support `inet_backend` transport option for TCP connections (#155, thanks @paulswartz!)
+
+## 1.3.10 (17 Feb 2025)
+
+### Enhancements
+
+* Add support for `certs_keys` TLS config option (#153, thanks @joshk!)
+
+## 1.3.9 (6 Jan 2025)
+
+### Fixes
+
+* Explicitly ignore several Handler return values to silence Dialyzer in dependent libraries
+
+## 1.3.8 (5 Jan 2025)
+
+### Changes
+
+* Refactor `ThousandIsland.Handler` implementation to facilitate partial reuse
+by custom Handler authors (#146 thanks @mruoss!)
+
 ## 1.3.7 (29 Nov 2024)
 
 ### Fixes

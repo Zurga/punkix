@@ -1,5 +1,6 @@
 {application,bandit,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,thousand_island,plug,
                              websock,hpax,telemetry]},
               {description,"A pure-Elixir HTTP server built for Plug & WebSock apps"},
@@ -52,7 +53,7 @@
                         'Elixir.Bandit.PhoenixAdapter',
                         'Elixir.Bandit.Pipeline',
                         'Elixir.Bandit.PrimitiveOps.WebSocket',
-                        'Elixir.Bandit.Telemetry',
+                        'Elixir.Bandit.Telemetry','Elixir.Bandit.Trace',
                         'Elixir.Bandit.TransportError',
                         'Elixir.Bandit.TransportInfo',
                         'Elixir.Bandit.WebSocket.Connection',
@@ -77,5 +78,5 @@
                         'Elixir.Bandit.WebSocket.Socket.ThousandIsland.Socket',
                         'Elixir.Bandit.WebSocket.UpgradeValidation']},
               {registered,[]},
-              {vsn,"1.6.1"},
+              {vsn,"1.6.11"},
               {mod,{'Elixir.Bandit.Application',[]}}]}.

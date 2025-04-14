@@ -1,5 +1,6 @@
 {application,finch,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,mint,nimble_pool,
                              nimble_options,telemetry,mime]},
               {description,"An HTTP client focused on performance."},

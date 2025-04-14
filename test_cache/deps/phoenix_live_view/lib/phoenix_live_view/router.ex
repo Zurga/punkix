@@ -5,7 +5,7 @@ defmodule Phoenix.LiveView.Router do
 
   @cookie_key "__phoenix_flash__"
 
-  @doc """
+  @doc ~S"""
   Defines a LiveView route.
 
   A LiveView can be routed to by using the `live` macro with a path and
@@ -13,9 +13,10 @@ defmodule Phoenix.LiveView.Router do
 
       live "/thermostat", ThermostatLive
 
-  By default, you can generate a route to this LiveView by using the `live_path` helper:
+  To navigate to this route within your app, you can use `Phoenix.VerifiedRoutes`:
 
-      live_path(@socket, ThermostatLive)
+      push_navigate(socket, to: ~p"/thermostat")
+      push_patch(socket, to: ~p"/thermostat?page=#{page}")
 
   > #### HTTP requests {: .info}
   >
@@ -105,9 +106,9 @@ defmodule Phoenix.LiveView.Router do
 
   """
   defmacro live(path, live_view, action \\ nil, opts \\ []) do
-    live_view = Macro.expand_literals(live_view, __CALLER__)
-    action = Macro.expand_literals(action, __CALLER__)
-    opts = Macro.expand_literals(opts, __CALLER__)
+    live_view = Macro.expand_literals(live_view, %{__CALLER__ | function: {:live, 4}})
+    action = Macro.expand_literals(action, %{__CALLER__ | function: {:live, 4}})
+    opts = Macro.expand_literals(opts, %{__CALLER__ | function: {:live, 4}})
 
     quote bind_quoted: binding() do
       {action, router_options} =
@@ -227,7 +228,7 @@ defmodule Phoenix.LiveView.Router do
   and be executed via `on_mount` hooks.
   """
   defmacro live_session(name, opts \\ [], do: block) do
-    opts = Macro.expand_literals(opts, __CALLER__)
+    opts = Macro.expand_literals(opts, %{__CALLER__ | function: {:live_session, 3}})
 
     quote do
       unquote(__MODULE__).__live_session__(__MODULE__, unquote(opts), unquote(name))
@@ -239,7 +240,6 @@ defmodule Phoenix.LiveView.Router do
   @doc false
   def __live_session__(module, opts, name) do
     Module.register_attribute(module, :phoenix_live_sessions, accumulate: true)
-    vsn = session_vsn(module)
 
     if not is_atom(name) do
       raise ArgumentError, """
@@ -263,7 +263,7 @@ defmodule Phoenix.LiveView.Router do
       """
     end
 
-    current = %{name: name, extra: extra, vsn: vsn}
+    current = %{name: name, extra: extra}
     Module.put_attribute(module, :phoenix_live_session_current, current)
 
     Module.put_attribute(module, :phoenix_live_sessions, name)
@@ -374,7 +374,7 @@ defmodule Phoenix.LiveView.Router do
       when is_atom(action) and is_list(opts) do
     live_session =
       Module.get_attribute(router, :phoenix_live_session_current) ||
-        %{name: :default, extra: %{}, vsn: session_vsn(router)}
+        %{name: :default, extra: %{}}
 
     helpers = Module.get_attribute(router, :phoenix_helpers)
 
@@ -487,14 +487,4 @@ defmodule Phoenix.LiveView.Router do
   end
 
   defp cookie_flash(%Plug.Conn{} = conn), do: {conn, nil}
-
-  defp session_vsn(module) do
-    if vsn = Module.get_attribute(module, :phoenix_session_vsn) do
-      vsn
-    else
-      vsn = System.system_time()
-      Module.put_attribute(module, :phoenix_session_vsn, vsn)
-      vsn
-    end
-  end
 end

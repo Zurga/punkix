@@ -1,5 +1,6 @@
 {application,thousand_island,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,ssl,telemetry]},
               {description,"A simple & modern pure Elixir socket server"},
               {modules,['Elixir.ThousandIsland',
@@ -19,4 +20,4 @@
                         'Elixir.ThousandIsland.Transports.SSL',
                         'Elixir.ThousandIsland.Transports.TCP']},
               {registered,[]},
-              {vsn,"1.3.7"}]}.
+              {vsn,"1.3.12"}]}.

@@ -234,9 +234,9 @@ defmodule Postgrex.SimpleConnection do
   ## Options
 
     * `:auto_reconnect` - automatically attempt to reconnect to the database
-      in event of a disconnection. See the
-      [note about async connect and auto-reconnects](#module-async-connect-and-auto-reconnects)
-      above. Defaults to `false`, which means the process terminates.
+      in event of a disconnection. Defaults to `false`, which means the process
+      terminates. See the note in `Postgrex.Notifications` about [async connect
+      and auto-reconnects][async-caveat].
 
     * `:configure` - A function to run before every connect attempt to dynamically
       configure the options as a `{module, function, args}`, where the current
@@ -250,6 +250,8 @@ defmodule Postgrex.SimpleConnection do
 
     * `:sync_connect` - controls if the connection should be established on boot
       or asynchronously right after boot. Defaults to `true`.
+
+  [async-caveat]: Postgrex.Notifications.html#module-async-connect-auto-reconnects-and-missed-notifications
   """
   @spec start_link(module, term, Keyword.t()) :: {:ok, pid} | {:error, Postgrex.Error.t() | term}
   def start_link(module, args, opts) do
@@ -337,12 +339,13 @@ defmodule Postgrex.SimpleConnection do
   @impl :gen_statem
   def handle_event(type, content, statem_state, state)
 
-  def handle_event(:internal, {:connect, :reconnect}, @state, %{protocol: protocol} = state) do
+  def handle_event(:internal, {:connect, :reconnect}, @state, %{protocol: protocol} = state)
+      when protocol != nil do
     Protocol.disconnect(:reconnect, protocol)
     {:keep_state, %{state | protocol: nil}, {:next_event, :internal, {:connect, :init}}}
   end
 
-  def handle_event(:internal, {:connect, :init}, @state, %{state: {mod, mod_state}} = state) do
+  def handle_event(:internal, {:connect, _}, @state, %{state: {mod, mod_state}} = state) do
     opts =
       case Keyword.get(opts(mod), :configure) do
         {module, fun, args} -> apply(module, fun, [opts(mod) | args])
@@ -359,6 +362,10 @@ defmodule Postgrex.SimpleConnection do
         end
 
       {:error, reason} ->
+        Logger.error(
+          "#{inspect(pid_or_name())} (#{inspect(mod)}) failed to connect to Postgres: #{Exception.format(:error, reason)}"
+        )
+
         if state.auto_reconnect do
           {:keep_state, state, {{:timeout, :backoff}, state.reconnect_backoff, nil}}
         else
@@ -460,6 +467,13 @@ defmodule Postgrex.SimpleConnection do
       {:keep_state, state, {:next_event, :internal, {:connect, :reconnect}}}
     else
       {:stop, reason, %{state | protocol: protocol}}
+    end
+  end
+
+  defp pid_or_name do
+    case Process.info(self(), :registered_name) do
+      {:registered_name, atom} when is_atom(atom) -> atom
+      _ -> self()
     end
   end
 

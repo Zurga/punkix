@@ -1,5 +1,6 @@
 {application,plug,
-             [{compile_env,[{plug,[mimes],error},{plug,[statuses],error}]},
+             [{config_mtime,1744621395},
+              {compile_env,[{plug,[mimes],error},{plug,[statuses],error}]},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,eex,mime,plug_crypto,
                              telemetry]},
@@ -47,6 +48,6 @@
                         'Elixir.Plug.TimeoutError','Elixir.Plug.Upload',
                         'Elixir.Plug.UploadError',plug_multipart]},
               {registered,[]},
-              {vsn,"1.16.1"},
+              {vsn,"1.17.0"},
               {mod,{'Elixir.Plug.Application',[]}},
               {env,[{validate_header_keys_during_test,true}]}]}.

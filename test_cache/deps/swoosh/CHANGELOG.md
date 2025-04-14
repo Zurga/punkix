@@ -1,6 +1,79 @@
 # Changelog
 
+## 1.18.4
+
+### ✨ Features
+
+- Support dark/light mode based on system theme in dev preview mailbox @chrismccord (#1027)
+
+## 1.18.3
+
+### 🧰 Maintenance
+
+- Update Req usage, preparing for v1.0 @wojtekmach (#1022)
+
+## 1.18.2
+
+### 🐛 Bug Fixes
+
+- Fix: Prevent zeptomail error when receiving non json response body on 500 @atoncetti (#1017)
+
+## 1.18.1
+
+### ✨ Features
+
+- Add PostUp adapter @zatchheems (#1015)
+
+## 1.18.0
+
+### ✨ Features
+
+- Implement loops.so adapter @caioaao (#1012)
+
+## 1.17.10
+
+### 🐛 Bug Fixes
+
+- Fix broken attachments on Scaleway adapter @olivermt (#1003)
+
+## 1.17.9
+
+### 🐛 Bug Fixes
+
+- fix assets path prefix
+- improve static serving config
+
+## 1.17.8 (deprecated: broken css priv path, fixed in 1.17.9)
+
+### 🐛 Bug Fixes
+
+- fix priv path for css file @princemaple (#1001)
+
+## 1.17.7 (deprecated: broken css priv path, fixed in 1.17.9)
+
+### ✨ Feature
+
+- fix: add csp nonce @yordis (#996)
+
+### 🧰 Maintenance
+
+- Compile tailwind instead of using cdn @princemaple (#998)
+
+## 1.17.6
+
+### ✨ Features
+
+- Sendgrid: Support Mail Body Compression @luhagel (#971)
+
+### 📝 Documentation
+
+- Document how to change base\_url for CustomerIO adapter @sheharyarn (#987)
+- Add JSON section to README @princemaple (#985)
+- Fix doc typo in test\_assertions.ex @sevab (#983)
+
 ## 1.17.5
+
+This release fixes a bug introduced in 1.17.4
 
 ### 🐛 Bug Fixes
 
@@ -359,14 +432,6 @@ Thank you @ruslandoga very much for throwing in this gem.
 ### 🧰 Maintenance
 
 - Move docs above maintenance @princemaple (#760)
-- Bump ex\_doc from 0.29.3 to 0.29.4 @dependabot (#756)
-- Bump ex\_aws from 2.4.1 to 2.4.2 @dependabot (#755)
-- Bump ex\_doc from 0.29.2 to 0.29.3 @dependabot (#753)
-- Bump plug\_cowboy from 2.6.0 to 2.6.1 @dependabot (#752)
-- Bump finch from 0.14.0 to 0.15.0 @dependabot (#751)
-- Bump ex\_doc from 0.29.1 to 0.29.2 @dependabot (#748)
-- Bump telemetry from 1.2.0 to 1.2.1 @dependabot (#745)
-- Bump telemetry from 1.1.0 to 1.2.0 @dependabot (#741)
 
 ## 1.9.1
 
@@ -434,21 +499,11 @@ Bump to require Elixir 1.11. Now official support has been updated to Elixir 1.1
 
 - doc: correct tags example for Adapters.Sendinblue @03juan (#711)
 
-### 🧰 Maintenance
-
-- Bump ex\_doc from 0.28.4 to 0.28.5 @dependabot (#712)
-- Bump ex\_aws from 2.3.3 to 2.3.4 @dependabot (#710)
-
 ## 1.7.4
 
 ### ✨ Features
 
 - Set attachment's ContentId in Mailjet @marcinkoziej (#709)
-
-### 🧰 Maintenance
-
-- Bump mime from 2.0.2 to 2.0.3 @dependabot (#708)
-- Bump finch from 0.12.0 to 0.13.0 @dependabot (#707)
 
 ### 📝 Documentation
 
@@ -492,12 +547,6 @@ Bump to require Elixir 1.11. Now official support has been updated to Elixir 1.1
 - SMTP: Allow send email without 'To' @Danielwsx64 (#694)
 - Add SMTP2GO adapter @princemaple (#687)
 
-### 🧰 Maintenance
-
-- Bump ex\_aws from 2.3.1 to 2.3.2 @dependabot (#692)
-- Bump finch from 0.11.0 to 0.12.0 @dependabot (#690)
-- Bump ex\_doc from 0.28.3 to 0.28.4 @dependabot (#688)
-
 ### 📝 Documentation
 
 - fix module name in ExAwsAmazonSES module doc @SteffenDE (#689)
@@ -509,10 +558,6 @@ Bump to require Elixir 1.11. Now official support has been updated to Elixir 1.1
 ## 1.6.5
 
 - Add `Swoosh.Adapters.ExAwsAmazonSES` adapter @ascandella (#684)
-
-### 🧰 Maintenance
-
-- Bump gen_smtp from 1.1.1 to 1.2.0 @dependabot (#682)
 
 ## 1.6.4
 
@@ -541,13 +586,6 @@ Bump to require Elixir 1.11. Now official support has been updated to Elixir 1.1
 - add OhMySMTP adapter @taobojlen (#663)
 
 ### 🧰 Maintenance
-
-- Bump finch from 0.10.1 to 0.10.2 @dependabot (#661)
-- Bump ex_doc from 0.27.0 to 0.27.3 @dependabot (#660)
-- Bump ex_doc from 0.26.0 to 0.27.0 @dependabot (#659)
-- Bump finch from 0.10.0 to 0.10.1 @dependabot (#655)
-- Bump jason from 1.2.2 to 1.3.0 @dependabot (#654)
-- Bump finch from 0.9.1 to 0.10.0 @dependabot (#651)
 - Config bypass only on test @nallwhy (#650)
 
 ### 📝 Documentation

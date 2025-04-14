@@ -1,5 +1,6 @@
 {application,websock,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir]},
               {description,"A specification for WebSocket connections"},
               {modules,['Elixir.WebSock']},

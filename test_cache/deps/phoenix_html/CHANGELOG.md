@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.2.1 (2025-02-21)
+
+* Enhancements
+  * Add type to `Phoenix.HTML.FormField`
+  * Allow keyword lists in options to use nil as key/value
+
+## 4.2.0 (2024-12-28)
+
+* Enhancements
+  * Add `Phoenix.HTML.css_escape/1` to escape strings for use inside CSS selectors
+  * Add the ability to pass `:hr` to `options_for_select/2` to render a horizontal rule
+
+* Bug fixes
+  * Pass form action through in FormData implementation
+
 ## v4.1.1 (2024-03-01)
   * Fix dependency resolution error
 
@@ -10,7 +25,7 @@
 
 ## v4.0.0 (2023-12-19)
 
-This version removes deprecated functionality and moved all HTML helpers to a separate library. HTML Helpers are no longer used in new apps from Phoenix v1.7. Older applications who wish to maintain compatibility, add `{:phoenix_html_helpers, "~> 1.0"}` to your `mix.exs` and then replace `use Phoenix.HTML` in your applications by:
+This version removes deprecated functionality and moved all HTML helpers to a separate library. HTML Helpers are no longer used in new apps from Phoenix v1.7, instead it relies on function components from `Phoenix.LiveView`. Older applications who wish to maintain compatibility, add `{:phoenix_html_helpers, "~> 1.0"}` to your `mix.exs` and then replace `use Phoenix.HTML` in your applications by:
 
 ```elixir
 import Phoenix.HTML

@@ -108,14 +108,14 @@ defmodule Phoenix.LiveView.Tokenizer do
          {:close, :tag, "section", %{column: 16, line: 1}},
          {:tag, "div", [], %{column: 10, line: 1, closing: :self}},
          {:tag, "section", [], %{column: 1, line: 1}}
-       ], :text}
+       ], {:text, :enabled}}
   """
   def tokenize(text, meta, tokens, cont, state) do
     line = Keyword.get(meta, :line, 1)
     column = Keyword.get(meta, :column, 1)
 
     case cont do
-      :text -> handle_text(text, line, column, [], tokens, state)
+      {:text, braces} -> handle_text(text, line, column, [], tokens, %{state | braces: braces})
       :style -> handle_style(text, line, column, [], tokens, state)
       :script -> handle_script(text, line, column, [], tokens, state)
       {:comment, _, _} -> handle_comment(text, line, column, [], tokens, state)
@@ -157,6 +157,7 @@ defmodule Phoenix.LiveView.Tokenizer do
 
   defp handle_text("{" <> rest, line, column, buffer, acc, %{braces: :enabled} = state) do
     text_to_acc = text_to_acc(buffer, acc, line, column, state.context)
+    state = put_in(state.context, [])
 
     case handle_interpolation(rest, line, column + 1, [], 0, state) do
       {:ok, value, new_line, new_column, rest} ->
@@ -174,7 +175,7 @@ defmodule Phoenix.LiveView.Tokenizer do
   end
 
   defp handle_text(<<>>, line, column, buffer, acc, state) do
-    ok(text_to_acc(buffer, acc, line, column, state.context), :text)
+    ok(text_to_acc(buffer, acc, line, column, state.context), {:text, state.braces})
   end
 
   ## handle_doctype
@@ -454,7 +455,8 @@ defmodule Phoenix.LiveView.Tokenizer do
         acc = put_attr(acc, name, attr_meta, value)
 
         state =
-          if name == "phx-no-curly-interpolation" and state.braces == :enabled do
+          if name == "phx-no-curly-interpolation" and state.braces == :enabled and
+               not script_or_style?(acc) do
             %{state | braces: 0}
           else
             state
@@ -467,6 +469,9 @@ defmodule Phoenix.LiveView.Tokenizer do
         raise_syntax_error!(message, meta, state)
     end
   end
+
+  defp script_or_style?([{:tag, name, _, _} | _]) when name in ~w(script style), do: true
+  defp script_or_style?(_), do: false
 
   ## handle_root_attribute
 

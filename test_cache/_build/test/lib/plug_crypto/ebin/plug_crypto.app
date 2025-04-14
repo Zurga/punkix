@@ -1,5 +1,6 @@
 {application,plug_crypto,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,crypto]},
               {description,"Crypto-related functionality for the web"},
               {modules,['Elixir.Plug.Crypto','Elixir.Plug.Crypto.Application',
@@ -7,5 +8,5 @@
                         'Elixir.Plug.Crypto.MessageEncryptor',
                         'Elixir.Plug.Crypto.MessageVerifier']},
               {registered,[]},
-              {vsn,"2.1.0"},
+              {vsn,"2.1.1"},
               {mod,{'Elixir.Plug.Crypto.Application',[]}}]}.

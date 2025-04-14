@@ -1,5 +1,6 @@
 {application,nimble_pool,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"A tiny resource-pool implementation"},
               {modules,['Elixir.NimblePool','Elixir.NimblePool.Application']},

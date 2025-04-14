@@ -457,11 +457,7 @@ defmodule Credo.Check do
 
       defoverridable Credo.Check
 
-      defp append_issues_and_timings([] = _issues, exec) do
-        exec
-      end
-
-      defp append_issues_and_timings([_ | _] = issues, exec) do
+      defp append_issues_and_timings(issues, exec) do
         Credo.Execution.ExecutionIssues.append(exec, issues)
       end
     end
@@ -691,29 +687,24 @@ defmodule Credo.Check do
   - `:column`       Sets the issue's column.
   - `:exit_status`  Sets the issue's exit_status.
   - `:severity`     Sets the issue's severity.
+  - `:category`     Sets the issue's category.
   """
   def format_issue(issue_meta, opts, check) do
-    params = IssueMeta.params(issue_meta)
-    issue_category = Params.category(params, check)
-    issue_base_priority = Params.priority(params, check)
-
-    format_issue(issue_meta, opts, issue_category, issue_base_priority, check)
-  end
-
-  @doc false
-  def format_issue(issue_meta, opts, issue_category, issue_priority, check) do
     source_file = IssueMeta.source_file(issue_meta)
     params = IssueMeta.params(issue_meta)
+    issue_category = opts[:category] || Params.category(params, check)
+    priority = params |> Params.priority(check) |> Priority.to_integer()
 
-    priority = Priority.to_integer(issue_priority)
+    exit_status_or_category =
+      opts[:exit_status] || Params.exit_status(params, check) || issue_category
 
-    exit_status_or_category = Params.exit_status(params, check) || issue_category
     exit_status = Check.to_exit_status(exit_status_or_category)
 
     line_no = opts[:line_no]
     column = opts[:column]
     severity = opts[:severity] || Severity.default_value()
     trigger = opts[:trigger]
+    message = to_string(opts[:message])
 
     trigger =
       if trigger == Issue.no_trigger() do
@@ -722,10 +713,23 @@ defmodule Credo.Check do
         to_string(trigger)
       end
 
+    message =
+      if String.valid?(message) do
+        message
+      else
+        IO.warn(
+          "#{check_name(check)} creates an Issue with a `:message` containing invalid bytes: #{inspect(message)}"
+        )
+
+        "(see warning) #{inspect(message)}"
+      end
+
     %Issue{
+      check: check,
+      category: issue_category,
       priority: priority,
       filename: source_file.filename,
-      message: opts[:message],
+      message: message,
       trigger: trigger,
       line_no: line_no,
       column: column,
@@ -734,14 +738,15 @@ defmodule Credo.Check do
     }
     |> add_line_no_options(line_no, source_file)
     |> add_column_if_missing(trigger, line_no, column, source_file)
-    |> add_check_and_category(check, issue_category)
+    |> force_priority_if_given(opts[:priority])
   end
 
-  defp add_check_and_category(issue, check, issue_category) do
+  defp force_priority_if_given(issue, nil), do: issue
+
+  defp force_priority_if_given(issue, priority) do
     %Issue{
       issue
-      | check: check,
-        category: issue_category
+      | priority: priority
     }
   end
 
@@ -769,6 +774,8 @@ defmodule Credo.Check do
       issue
     end
   end
+
+  defp check_name(module), do: Credo.Code.Name.full(module)
 
   # Returns the scope for the given line as a tuple consisting of the call to
   # define the scope (`:defmodule`, `:def`, `:defp` or `:defmacro`) and the

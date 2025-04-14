@@ -542,16 +542,18 @@ defmodule Phoenix.LiveView do
 
   """
   defmacro on_mount(mod_or_mod_arg) do
+    caller = %{__CALLER__ | function: {:on_mount, 1}}
+
     # While we could pass `mod_or_mod_arg` as a whole to
     # expand_literals, we want to also be able to expand only
     # the first element, even if the second element is not a literal.
     mod_or_mod_arg =
       case mod_or_mod_arg do
         {mod, arg} ->
-          {Macro.expand_literals(mod, __CALLER__), Macro.expand_literals(arg, __CALLER__)}
+          {Macro.expand_literals(mod, caller), Macro.expand_literals(arg, caller)}
 
         mod_or_mod_arg ->
-          Macro.expand_literals(mod_or_mod_arg, __CALLER__)
+          Macro.expand_literals(mod_or_mod_arg, caller)
       end
 
     quote do
@@ -657,10 +659,16 @@ defmodule Phoenix.LiveView do
   @doc """
   Adds a flash message to the socket to be displayed.
 
-  *Note*: While you can use `put_flash/3` inside a `Phoenix.LiveComponent`,
-  components have their own `@flash` assigns. The `@flash` assign
-  in a component is only copied to its parent LiveView if the component
-  calls `push_navigate/2` or `push_patch/2`.
+  The flash message will stick around until it is read.
+  If you perform a redirect or a navigation event, the message will be
+  signed and temporarily stored in the client. Therefore it is important
+  to use flash messages only for user-facing notifications. Do not store
+  sensitive information in flash messages.
+
+  In a typical LiveView application, the message will be rendered by the
+  CoreComponents’ `flash/1` component. It is up to this function to determine
+  what kind of messages it supports. By default, the `:info` and `:error`
+  kinds are handled.
 
   *Note*: You must also place the `Phoenix.LiveView.Router.fetch_live_flash/2`
   plug in your browser's pipeline in place of `fetch_flash` for LiveView flash
@@ -673,16 +681,18 @@ defmodule Phoenix.LiveView do
         plug :fetch_live_flash
       end
 
-  In a typical LiveView application, the message will be rendered by the CoreComponents’ flash/1 component.
-  It is up to this function to determine what kind of messages it supports.
-  By default, the `:info` and `:error` kinds are handled.
-
   ## Examples
 
       iex> put_flash(socket, :info, "It worked!")
       iex> put_flash(socket, :error, "You can't access that page")
-  """
 
+  ## Inside components
+
+  You can use `put_flash/3` inside a `Phoenix.LiveComponent` and
+  components have their own `@flash` assigns. The `@flash` assign
+  in a component is only copied to its parent LiveView if the component
+  calls `push_navigate/2` or `push_patch/2`.
+  """
   defdelegate put_flash(socket, kind, msg), to: Phoenix.LiveView.Utils
 
   @doc """
@@ -1506,7 +1516,77 @@ defmodule Phoenix.LiveView do
   interoperability](js-interop.html#client-hooks-via-phx-hook) because a client hook
   can push an event and receive a reply.
 
-  ## Examples
+  ## Sharing event handling logic
+
+  Lifecycle hooks are an excellent way to extract related events out of the parent LiveView and
+  into separate modules without resorting unnecessarily to LiveComponents for organization.
+
+      defmodule DemoLive do
+        use Phoenix.LiveView
+
+        def render(assigns) do
+          ~H\"""
+          <div>
+            <div>
+              Counter: {@counter}
+              <button phx-click="inc">+</button>
+            </div>
+
+            <MySortComponent.display lists={[first_list: @first_list, second_list: @second_list]} />
+          </div>
+          \"""
+        end
+
+        def mount(_params, _session, socket) do
+          first_list = for(i <- 1..9, do: "First List \#{i}") |> Enum.shuffle()
+          second_list = for(i <- 1..9, do: "Second List \#{i}") |> Enum.shuffle()
+
+          socket =
+            socket
+            |> assign(:counter, 0)
+            |> assign(first_list: first_list)
+            |> assign(second_list: second_list)
+            |> attach_hook(:sort, :handle_event, &MySortComponent.hooked_event/3)  # 2) Delegated events
+          {:ok, socket}
+        end
+
+        # 1) Normal event
+        def handle_event("inc", _params, socket) do
+          {:noreply, update(socket, :counter, &(&1 + 1))}
+        end
+      end
+
+      defmodule MySortComponent do
+        use Phoenix.Component
+
+        def display(assigns) do
+          ~H\"""
+          <div :for={{key, list} <- @lists}>
+            <ul><li :for={item <- list}>{item}</li></ul>
+            <button phx-click="shuffle" phx-value-list={key}>Shuffle</button>
+            <button phx-click="sort" phx-value-list={key}>Sort</button>
+          </div>
+          \"""
+        end
+
+        def hooked_event("shuffle", %{"list" => key}, socket) do
+          key = String.to_existing_atom(key)
+          shuffled = Enum.shuffle(socket.assigns[key])
+
+          {:halt, assign(socket, key, shuffled)}
+        end
+
+        def hooked_event("sort", %{"list" => key}, socket) do
+          key = String.to_existing_atom(key)
+          sorted = Enum.sort(socket.assigns[key])
+
+          {:halt, assign(socket, key, sorted)}
+        end
+
+        def hooked_event(_event, _params, socket), do: {:cont, socket}
+      end
+
+  ## Other examples
 
   Attaching and detaching a hook:
 
@@ -1678,6 +1758,7 @@ defmodule Phoenix.LiveView do
     2. Each stream item must include its DOM id on the item's element.
 
   > #### Note {: .warning}
+  >
   > Failing to place `phx-update="stream"` on the **immediate parent** for
   > **each stream** will result in broken behavior.
   >
@@ -1732,6 +1813,9 @@ defmodule Phoenix.LiveView do
   </table>
   ```
 
+  It is important to set a unique ID on the empty row, otherwise it cannot be tracked
+  in the stream container and subsequent patches will duplicate the node.
+
   ## Non-stream items in stream containers
 
   In the section on handling the empty case, we showed how to render a message when
@@ -1740,19 +1824,26 @@ defmodule Phoenix.LiveView do
   Note that for non-stream items inside a `phx-update="stream"` container, the following
   needs to be considered:
 
-    1. Items can be added and updated, but not removed, even if the stream is reset.
+    1. Non-stream items must have a unique DOM id.
 
-  This means that if you try to conditionally render a non-stream item inside a stream container,
-  it won't be removed if it was rendered once.
+    2. Items can be added and updated, but not removed, even if the stream is reset.
 
-    2. Items are affected by the `:at` option.
+       This means that if you try to conditionally render a non-stream item inside a stream container,
+       it won't be removed if it was rendered once.
 
-  For example, when you render a non-stream item at the beginning of the stream container and then
-  prepend items (with `at: 0`) to the stream, the non-stream item will be pushed down.
+    3. Items are affected by the `:at` option.
+
+       For example, when you render a non-stream item at the beginning of the stream container and then
+       prepend items (with `at: 0`) to the stream, the non-stream item will be pushed down.
 
   """
-  @spec stream(%Socket{}, name :: atom | String.t(), items :: Enumerable.t(), opts :: Keyword.t()) ::
-          %Socket{}
+  @spec stream(
+          socket :: Socket.t(),
+          name :: atom | String.t(),
+          items :: Enumerable.t(),
+          opts :: Keyword.t()
+        ) ::
+          Socket.t()
   def stream(%Socket{} = socket, name, items, opts \\ []) do
     socket
     |> ensure_streams()
@@ -1790,7 +1881,8 @@ defmodule Phoenix.LiveView do
 
   Returns an updated `socket`.
   """
-  @spec stream_configure(%Socket{}, name :: atom | String.t(), opts :: Keyword.t()) :: %Socket{}
+  @spec stream_configure(socket :: Socket.t(), name :: atom | String.t(), opts :: Keyword.t()) ::
+          Socket.t()
   def stream_configure(%Socket{} = socket, name, opts) when is_list(opts) do
     new_socket = ensure_streams(socket)
 
@@ -1809,9 +1901,19 @@ defmodule Phoenix.LiveView do
   end
 
   defp ensure_streams(%Socket{} = socket) do
-    Phoenix.LiveView.Utils.assign_new(socket, :streams, fn ->
-      %{__ref__: 0, __changed__: MapSet.new(), __configured__: %{}}
-    end)
+    # don't use assign_new here because we DON'T want to copy parent streams
+    # during the dead render of nested or sticky LiveViews
+    case socket.assigns do
+      %{streams: _} ->
+        socket
+
+      _ ->
+        Phoenix.LiveView.Utils.assign(socket, :streams, %{
+          __ref__: 0,
+          __changed__: MapSet.new(),
+          __configured__: %{}
+        })
+    end
   end
 
   @doc """
@@ -1873,8 +1975,13 @@ defmodule Phoenix.LiveView do
 
   See `stream_delete/3` for more information on deleting items.
   """
-  @spec stream_insert(%Socket{}, name :: atom | String.t(), item :: any, opts :: Keyword.t()) ::
-          %Socket{}
+  @spec stream_insert(
+          socket :: Socket.t(),
+          name :: atom | String.t(),
+          item :: any,
+          opts :: Keyword.t()
+        ) ::
+          Socket.t()
   def stream_insert(%Socket{} = socket, name, item, opts \\ []) do
     at = Keyword.get(opts, :at, -1)
     limit = Keyword.get(opts, :limit)
@@ -1902,7 +2009,7 @@ defmodule Phoenix.LiveView do
 
   Returns an updated `socket`.
   """
-  @spec stream_delete(%Socket{}, name :: atom | String.t(), item :: any) :: %Socket{}
+  @spec stream_delete(socket :: Socket.t(), name :: atom | String.t(), item :: any) :: Socket.t()
   def stream_delete(%Socket{} = socket, name, item) do
     update_stream(socket, name, &LiveStream.delete_item(&1, item))
   end
@@ -1938,8 +2045,8 @@ defmodule Phoenix.LiveView do
         {:noreply, stream_delete_by_dom_id(socket, :songs, dom_id)}
       end
   '''
-  @spec stream_delete_by_dom_id(%Socket{}, name :: atom | String.t(), id :: String.t()) ::
-          %Socket{}
+  @spec stream_delete_by_dom_id(socket :: Socket.t(), name :: atom | String.t(), id :: String.t()) ::
+          Socket.t()
   def stream_delete_by_dom_id(%Socket{} = socket, name, id) do
     update_stream(socket, name, &LiveStream.delete_item_by_dom_id(&1, id))
   end

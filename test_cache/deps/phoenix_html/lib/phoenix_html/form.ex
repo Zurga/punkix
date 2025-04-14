@@ -34,8 +34,11 @@ defmodule Phoenix.HTML.Form do
 
   Its fields are:
 
-    * `:source` - the data structure given to `form_for/4` that
-      implements the form data protocol
+    * `:source` - the data structure that implements the form data protocol
+
+    * `:action` - The action that was taken against the form. This value can be
+      used to distinguish between different operations such as the user typing
+      into a form for validation, or submitting a form for a database insert.
 
     * `:impl` - the module with the form data protocol implementation.
       This is used to avoid multiple protocol dispatches.
@@ -54,7 +57,7 @@ defmodule Phoenix.HTML.Form do
       submit the form behind the scenes as hidden inputs
 
     * `:options` - a copy of the options given when creating the
-      form via `form_for/4` without any form data specific key
+      form without any form data specific key
 
     * `:errors` - a keyword list of errors that are associated with
       the form
@@ -143,8 +146,7 @@ defmodule Phoenix.HTML.Form do
   @doc """
   Returns an id of a corresponding form field.
 
-  The form should either be a `Phoenix.HTML.Form` emitted
-  by `form_for` or an atom.
+  The form should either be a `Phoenix.HTML.Form` or an atom.
   """
   @spec input_id(t | atom, field) :: String.t()
   def input_id(%{id: nil}, field), do: "#{field}"
@@ -271,10 +273,27 @@ defmodule Phoenix.HTML.Form do
   end
 
   @doc """
-  Returns options to be used inside a select.
+  Returns options to be used inside a select element.
 
-  This is useful when building the select by hand.
-  It expects all options and one or more select values.
+  `options` is expected to be an enumerable which will be used to
+  generate each `option` element. The function supports different data
+  for the individual elements:
+
+    * keyword lists - each keyword list is expected to have the keys
+      `:key` and `:value`. Additional keys such as `:disabled` may
+      be given to customize the option.
+    * two-item tuples - where the first element is an atom, string or
+      integer to be used as the option label and the second element is
+      an atom, string or integer to be used as the option value
+    * simple atom, string or integer - which will be used as both label and value
+      for the generated select
+    
+  ## Option groups
+
+  If `options` is map or keyword list where the first element is a string,
+  atom or integer and the second element is a list or a map, it is assumed
+  the key will be wrapped in an `<optgroup>` and the value will be used to
+  generate `<options>` nested under the group.
 
   ## Examples
 
@@ -290,7 +309,7 @@ defmodule Phoenix.HTML.Form do
       #=> <option value="user">User</option>
       #=> <option value="moderator" selected>Moderator</option>
 
-  Groups are also supported:
+  Groups:
 
       options_for_select(["Europe": ["UK", "Sweden", "France"], ...], nil)
       #=> <optgroup label="Europe">
@@ -298,6 +317,21 @@ defmodule Phoenix.HTML.Form do
       #=>   <option>Sweden</option>
       #=>   <option>France</option>
       #=> </optgroup>
+
+  Horizontal separators can be added:
+
+      options_for_select(["Admin", "User", :hr, "New"], nil)
+      #=> <option>Admin</option>
+      #=> <option>User</option>
+      #=> <hr/>
+      #=> <option>New</option>
+
+      options_for_select(["Admin": "admin", "User": "user", hr: nil, "New": "new"], nil)
+      #=> <option value="admin" selected>Admin</option>
+      #=> <option value="user">User</option>
+      #=> <hr/>
+      #=> <option value="new">New</option>
+
 
   """
   def options_for_select(options, selected_values) do
@@ -310,23 +344,37 @@ defmodule Phoenix.HTML.Form do
 
   defp escaped_options_for_select(options, selected_values) do
     Enum.reduce(options, [], fn
+      {:hr, nil}, acc ->
+        [acc | hr_tag()]
+
       {option_key, option_value}, acc ->
         [acc | option(option_key, option_value, [], selected_values)]
 
       options, acc when is_list(options) ->
-        {option_key, options} = Keyword.pop(options, :key)
+        {option_key, options} =
+          case List.keytake(options, :key, 0) do
+            nil ->
+              raise ArgumentError,
+                    "expected :key key when building <option> from keyword list: #{inspect(options)}"
 
-        option_key ||
-          raise ArgumentError,
-                "expected :key key when building <option> from keyword list: #{inspect(options)}"
+            {{:key, key}, options} ->
+              {key, options}
+          end
 
-        {option_value, options} = Keyword.pop(options, :value)
+        {option_value, options} =
+          case List.keytake(options, :value, 0) do
+            nil ->
+              raise ArgumentError,
+                    "expected :value key when building <option> from keyword list: #{inspect(options)}"
 
-        option_value ||
-          raise ArgumentError,
-                "expected :value key when building <option> from keyword list: #{inspect(options)}"
+            {{:value, value}, options} ->
+              {value, options}
+          end
 
         [acc | option(option_key, option_value, options, selected_values)]
+
+      :hr, acc ->
+        [acc | hr_tag()]
 
       option, acc ->
         [acc | option(option, option, [], selected_values)]
@@ -349,6 +397,10 @@ defmodule Phoenix.HTML.Form do
   defp option_tag(name, attrs, {:safe, body}) when is_binary(name) and is_list(attrs) do
     {:safe, attrs} = Phoenix.HTML.attributes_escape(attrs)
     [?<, name, attrs, ?>, body, ?<, ?/, name, ?>]
+  end
+
+  defp hr_tag() do
+    [?<, "hr", ?/, ?>]
   end
 
   # Helper for getting field errors, handling string fields

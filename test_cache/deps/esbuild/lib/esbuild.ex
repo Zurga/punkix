@@ -1,6 +1,6 @@
 defmodule Esbuild do
   # https://registry.npmjs.org/esbuild/latest
-  @latest_version "0.23.0"
+  @latest_version "0.25.0"
 
   @moduledoc """
   Esbuild is an installer and runner for [esbuild](https://esbuild.github.io).
@@ -28,9 +28,6 @@ defmodule Esbuild do
     * `:version_check` - whether to perform the version check or not.
       Useful when you manage the esbuild executable with an external
       tool (eg. npm)
-
-    * `:cacerts_path` - the directory to find certificates for
-      https connections
 
     * `:path` - the path to find the esbuild executable at. By
       default, it is automatically downloaded and placed inside

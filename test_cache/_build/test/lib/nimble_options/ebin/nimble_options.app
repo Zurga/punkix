@@ -1,5 +1,6 @@
 {application,nimble_options,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir]},
               {description,"A tiny library for validating and documenting high-level options"},
               {modules,['Elixir.NimbleOptions','Elixir.NimbleOptions.Docs',

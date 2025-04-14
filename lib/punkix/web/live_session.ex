@@ -1,5 +1,5 @@
 defmodule Punkix.Web.LiveSession do
-  defmacro __using__(opts \\ []) do
+  defmacro __using__(_opts \\ []) do
     quote do
       import Punkix.Web.LiveSession
       import Phoenix.LiveView, only: [attach_hook: 4]

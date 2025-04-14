@@ -238,6 +238,10 @@ defmodule Mint.HTTP do
       server. See `Mint.HTTP2.put_settings/2` for more information. This is only used
       in HTTP/2 connections.
 
+  There may be further protocol specific options that only take effect when the corresponding
+  connection is established. Check `Mint.HTTP1.connect/4` and `Mint.HTTP2.connect/4` for
+  details.
+
   ## Protocol negotiation
 
   If both `:http1` and `:http2` are present in the list passed in the `:protocols` option,
@@ -489,7 +493,7 @@ defmodule Mint.HTTP do
   """
   @impl true
   @spec close(t()) :: {:ok, t()}
-  def close(conn), do: conn_module(conn).close(conn)
+  def close(conn), do: conn_apply(conn, :close, [conn])
 
   @doc """
   Checks whether the connection is open.
@@ -526,7 +530,7 @@ defmodule Mint.HTTP do
   """
   @impl true
   @spec open?(t(), :read | :write) :: boolean()
-  def open?(conn, type \\ :write), do: conn_module(conn).open?(conn, type)
+  def open?(conn, type \\ :write), do: conn_apply(conn, :open?, [conn, type])
 
   @doc """
   Sends a request to the connected server.
@@ -595,7 +599,7 @@ defmodule Mint.HTTP do
           | {:error, t(), Types.error()}
 
   def request(conn, method, path, headers, body),
-    do: conn_module(conn).request(conn, method, path, headers, body)
+    do: conn_apply(conn, :request, [conn, method, path, headers, body])
 
   @doc """
   Streams a chunk of the request body on the connection or signals the end of the body.
@@ -686,7 +690,7 @@ defmodule Mint.HTTP do
         ) ::
           {:ok, t()} | {:error, t(), Types.error()}
   def stream_request_body(conn, ref, body),
-    do: conn_module(conn).stream_request_body(conn, ref, body)
+    do: conn_apply(conn, :stream_request_body, [conn, ref, body])
 
   @doc """
   Streams the next batch of responses from the given `message`.
@@ -705,6 +709,14 @@ defmodule Mint.HTTP do
   section below. If there's an error, `{:error, conn, reason, responses}` is returned,
   where `conn` is the updated connection, `reason` is the error reason, and `responses`
   is a list of responses that were correctly parsed before the error.
+
+  > #### Graceful Close {: .tip}
+  >
+  > If this function returns `{:ok, conn, responses}`, it doesn't *necessarily* mean
+  > that the connection is still open. For example, TCP/SSL **close** messages are treated
+  > as errors only if there are in-flight requests. If there are no in-flight requests,
+  > the connection is closed gracefully and `{:ok, conn, responses}` is returned.
+  > Always check with `open?/1` to see if the connection is still open.
 
   If the given `message` is not from the connection's socket,
   this function returns `:unknown`.
@@ -815,7 +827,7 @@ defmodule Mint.HTTP do
           {:ok, t(), [Types.response()]}
           | {:error, t(), Types.error(), [Types.response()]}
           | :unknown
-  def stream(conn, message), do: conn_module(conn).stream(conn, message)
+  def stream(conn, message), do: conn_apply(conn, :stream, [conn, message])
 
   @doc """
   Returns the number of open requests.
@@ -834,7 +846,7 @@ defmodule Mint.HTTP do
   """
   @impl true
   @spec open_request_count(t()) :: non_neg_integer()
-  def open_request_count(conn), do: conn_module(conn).open_request_count(conn)
+  def open_request_count(conn), do: conn_apply(conn, :open_request_count, [conn])
 
   @doc """
   Receives data from the socket in a blocking way.
@@ -870,7 +882,7 @@ defmodule Mint.HTTP do
   @spec recv(t(), non_neg_integer(), timeout()) ::
           {:ok, t(), [Types.response()]}
           | {:error, t(), Types.error(), [Types.response()]}
-  def recv(conn, byte_count, timeout), do: conn_module(conn).recv(conn, byte_count, timeout)
+  def recv(conn, byte_count, timeout), do: conn_apply(conn, :recv, [conn, byte_count, timeout])
 
   @doc """
   Changes the mode of the underlying socket.
@@ -896,7 +908,7 @@ defmodule Mint.HTTP do
   """
   @impl true
   @spec set_mode(t(), :active | :passive) :: {:ok, t()} | {:error, Types.error()}
-  def set_mode(conn, mode), do: conn_module(conn).set_mode(conn, mode)
+  def set_mode(conn, mode), do: conn_apply(conn, :set_mode, [conn, mode])
 
   @doc """
   Changes the *controlling process* of the given connection to `new_pid`.
@@ -934,7 +946,8 @@ defmodule Mint.HTTP do
   """
   @impl true
   @spec controlling_process(t(), pid()) :: {:ok, t()} | {:error, Types.error()}
-  def controlling_process(conn, new_pid), do: conn_module(conn).controlling_process(conn, new_pid)
+  def controlling_process(conn, new_pid),
+    do: conn_apply(conn, :controlling_process, [conn, new_pid])
 
   @doc """
   Assigns a new private key and value in the connection.
@@ -958,7 +971,7 @@ defmodule Mint.HTTP do
   """
   @impl true
   @spec put_private(t(), atom(), term()) :: t()
-  def put_private(conn, key, value), do: conn_module(conn).put_private(conn, key, value)
+  def put_private(conn, key, value), do: conn_apply(conn, :put_private, [conn, key, value])
 
   @doc """
   Gets a private value from the connection.
@@ -983,7 +996,7 @@ defmodule Mint.HTTP do
   @impl true
   @spec get_private(t(), atom(), term()) :: term()
   def get_private(conn, key, default \\ nil),
-    do: conn_module(conn).get_private(conn, key, default)
+    do: conn_apply(conn, :get_private, [conn, key, default])
 
   @doc """
   Deletes a value in the private store.
@@ -1007,7 +1020,7 @@ defmodule Mint.HTTP do
   """
   @impl true
   @spec delete_private(t(), atom()) :: t()
-  def delete_private(conn, key), do: conn_module(conn).delete_private(conn, key)
+  def delete_private(conn, key), do: conn_apply(conn, :delete_private, [conn, key])
 
   @doc """
   Gets the socket associated with the connection.
@@ -1018,7 +1031,7 @@ defmodule Mint.HTTP do
   """
   @impl true
   @spec get_socket(t()) :: Mint.Types.socket()
-  def get_socket(conn), do: conn_module(conn).get_socket(conn)
+  def get_socket(conn), do: conn_apply(conn, :get_socket, [conn])
 
   @doc """
   Sets whether the connection should log information or not.
@@ -1028,7 +1041,7 @@ defmodule Mint.HTTP do
   @doc since: "1.5.0"
   @impl true
   @spec put_log(t(), boolean()) :: t()
-  def put_log(conn, log?), do: conn_module(conn).put_log(conn, log?)
+  def put_log(conn, log?), do: conn_apply(conn, :put_log, [conn, log?])
 
   @doc """
   Gets the proxy headers associated with the connection in the `CONNECT` method.
@@ -1039,16 +1052,16 @@ defmodule Mint.HTTP do
   @doc since: "1.4.0"
   @impl true
   @spec get_proxy_headers(t()) :: Mint.Types.headers()
-  def get_proxy_headers(conn), do: conn_module(conn).get_proxy_headers(conn)
+  def get_proxy_headers(conn), do: conn_apply(conn, :get_proxy_headers, [conn])
 
   # Made public since the struct is opaque.
   @doc false
   @impl true
-  def put_proxy_headers(conn, headers), do: conn_module(conn).put_proxy_headers(conn, headers)
+  def put_proxy_headers(conn, headers), do: conn_apply(conn, :put_proxy_headers, [conn, headers])
 
   ## Helpers
 
-  defp conn_module(%UnsafeProxy{}), do: UnsafeProxy
-  defp conn_module(%Mint.HTTP1{}), do: Mint.HTTP1
-  defp conn_module(%Mint.HTTP2{}), do: Mint.HTTP2
+  defp conn_apply(%UnsafeProxy{}, fun, args), do: apply(UnsafeProxy, fun, args)
+  defp conn_apply(%Mint.HTTP1{}, fun, args), do: apply(Mint.HTTP1, fun, args)
+  defp conn_apply(%Mint.HTTP2{}, fun, args), do: apply(Mint.HTTP2, fun, args)
 end

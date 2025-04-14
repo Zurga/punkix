@@ -1,5 +1,6 @@
 {application,boundary,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"boundary"},
               {modules,['Elixir.Boundary','Elixir.Boundary.Checker',

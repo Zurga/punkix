@@ -52,6 +52,7 @@ defmodule Punkix.Web.Components.InteractionRecorder do
      })}
   end
 
+  @impl true
   def render(assigns) do
     ~F"""
       <div id="interaction_recorder" :hook>

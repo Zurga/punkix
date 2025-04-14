@@ -1,5 +1,6 @@
 {application,phoenix_html_helpers,
-    [{optional_applications,[plug]},
+    [{config_mtime,1744621395},
+     {optional_applications,[plug]},
      {applications,[kernel,stdlib,elixir,logger,phoenix_html,plug]},
      {description,
          "Collection of helpers to generate and manipulate HTML contents"},

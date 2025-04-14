@@ -1,5 +1,6 @@
 {application,jason,
-             [{optional_applications,[decimal]},
+             [{config_mtime,1744621395},
+              {optional_applications,[decimal]},
               {applications,[kernel,stdlib,elixir,decimal]},
               {description,"A blazing fast JSON parser and generator in pure Elixir.\n"},
               {modules,['Elixir.Enumerable.Jason.OrderedObject',

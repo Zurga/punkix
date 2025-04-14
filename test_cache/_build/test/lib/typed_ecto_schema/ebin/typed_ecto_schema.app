@@ -1,5 +1,6 @@
 {application,typed_ecto_schema,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,ecto]},
               {description,"A library to define Ecto schemas with typespecs without all the boilerplate code."},
               {modules,['Elixir.TypedEctoSchema',

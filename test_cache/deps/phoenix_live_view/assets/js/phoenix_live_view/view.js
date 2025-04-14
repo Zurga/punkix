@@ -54,6 +54,7 @@ import DOMPatch from "./dom_patch"
 import LiveUploader from "./live_uploader"
 import Rendered from "./rendered"
 import ViewHook from "./view_hook"
+import JS from "./js"
 
 export let prependFormDataKey = (key, prefix) => {
   let isArray = key.endsWith("[]")
@@ -66,8 +67,8 @@ export let prependFormDataKey = (key, prefix) => {
   return baseKey
 }
 
-let serializeForm = (form, metadata, onlyNames = []) => {
-  const {submitter, ...meta} = metadata
+let serializeForm = (form, opts, onlyNames = []) => {
+  const {submitter} = opts
 
   // We must inject the submitter in the order that it exists in the DOM
   // relative to other inputs. For example, for checkbox groups, the order must be maintained.
@@ -99,12 +100,26 @@ let serializeForm = (form, metadata, onlyNames = []) => {
 
   const params = new URLSearchParams()
 
-  let elements = Array.from(form.elements)
+  const {inputsUnused, onlyHiddenInputs} = Array.from(form.elements).reduce((acc, input) => {
+    const {inputsUnused, onlyHiddenInputs} = acc
+    const key = input.name
+    if(!key){ return acc }
+
+    if(inputsUnused[key] === undefined){ inputsUnused[key] = true }
+    if(onlyHiddenInputs[key] === undefined){ onlyHiddenInputs[key] = true }
+
+    const isUsed = DOM.private(input, PHX_HAS_FOCUSED) || DOM.private(input, PHX_HAS_SUBMITTED)
+    const isHidden = input.type === "hidden"
+    inputsUnused[key] = inputsUnused[key] && !isUsed
+    onlyHiddenInputs[key] = onlyHiddenInputs[key] && isHidden
+
+    return acc
+  }, {inputsUnused: {}, onlyHiddenInputs: {}})
+
   for(let [key, val] of formData.entries()){
     if(onlyNames.length === 0 || onlyNames.indexOf(key) >= 0){
-      let inputs = elements.filter(input => input.name === key)
-      let isUnused = !inputs.some(input => (DOM.private(input, PHX_HAS_FOCUSED) || DOM.private(input, PHX_HAS_SUBMITTED)))
-      let hidden = inputs.every(input => input.type === "hidden")
+      let isUnused = inputsUnused[key]
+      let hidden = onlyHiddenInputs[key]
       if(isUnused && !(submitter && submitter.name == key) && !hidden){
         params.append(prependFormDataKey(key, "_unused_"), "")
       }
@@ -117,8 +132,6 @@ let serializeForm = (form, metadata, onlyNames = []) => {
   if(submitter && injectedElement){
     submitter.parentElement.removeChild(injectedElement)
   }
-
-  for(let metaKey in meta){ params.append(metaKey, meta[metaKey]) }
 
   return params.toString()
 }
@@ -142,6 +155,7 @@ export default class View {
     this.lastAckRef = null
     this.childJoins = 0
     this.loaderTimer = null
+    this.disconnectedTimer = null
     this.pendingDiffs = []
     this.pendingForms = new Set()
     this.redirect = false
@@ -253,6 +267,7 @@ export default class View {
 
   hideLoader(){
     clearTimeout(this.loaderTimer)
+    clearTimeout(this.disconnectedTimer)
     this.setContainerClasses(PHX_CONNECTED_CLASS)
     this.execAll(this.binding("connected"))
   }
@@ -317,8 +332,12 @@ export default class View {
       this.formsForRecovery = this.getFormsForRecovery()
     }
     if(this.isMain() && window.history.state === null){
-      // set initial history entry if this is the first page load
-      this.liveSocket.replaceRootHistory()
+      // set initial history entry if this is the first page load (no history)
+      Browser.pushState("replace", {
+        type: "patch",
+        id: this.id,
+        position: this.liveSocket.currentHistoryPosition
+      })
     }
 
     if(liveview_version !== this.liveSocket.version()){
@@ -696,6 +715,9 @@ export default class View {
   addHook(el){
     let hookElId = ViewHook.elementID(el)
 
+    // only ever try to add hooks to elements owned by this view
+    if(el.getAttribute && !this.ownsElement(el)){ return }
+
     if(hookElId && !this.viewHooks[hookElId]){
       // hook created, but not attached (createHook for web component)
       let hook = DOM.getCustomElHook(el) || logError(`no hook found for custom element: ${el.id}`)
@@ -709,7 +731,6 @@ export default class View {
     } else {
       // new hook found with phx-hook attribute
       let hookName = el.getAttribute(`data-phx-${PHX_HOOK}`) || el.getAttribute(this.binding(PHX_HOOK))
-      if(hookName && !this.ownsElement(el)){ return }
       let callbacks = this.liveSocket.getHookCallbacks(hookName)
 
       if(callbacks){
@@ -724,12 +745,21 @@ export default class View {
   }
 
   destroyHook(hook){
+    // __destroyed clears the elementID from the hook, therefore
+    // we need to get it before calling __destroyed
+    const hookId = ViewHook.elementID(hook.el)
     hook.__destroyed()
     hook.__cleanup__()
-    delete this.viewHooks[ViewHook.elementID(hook.el)]
+    delete this.viewHooks[hookId]
   }
 
   applyPendingUpdates(){
+    // prevent race conditions where we might still be pending a new
+    // navigation after applying the current one;
+    // if we call update and a pendingDiff is not applied, it would
+    // be silently dropped otherwise, as update would push it back to
+    // pendingDiffs, but we clear it immediately after
+    if(this.liveSocket.hasPendingLink() && this.root.isMain()){ return }
     this.pendingDiffs.forEach(({diff, events}) => this.update(diff, events))
     this.pendingDiffs = []
     this.eachChild(child => child.applyPendingUpdates())
@@ -881,7 +911,13 @@ export default class View {
     if(this.isMain()){ DOM.dispatchEvent(window, "phx:page-loading-start", {detail: {to: this.href, kind: "error"}}) }
     this.showLoader()
     this.setContainerClasses(...classes)
-    this.execAll(this.binding("disconnected"))
+    this.delayedDisconnected()
+  }
+
+  delayedDisconnected(){
+    this.disconnectedTimer = setTimeout(() => {
+      this.execAll(this.binding("disconnected"))
+    }, this.liveSocket.disconnectedTimeout)
   }
 
   wrapPush(callerPush, receives){
@@ -970,11 +1006,12 @@ export default class View {
     let elRef = new ElementRef(el)
 
     elRef.maybeUndo(ref, phxEvent, clonedTree => {
-      let hook = this.triggerBeforeUpdateHook(el, clonedTree)
-      DOMPatch.patchWithClonedTree(el, clonedTree, this.liveSocket)
+      // we need to perform a full patch on unlocked elements
+      // to perform all the necessary logic (like calling updated for hooks, etc.)
+      let patch = new DOMPatch(this, el, this.id, clonedTree, [], null, {undoRef: ref})
+      const phxChildrenAdded = this.performPatch(patch, true)
       DOM.all(el, `[${PHX_REF_SRC}="${this.refSrc()}"]`, child => this.undoElRef(child, ref, phxEvent))
-      this.execNewMounted(el)
-      if(hook){ hook.__updated() }
+      if(phxChildrenAdded){ this.joinNewChildren() }
     })
   }
 
@@ -1160,12 +1197,13 @@ export default class View {
       ], phxEvent, "change", opts)
     }
     let formData
-    let meta  = this.extractMeta(inputEl.form)
-    if(inputEl instanceof HTMLButtonElement){ meta.submitter = inputEl }
+    let meta = this.extractMeta(inputEl.form, {}, opts.value)
+    let serializeOpts = {}
+    if(inputEl instanceof HTMLButtonElement){ serializeOpts.submitter = inputEl }
     if(inputEl.getAttribute(this.binding("change"))){
-      formData = serializeForm(inputEl.form, {_target: opts._target, ...meta}, [inputEl.name])
+      formData = serializeForm(inputEl.form, serializeOpts, [inputEl.name])
     } else {
-      formData = serializeForm(inputEl.form, {_target: opts._target, ...meta})
+      formData = serializeForm(inputEl.form, serializeOpts)
     }
     if(DOM.isUploadInput(inputEl) && inputEl.files && inputEl.files.length > 0){
       LiveUploader.trackFiles(inputEl, Array.from(inputEl.files))
@@ -1176,20 +1214,33 @@ export default class View {
       type: "form",
       event: phxEvent,
       value: formData,
+      meta: {
+        // no target was implicitly sent as "undefined" in LV <= 1.0.5, therefore
+        // we have to keep it. In 1.0.6 we switched from passing meta as URL encoded data
+        // to passing it directly in the event, but the JSON encode would drop keys with
+        // undefined values.
+        _target: opts._target || "undefined",
+        ...meta
+      },
       uploads: uploads,
       cid: cid
     }
     this.pushWithReply(refGenerator, "event", event).then(({resp}) => {
       if(DOM.isUploadInput(inputEl) && DOM.isAutoUpload(inputEl)){
-        if(LiveUploader.filesAwaitingPreflight(inputEl).length > 0){
-          let [ref, _els] = refGenerator()
-          this.undoRefs(ref, phxEvent, [inputEl.form])
-          this.uploadFiles(inputEl.form, phxEvent, targetCtx, ref, cid, (_uploads) => {
-            callback && callback(resp)
-            this.triggerAwaitingSubmit(inputEl.form, phxEvent)
-            this.undoRefs(ref, phxEvent)
-          })
-        }
+        // the element could be inside a locked parent for other unrelated changes;
+        // we can only start uploads when the tree is unlocked and the
+        // necessary data attributes are set in the real DOM
+        ElementRef.onUnlock(inputEl, () => {
+          if(LiveUploader.filesAwaitingPreflight(inputEl).length > 0){
+            let [ref, _els] = refGenerator()
+            this.undoRefs(ref, phxEvent, [inputEl.form])
+            this.uploadFiles(inputEl.form, phxEvent, targetCtx, ref, cid, (_uploads) => {
+              callback && callback(resp)
+              this.triggerAwaitingSubmit(inputEl.form, phxEvent)
+              this.undoRefs(ref, phxEvent)
+            })
+          }
+        })
       } else {
         callback && callback(resp)
       }
@@ -1284,22 +1335,24 @@ export default class View {
         if(LiveUploader.inputsAwaitingPreflight(formEl).length > 0){
           return this.undoRefs(ref, phxEvent)
         }
-        let meta = this.extractMeta(formEl)
-        let formData = serializeForm(formEl, {submitter, ...meta})
+        let meta = this.extractMeta(formEl, {}, opts.value)
+        let formData = serializeForm(formEl, {submitter})
         this.pushWithReply(proxyRefGen, "event", {
           type: "form",
           event: phxEvent,
           value: formData,
+          meta: meta,
           cid: cid
         }).then(({resp}) => onReply(resp))
       })
     } else if(!(formEl.hasAttribute(PHX_REF_SRC) && formEl.classList.contains("phx-submit-loading"))){
-      let meta = this.extractMeta(formEl)
-      let formData = serializeForm(formEl, {submitter, ...meta})
+      let meta = this.extractMeta(formEl, {}, opts.value)
+      let formData = serializeForm(formEl, {submitter})
       this.pushWithReply(refGenerator, "event", {
         type: "form",
         event: phxEvent,
         value: formData,
+        meta: meta,
         cid: cid
       }).then(({resp}) => onReply(resp))
     }
@@ -1413,10 +1466,17 @@ export default class View {
     this.withinTargets(phxTarget, (targetView, targetCtx) => {
       const cid = this.targetComponentID(newForm, targetCtx)
       pending++
-      targetView.pushInput(input, targetCtx, cid, phxEvent, {_target: input.name}, () => {
-        pending--
-        if(pending === 0){ callback() }
-      })
+      let e = new CustomEvent("phx:form-recovery", {detail: {sourceElement: oldForm}})
+      JS.exec(e, "change", phxEvent, this, input, ["push", {
+        _target: input.name,
+        targetView,
+        targetCtx,
+        newCid: cid,
+        callback: () => {
+          pending--
+          if(pending === 0){ callback() }
+        }
+      }])
     }, templateDom, templateDom)
   }
 

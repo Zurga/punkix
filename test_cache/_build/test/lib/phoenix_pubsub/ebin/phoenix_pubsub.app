@@ -1,5 +1,6 @@
 {application,phoenix_pubsub,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,crypto]},
               {description,"Distributed PubSub and Presence platform"},
               {modules,['Elixir.Phoenix.PubSub',

@@ -1,3 +1,102 @@
+## 1.6.11 (31 Mar 2025)
+
+### Changes
+
+* Ensure that HTTP/1 request headers are sent to the Plug in the order they're
+sent (#482)
+* Do not populate the `cookies` header with an empty string if no cookies were
+sent in HTTP/2 (#483)
+
+## 1.6.10 (25 Mar 2025)
+
+### Fixes
+
+* Fix bug introduced when closing compressed websock connections in certain circumstances (#478)
+
+### Enhancements
+
+* Standardize & document the format of messages sent to HTTP/2 Stream processes (#481)
+
+## 1.6.9 (21 Mar 2025)
+
+### Fixes
+
+* Do not close compression context before calling websock close callback (#462,
+  thanks @thiagopromano!)
+
+## 1.6.8 (5 Mar 2025)
+
+### Fixes
+
+* Do not send stream WINDOW_UPDATEs on the last data frame of a stream
+
+### Enhancements
+
+* Add `status` to the telemetry metadata emitted on WebSocket upgrades (#466)
+
+## 1.6.7 (30 Jan 2025)
+
+### Changes
+
+* Consider timeouts when reading HTTP/1 headers as a connection error and not an HTTP error
+* Enhance logging for WebSocket deflation errors
+
+## 1.6.6 (25 Jan 2025)
+
+### Fixes
+
+* Consider closures during HTTP/1 header reading as a socket error to silence them by default via `log_client_closures` config flag
+* Send `connection: close` when closing connection on error per RFC9112§9.6
+
+### Enhancements
+
+* Add experimental opt-in trace logging to help diagnose hard to reproduce errors
+* Move CI to 1.18 & improve tests (#459, #461, thanks @grzuy!)
+
+## 1.6.5 (15 Jan 2025)
+
+### Fixes
+
+* Fix regression introduced in 1.6.1 where we would not send headers set by the Plug during WebSocket upgrades (#458)
+
+### Enhancements
+
+* Properly normalize Erlang errors before emitting telemetry and logged crash_reason (#455, thanks @grzuy!)
+
+## 1.6.4 (11 Jan 2025)
+
+### Fixes
+
+* Fix error in socket setup error handling introduced in 1.6.2 (thanks @danielspofford!)
+
+## 1.6.3 (8 Jan 2025)
+
+### Fixes
+
+* Always close HTTP/1 connection in any case where an error comes out of the plug (#452, thanks @zookzook!)
+* Fix dialyzer warning introduced by Thousand Island 1.3.9
+
+## 1.6.2 (4 Jan 2025)
+
+### Enhancements
+
+* Send telemetry events on Plugs that throw or exit (#443)
+* Improve test robustness & speed (#446)
+* Read a minimal number of bytes when sniffing for protocol (#449)
+* Add `plug` and `websock` to logging metadata whenever possible (#448)
+* Add `plug` and `websock` to telemetry metadata whenever possible (#447)
+* Silently eat Bandit.TransportError errors during HTTP/1 error fallback handling
+
+### Fixes
+
+* Bump hpax to 1.0.2, fixes https://github.com/phoenixframework/phoenix/issues/6020 (thanks @krainboltgreene!)
+* Fix cases where we would desync on pipelined POST requests (#442)
+
+### Changes
+
+* Unwrap Plug.Conn.WrapperErrors raised by Plug and handle the wrapped error per policy
+* Surface socket setup errors as Bandit.TransportError for consistency in logging
+
 ## 1.6.1 (6 Dec 2024)
 
 ### Enhancements

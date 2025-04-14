@@ -1,5 +1,6 @@
 {application,surface_catalogue,
-             [{optional_applications,[phoenix_live_reload]},
+             [{config_mtime,1744621395},
+              {optional_applications,[phoenix_live_reload]},
               {applications,[kernel,stdlib,elixir,logger,surface,earmark,
                              makeup_elixir,html_entities,phoenix_live_reload]},
               {description,"An initial prototype of the Surface Catalogue"},

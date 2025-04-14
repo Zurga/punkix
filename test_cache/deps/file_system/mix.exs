@@ -2,7 +2,7 @@ defmodule FileSystem.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/falood/file_system"
-  @version "1.0.1"
+  @version "1.1.0"
 
   def project do
     [
@@ -62,7 +62,7 @@ defmodule FileSystem.MixProject do
       ldflags = System.get_env("LDFLAGS", "")
 
       cmd =
-        "clang #{cflags} #{ldflags} -framework CoreFoundation -framework CoreServices -Wno-deprecated-declarations #{source} -o #{target}"
+        "xcrun -r clang #{cflags} #{ldflags} -framework CoreFoundation -framework CoreServices -Wno-deprecated-declarations #{source} -o #{target}"
 
       if Mix.shell().cmd(cmd) > 0 do
         Logger.error(

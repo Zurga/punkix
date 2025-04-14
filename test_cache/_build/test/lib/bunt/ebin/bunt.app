@@ -1,5 +1,6 @@
 {application,bunt,
-             [{compile_env,[{bunt,[color_aliases],error}]},
+             [{config_mtime,1744621395},
+              {compile_env,[{bunt,[color_aliases],error}]},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir]},
               {description,"256 color ANSI coloring in the terminal"},

@@ -1,5 +1,6 @@
 {application,earmark,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,eex]},
               {description,"Earmark is a pure-Elixir Markdown converter.\n\nIt is intended to be used as a library (just call Earmark.as_html),\nbut can also be used as a command-line tool (run mix escript.build\nfirst).\n\nOutput generation is pluggable.\n"},
               {modules,['Elixir.Earmark','Elixir.Earmark.AstTools',

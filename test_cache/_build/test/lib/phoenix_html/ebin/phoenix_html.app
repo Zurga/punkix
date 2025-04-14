@@ -1,5 +1,6 @@
 {application,phoenix_html,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,eex,logger]},
               {description,"Phoenix view functions for working with HTML templates"},
               {modules,['Elixir.Phoenix.HTML','Elixir.Phoenix.HTML.Engine',
@@ -20,4 +21,4 @@
                         'Elixir.Phoenix.HTML.Safe.Tuple',
                         'Elixir.Phoenix.HTML.Safe.URI']},
               {registered,[]},
-              {vsn,"4.1.1"}]}.
+              {vsn,"4.2.1"}]}.

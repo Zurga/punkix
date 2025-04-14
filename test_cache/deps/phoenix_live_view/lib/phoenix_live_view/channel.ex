@@ -245,7 +245,7 @@ defmodule Phoenix.LiveView.Channel do
 
   def handle_info(%Message{topic: topic, event: "event"} = msg, %{topic: topic} = state) do
     %{"value" => raw_val, "event" => event, "type" => type} = payload = msg.payload
-    val = decode_event_type(type, raw_val)
+    val = decode_event_type(type, raw_val, msg.payload)
 
     if cid = msg.payload["cid"] do
       component_handle(state, cid, msg.ref, fn component_socket, component ->
@@ -472,7 +472,8 @@ defmodule Phoenix.LiveView.Channel do
     %{view: view} = socket
 
     if exported?(view, :code_change, 3) do
-      view.code_change(old, socket, extra)
+      {:ok, socket} = view.code_change(old, socket, extra)
+      {:ok, %{state | socket: socket}}
     else
       {:ok, state}
     end
@@ -777,13 +778,14 @@ defmodule Phoenix.LiveView.Channel do
     )
   end
 
-  defp decode_event_type("form", url_encoded) do
+  defp decode_event_type("form", url_encoded, raw_payload) do
     url_encoded
     |> Plug.Conn.Query.decode()
+    |> maybe_merge_meta(raw_payload)
     |> decode_merge_target()
   end
 
-  defp decode_event_type(_, value), do: value
+  defp decode_event_type(_, value, _raw_payload), do: value
 
   defp decode_merge_target(%{"_target" => target} = params) when is_list(target), do: params
 
@@ -793,6 +795,12 @@ defmodule Phoenix.LiveView.Channel do
   end
 
   defp decode_merge_target(%{} = params), do: params
+
+  defp maybe_merge_meta(value, %{"meta" => meta}) when is_map(value) do
+    Map.merge(value, meta)
+  end
+
+  defp maybe_merge_meta(value, _raw_payload), do: value
 
   defp gather_keys(%{} = map, acc) do
     case Enum.at(map, 0) do
@@ -812,12 +820,31 @@ defmodule Phoenix.LiveView.Channel do
       {:diff, diff, new_state} ->
         {:noreply,
          new_state
+         |> clear_live_patch_counter()
          |> push_live_patch(pending_live_patch)
          |> push_diff(diff, ref)}
 
       result ->
         handle_redirect(new_state, result, Utils.changed_flash(new_socket), ref)
     end
+  end
+
+  defp check_patch_redirect_limit!(state) do
+    current = state.redirect_count
+
+    if current == 20 do
+      raise RuntimeError, """
+      too many redirects for #{inspect(state.socket.view)} on action #{inspect(state.socket.assigns.live_action)}
+
+      Check the `handle_params/3` callback for an infinite patch redirect loop
+      """
+    else
+      %{state | redirect_count: current + 1}
+    end
+  end
+
+  defp clear_live_patch_counter(state) do
+    %{state | redirect_count: 0}
   end
 
   defp handle_redirect(new_state, result, flash, ref) do
@@ -857,6 +884,7 @@ defmodule Phoenix.LiveView.Channel do
 
         new_state
         |> drop_redirect()
+        |> check_patch_redirect_limit!()
         |> Map.update!(:socket, &Utils.replace_flash(&1, flash))
         |> sync_handle_params_with_live_redirect(params, action, opts, ref)
 
@@ -1256,8 +1284,7 @@ defmodule Phoenix.LiveView.Channel do
     %{
       root_view: root_view,
       assign_new: assign_new,
-      live_session_name: live_session_name,
-      live_session_vsn: live_session_vsn
+      live_session_name: live_session_name
     } = session
 
     {:ok,
@@ -1268,8 +1295,7 @@ defmodule Phoenix.LiveView.Channel do
        lifecycle: lifecycle,
        root_view: root_view,
        live_temp: %{},
-       live_session_name: live_session_name,
-       live_session_vsn: live_session_vsn
+       live_session_name: live_session_name
      }}
   end
 
@@ -1282,8 +1308,7 @@ defmodule Phoenix.LiveView.Channel do
     %{
       root_view: root_view,
       assign_new: assign_new,
-      live_session_name: live_session_name,
-      live_session_vsn: live_session_vsn
+      live_session_name: live_session_name
     } = session
 
     case sync_with_parent(parent, assign_new) do
@@ -1298,8 +1323,7 @@ defmodule Phoenix.LiveView.Channel do
            lifecycle: lifecycle,
            root_view: root_view,
            live_temp: %{},
-           live_session_name: live_session_name,
-           live_session_vsn: live_session_vsn
+           live_session_name: live_session_name
          }}
 
       {:error, :noproc} ->
@@ -1373,6 +1397,7 @@ defmodule Phoenix.LiveView.Channel do
       socket: lv_socket,
       topic: phx_socket.topic,
       components: Diff.new_components(),
+      redirect_count: 0,
       upload_names: %{},
       upload_pids: %{}
     }
@@ -1558,21 +1583,15 @@ defmodule Phoenix.LiveView.Channel do
 
     if Session.main?(session) do
       # Ensure the session's LV module and live session name still match on connect.
-      # If the route has changed the LV module or has moved live sessions, the client
-      # will fallback to full page redirect to the current URL.
+      # If the route has changed the LV module or has moved live sessions (typically
+      # during a deployment), the client will fallback to full page redirect to the
+      # current URL.
       case session_route(session, endpoint, url) do
         %Route{view: ^view, live_session: %{name: ^session_name}} = route ->
           {:ok, session, route, url}
 
-        # if we have a sticky LV, it will be considered a main with no live session
-        %Route{} when is_nil(session_name) ->
-          {:ok, session, nil, url}
-
         # if we have a session, then it no longer matches and is unauthorized
-        %Route{} ->
-          {:error, :unauthorized}
-
-        nil ->
+        _ ->
           {:error, :unauthorized}
       end
     else

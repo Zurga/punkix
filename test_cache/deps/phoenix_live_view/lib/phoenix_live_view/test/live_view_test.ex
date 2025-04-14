@@ -203,6 +203,12 @@ defmodule Phoenix.LiveViewTest do
   `%Plug.Conn{}` is given, which will be converted to
   a LiveView immediately.
 
+  ## Options
+
+    * `:on_error` - Can be either `:raise` or `:warn` to control whether
+       detected errors like duplicate IDs or live components fail the test or just log
+       a warning. Defaults to `:warn`.
+
   ## Examples
 
       {:ok, view, html} = live(conn, "/path")
@@ -212,14 +218,14 @@ defmodule Phoenix.LiveViewTest do
       assert {:error, {:redirect, %{to: "/somewhere"}}} = live(conn, "/path")
 
   """
-  defmacro live(conn, path \\ nil) do
+  defmacro live(conn, path \\ nil, opts \\ []) do
     quote bind_quoted: binding(), generated: true do
       cond do
         is_binary(path) ->
-          Phoenix.LiveViewTest.__live__(get(conn, path), path)
+          Phoenix.LiveViewTest.__live__(get(conn, path), path, opts)
 
         is_nil(path) ->
-          Phoenix.LiveViewTest.__live__(conn)
+          Phoenix.LiveViewTest.__live__(conn, nil, opts)
 
         true ->
           raise RuntimeError, "path must be nil or a binary, got: #{inspect(path)}"
@@ -238,6 +244,9 @@ defmodule Phoenix.LiveViewTest do
   ## Options
 
     * `:session` - the session to be given to the LiveView
+    * `:on_error` - Can be either `:raise` or `:warn` to control whether
+       detected errors like duplicate IDs or live components fail the test or just log
+       a warning. Defaults to `:warn`.
 
   All other options are forwarded to the LiveView for rendering. Refer to
   `Phoenix.Component.live_render/3` for a list of supported render
@@ -272,16 +281,16 @@ defmodule Phoenix.LiveViewTest do
     |> Plug.Test.init_test_session(%{})
     |> Phoenix.LiveView.Router.fetch_live_flash([])
     |> Phoenix.LiveView.Controller.live_render(live_view, opts)
-    |> connect_from_static_token(nil)
+    |> connect_from_static_token(nil, opts)
   end
 
   @doc false
-  def __live__(%Plug.Conn{state: state, status: status} = conn) do
+  def __live__(%Plug.Conn{state: state, status: status} = conn, _path = nil, opts) do
     path = rebuild_path(conn)
 
     case {state, status} do
       {:sent, 200} ->
-        connect_from_static_token(conn, path)
+        connect_from_static_token(conn, path, opts)
 
       {:sent, 302} ->
         error_redirect_conn(conn)
@@ -311,13 +320,14 @@ defmodule Phoenix.LiveViewTest do
   end
 
   @doc false
-  def __live__(conn, path) do
-    connect_from_static_token(conn, path)
+  def __live__(conn, path, opts) do
+    connect_from_static_token(conn, path, opts)
   end
 
   defp connect_from_static_token(
          %Plug.Conn{status: 200, assigns: %{live_module: live_module}} = conn,
-         path
+         path,
+         opts
        ) do
     DOM.ensure_loaded!()
 
@@ -336,15 +346,16 @@ defmodule Phoenix.LiveViewTest do
       router: router,
       endpoint: Phoenix.Controller.endpoint_module(conn),
       session: maybe_get_session(conn),
-      url: Plug.Conn.request_url(conn)
+      url: Plug.Conn.request_url(conn),
+      on_error: opts[:on_error] || :warn
     })
   end
 
-  defp connect_from_static_token(%Plug.Conn{status: 200}, _path) do
+  defp connect_from_static_token(%Plug.Conn{status: 200}, _path, _opts) do
     {:error, :nosession}
   end
 
-  defp connect_from_static_token(%Plug.Conn{status: redir} = conn, _path)
+  defp connect_from_static_token(%Plug.Conn{status: redir} = conn, _path, _opts)
        when redir in [301, 302] do
     error_redirect_conn(conn)
   end
@@ -382,11 +393,12 @@ defmodule Phoenix.LiveViewTest do
         endpoint: opts.endpoint,
         session: opts.session,
         url: opts.url,
-        test_supervisor: fetch_test_supervisor!()
+        test_supervisor: fetch_test_supervisor!(),
+        on_error: opts.on_error
       })
 
     case ClientProxy.start_link(opts) do
-      {:ok, _} ->
+      {:ok, _pid} ->
         receive do
           {^ref, {:ok, view, html}} -> {:ok, view, html}
         end
@@ -1057,9 +1069,10 @@ defmodule Phoenix.LiveViewTest do
              |> render() == "Snooze"
   """
   def render(view_or_element) do
-    view_or_element
-    |> render_tree()
-    |> DOM.to_html()
+    case render_tree(view_or_element) do
+      {:error, reason} -> {:error, reason}
+      html -> DOM.to_html(html)
+    end
   end
 
   @doc """
@@ -1447,11 +1460,17 @@ defmodule Phoenix.LiveViewTest do
 
   It returns :ok if the specified redirect isn't already in the mailbox.
 
+  If no path is specified, refutes any redirection on the given view.
+
   ## Examples
 
       render_click(view, :event_that_triggers_redirect_to_path)
       :ok = refute_redirected view, "/wrong_path"
   """
+  def refute_redirected(view) do
+    refute_navigation(view, :redirect, nil)
+  end
+
   def refute_redirected(view, to) when is_binary(to) do
     refute_navigation(view, :redirect, to)
   end
@@ -1466,7 +1485,7 @@ defmodule Phoenix.LiveViewTest do
             "expected #{inspect(view.module)} not to #{kind}, "
           end
 
-        raise ArgumentError, message <> "but got a #{kind} to #{inspect(to)}"
+        raise ArgumentError, message <> "but got a #{kind} to #{inspect(new_to)}"
     after
       0 -> :ok
     end
@@ -1706,7 +1725,7 @@ defmodule Phoenix.LiveViewTest do
 
   """
   defmacro follow_redirect(reason, conn, to \\ nil) do
-    quote bind_quoted: binding() do
+    quote bind_quoted: binding(), generated: true do
       case reason do
         {:error, {:live_redirect, opts}} ->
           {conn, to} = Phoenix.LiveViewTest.__follow_redirect__(conn, @endpoint, to, opts)
@@ -1802,7 +1821,8 @@ defmodule Phoenix.LiveViewTest do
       endpoint: root.endpoint,
       router: root.router,
       session: session,
-      url: url
+      url: url,
+      on_error: root.on_error
     })
   end
 
@@ -2002,12 +2022,29 @@ defmodule Phoenix.LiveViewTest do
   end
 
   defp render_chunk(upload, entry_name, percent) do
-    %{proxy: {_ref, _topic, pid}} = upload.view
+    pid = proxy_pid(upload.view)
     monitor_ref = Process.monitor(pid)
+    trap = Process.flag(:trap_exit, true)
 
     try do
       case UploadClient.chunk(upload, entry_name, percent, proxy_pid(upload.view)) do
         {:ok, _} ->
+          # The chunk function returns as soon as the upload is consumed, therefore
+          # the following could happen:
+          #
+          #   1. the upload is consumed, and the channel is closed
+          #     --> we receive :ok here
+          #     --> the progress callback redirected, the channel sends a message to itself
+          #   2. we try to render and send a message to the ClientProxy, which pings the channel
+          #   3. the channel receives the ping before it is scheduled to send the redirect message to
+          #      itself, therefore the ping succeeds
+          #   4. we receive the HTML, but we expected a redirect shutdown
+          #
+          # If we synchronize here, we ensure that the channel successfully sent the redirect message
+          # before we try to render. This way, either the first sync already fails, or the second sync
+          # inside the render fails because at that time, the redirect message must have been processed
+          # by the channel.
+          sync_with_root!(upload.view)
           render(upload.view)
 
         {:error, reason} ->
@@ -2024,6 +2061,14 @@ defmodule Phoenix.LiveViewTest do
         after
           0 -> exit(reason)
         end
+    after
+      Process.flag(:trap_exit, trap)
     end
+  end
+
+  defp sync_with_root!(%View{} = view) do
+    pid = proxy_pid(view)
+    proxy_topic = proxy_topic(view)
+    GenServer.call(pid, {:sync_with_root, proxy_topic})
   end
 end

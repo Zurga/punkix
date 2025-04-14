@@ -1,5 +1,6 @@
 {application,phx_new,
-             [{optional_applications,[]},
+             [{config_mtime,1744621395},
+              {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,eex,crypto]},
               {description,"Phoenix framework project generator.\n\nProvides a `mix phx.new` task to bootstrap a new Elixir application\nwith Phoenix dependencies.\n"},
               {modules,['Elixir.Mix.Tasks.Local.Phx',

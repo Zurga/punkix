@@ -20,11 +20,10 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import { encode, decode, PunkixHooks} from "./punkix";
-import Hooks from "./_hooks"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
-	hooks: {...PunkixHooks, ...Hooks},
+	hooks: {...PunkixHooks },
 	// encode: encode,
 	// decode: decode,
   longPollFallbackMs: null,

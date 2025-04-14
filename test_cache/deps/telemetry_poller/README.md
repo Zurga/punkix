@@ -1,5 +1,6 @@
 # telemetry_poller
 
+[![Test](https://github.com/kianmeng/telemetry_poller/actions/workflows/test.yml/badge.svg)](https://github.com/kianmeng/telemetry_poller/actions/workflows/test.yml)
 [![Codecov](https://codecov.io/gh/beam-telemetry/telemetry_poller/branch/master/graphs/badge.svg)](https://codecov.io/gh/beam-telemetry/telemetry_poller/branch/master/graphs/badge.svg)
 
 Allows to periodically collect measurements and dispatch them as Telemetry events.
@@ -113,7 +114,7 @@ Then fire up `iex -pa "_build/default/lib/*/ebin"`, then
 
 ## Copyright and License
 
-Copyright (c) 2019 Erlang Ecosystem Foundation and Erlang Solutions.
+Copyright (c) 2025 Erlang Ecosystem Foundation.
 
 telemetry_poller source code is released under Apache License, Version 2.0.
 

@@ -28,6 +28,8 @@
  * @param {Object} [opts.uploaders] - The optional object for referencing LiveView uploader callbacks.
  * @param {integer} [opts.loaderTimeout] - The optional delay in milliseconds to wait before apply
  * loading states.
+ * @param {integer} [opts.disconnectedTimeout] - The delay in milliseconds to wait before
+ * executing phx-disconnected commands. Defaults to 500.
  * @param {integer} [opts.maxReloads] - The maximum reloads before entering failsafe mode.
  * @param {integer} [opts.reloadJitterMin] - The minimum time between normal reload attempts.
  * @param {integer} [opts.reloadJitterMax] - The maximum time between normal reload attempts.
@@ -78,6 +80,7 @@ import {
   DEFAULTS,
   FAILSAFE_JITTER,
   LOADER_TIMEOUT,
+  DISCONNECTED_TIMEOUT,
   MAX_RELOADS,
   PHX_DEBOUNCE,
   PHX_DROP_TARGET,
@@ -152,6 +155,7 @@ export default class LiveSocket {
     this.hooks = opts.hooks || {}
     this.uploaders = opts.uploaders || {}
     this.loaderTimeout = opts.loaderTimeout || LOADER_TIMEOUT
+    this.disconnectedTimeout = opts.disconnectedTimeout || DISCONNECTED_TIMEOUT
     this.reloadWithJitterTimer = null
     this.maxReloads = opts.maxReloads || MAX_RELOADS
     this.reloadJitterMin = opts.reloadJitterMin || RELOAD_JITTER_MIN
@@ -362,7 +366,11 @@ export default class LiveSocket {
       view.setHref(this.getHref())
       view.joinDead()
       if(!this.main){ this.main = view }
-      window.requestAnimationFrame(() => view.execNewMounted())
+      window.requestAnimationFrame(() => {
+        view.execNewMounted()
+        // restore scroll position when navigating from an external / non-live page
+        this.maybeScroll(history.state?.scroll)
+      })
     }
   }
 
@@ -371,7 +379,9 @@ export default class LiveSocket {
     DOM.all(document, `${PHX_VIEW_SELECTOR}:not([${PHX_PARENT_ID}])`, rootEl => {
       if(!this.getRootById(rootEl.id)){
         let view = this.newRootView(rootEl)
-        view.setHref(this.getHref())
+        // stickies cannot be mounted at the router and therefore should not
+        // get a href set on them
+        if(!DOM.isPhxSticky(rootEl)){ view.setHref(this.getHref()) }
         view.join()
         if(rootEl.hasAttribute(PHX_MAIN)){ this.main = view }
       }
@@ -387,22 +397,26 @@ export default class LiveSocket {
   }
 
   replaceMain(href, flash, callback = null, linkRef = this.setPendingLink(href)){
-    let liveReferer = this.currentLocation.href
+    const liveReferer = this.currentLocation.href
     this.outgoingMainEl = this.outgoingMainEl || this.main.el
-    let removeEls = DOM.all(this.outgoingMainEl, `[${this.binding("remove")}]`)
-    let newMainEl = DOM.cloneNode(this.outgoingMainEl, "")
+
+    const stickies = DOM.findPhxSticky(document) || []
+    const removeEls = DOM.all(this.outgoingMainEl, `[${this.binding("remove")}]`)
+      .filter(el => !DOM.isChildOfAny(el, stickies))
+
+    const newMainEl = DOM.cloneNode(this.outgoingMainEl, "")
     this.main.showLoader(this.loaderTimeout)
     this.main.destroy()
 
     this.main = this.newRootView(newMainEl, flash, liveReferer)
     this.main.setRedirect(href)
-    this.transitionRemoves(removeEls, true)
+    this.transitionRemoves(removeEls)
     this.main.join((joinCount, onDone) => {
       if(joinCount === 1 && this.commitPendingLink(linkRef)){
         this.requestDOMUpdate(() => {
           // remove phx-remove els right before we replace the main element
           removeEls.forEach(el => el.remove())
-          DOM.findPhxSticky(document).forEach(el => newMainEl.appendChild(el))
+          stickies.forEach(el => newMainEl.appendChild(el))
           this.outgoingMainEl.replaceWith(newMainEl)
           this.outgoingMainEl = null
           callback && callback(linkRef)
@@ -412,12 +426,8 @@ export default class LiveSocket {
     })
   }
 
-  transitionRemoves(elements, skipSticky, callback){
+  transitionRemoves(elements, callback){
     let removeAttr = this.binding("remove")
-    if(skipSticky){
-      const stickies = DOM.findPhxSticky(document) || []
-      elements = elements.filter(el => !DOM.isChildOfAny(el, stickies))
-    }
     let silenceEvents = (e) => {
       e.preventDefault()
       e.stopImmediatePropagation()
@@ -689,7 +699,7 @@ export default class LiveSocket {
     })
     window.addEventListener("popstate", event => {
       if(!this.registerNewLocation(window.location)){ return }
-      let {type, backType, id, root, scroll, position} = event.state || {}
+      let {type, backType, id, scroll, position} = event.state || {}
       let href = window.location.href
 
       // Compare positions to determine direction
@@ -703,15 +713,11 @@ export default class LiveSocket {
 
       DOM.dispatchEvent(window, "phx:navigate", {detail: {href, patch: type === "patch", pop: true, direction: isForward ? "forward" : "backward"}})
       this.requestDOMUpdate(() => {
+        const callback = () => { this.maybeScroll(scroll) }
         if(this.main.isConnected() && (type === "patch" && id === this.main.id)){
-          this.main.pushLinkPatch(event, href, null, () => {
-            this.maybeScroll(scroll)
-          })
+          this.main.pushLinkPatch(event, href, null, callback)
         } else {
-          this.replaceMain(href, null, () => {
-            if(root){ this.replaceRootHistory() }
-            this.maybeScroll(scroll)
-          })
+          this.replaceMain(href, null, callback)
         }
       })
     }, false)
@@ -798,7 +804,8 @@ export default class LiveSocket {
   }
 
   historyRedirect(e, href, linkState, flash, targetEl){
-    if(targetEl && e.isTrusted && e.type !== "popstate"){ targetEl.classList.add("phx-click-loading") }
+    const clickLoading = targetEl && e.isTrusted && e.type !== "popstate"
+    if(clickLoading){ targetEl.classList.add("phx-click-loading") }
     if(!this.isConnected() || !this.main.isMain()){ return Browser.redirect(href, flash) }
 
     // convert to full href if only path prefix
@@ -827,17 +834,11 @@ export default class LiveSocket {
           DOM.dispatchEvent(window, "phx:navigate", {detail: {href, patch: false, pop: false, direction: "forward"}})
           this.registerNewLocation(window.location)
         }
+        // explicitly undo click-loading class
+        // (in case it originated in a sticky live view, otherwise it would be removed anyway)
+        if(clickLoading){ targetEl.classList.remove("phx-click-loading") }
         done()
       })
-    })
-  }
-
-  replaceRootHistory(){
-    Browser.pushState("replace", {
-      root: true,
-      type: "patch",
-      id: this.main.id,
-      position: this.currentHistoryPosition // Preserve current position
     })
   }
 

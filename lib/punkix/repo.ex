@@ -14,7 +14,8 @@ defmodule Punkix.Repo do
   end
 
   def get_schema([value | _]), do: get_schema(value)
-  def get_schema(value), do: value.__struct__
+  def get_schema(value) when is_struct(value), do: value.__struct__
+  def get_schema(_), do: nil
 
   def find_preloads([]), do: []
   def find_preloads([value | _]), do: find_preloads(value)
@@ -31,24 +32,30 @@ defmodule Punkix.Repo do
       fn key ->
         new_value =
           case Map.get(value, key) do
-            [new_value | _] when is_struct(new_value) ->
+            [new_value | _] ->
               new_value
 
-            new_value
-            when is_struct(new_value) and not is_struct(new_value, Ecto.Association.NotLoaded) ->
-              new_value
-
-            _ ->
+            new_value when is_struct(new_value, Ecto.Association.NotLoaded) ->
               :continue
+
+            new_value ->
+              new_value
           end
 
-        if new_value != :continue do
-          [{key, do_find_preloads(new_value.__struct__, new_value)} | keys]
-        else
-          keys
+        cond do
+          is_struct(new_value) ->
+            [{key, do_find_preloads(new_value.__struct__, new_value)} | keys]
+
+          new_value == [] ->
+            [{key, []} | keys]
+
+          true ->
+            keys
         end
+        |> List.flatten()
       end
     )
+    |> List.flatten()
   end
 
   def nil_to_error(result) do
