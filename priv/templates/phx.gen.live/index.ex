@@ -9,7 +9,14 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :<%= schema.collection %>, list_<%= schema.plural %>(socket))}
+    <%= schema.collection %> = list_<%= schema.plural %>(socket)
+
+    if connected?(socket) do
+      EctoSync.subscribe({<%= inspect schema.alias %>, :inserted}, nil)
+      EctoSync.subscribe(<%= schema.collection %>)
+    end
+
+    {:ok, stream(socket, :<%= schema.collection %>, <%= schema.collection %>)}
   end
 
   @impl true
@@ -37,26 +44,31 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   @impl true
-  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:created, <%= schema.singular %>}}, socket) do
+  def handle_info({{<%= inspect(schema.alias) %>, :inserted}, <%= schema.singular %>, source}, socket) do
+    EctoSync.subscribe(<%= schema.singular %>)
     {:noreply,
-      socket
-      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
-      |> put_flash(:info, "<%= schema.human_singular %> created successfully")
-      |> push_patch(to: ~p"<%= schema.route_prefix %>")}
+     socket
+     |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
+     |> maybe_patch_and_flash(source, ~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> created successfully")}
   end
 
   @impl true
-  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:updated, <%= schema.singular %>}}, socket) do
-    {:noreply, 
-      socket
-      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>) 
-      |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
-      |> push_patch(to: ~p"<%= schema.route_prefix %>")}
+  def handle_info({{<%= inspect(schema.alias) %>, :updated}, <%= schema.singular %>, source}, socket) do
+    {:noreply,
+     socket
+     |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
+     |> maybe_patch_and_flash(source, ~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> updated successfully")}
   end
 
   @impl true
-  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:deleted, <%= schema.singular %>}}, socket) do
-    {:noreply, stream_delete(socket, :<%= schema.collection %>, <%= schema.singular %>)}
+  def handle_info(%{schema: <%= inspect(schema.alias) %>, event: event} = sync_config, socket) do
+    <%= schema.singular %> = EctoSync.sync(:cached, sync_config)
+    socket = case event do
+      :deleted ->  stream_delete(socket, :<%= schema.collection %>, <%= schema.singular %>)
+      _ -> stream_insert(socket, :<%= schema.collection %>, <%= schema.singular %>)
+    end
+
+    {:noreply, socket}
   end
 
   defp list_<%= schema.plural %>(_socket) do

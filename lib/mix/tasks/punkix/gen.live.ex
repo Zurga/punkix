@@ -14,6 +14,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
   replace(Mix.Tasks.Phx.Gen.Live, :live_route_instructions, 1)
 
   replace(Mix.Tasks.Phx.Gen.Live, :inputs, 1, :inputs)
+  wrap(Mix.Tasks.Phx.Gen.Live, :copy_new_files, 3, :add_watchers)
 
   @type_input_map %{
     ~w[integer float decimal]a => "NumberInput",
@@ -60,6 +61,41 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
       ~s|  end\n|,
       ~s|end|
     ]
+  end
+
+  def add_watchers(context) do
+    application_path = Mix.Phoenix.context_lib_path(context.context_app, "application.ex")
+
+    with {:ok, application_source} <- File.read(application_path) do
+      patched_source =
+        application_source
+        |> then(fn source ->
+          split = String.split(source, "\n")
+
+          first_use =
+            Enum.find_index(split, &(String.trim_leading(&1) |> String.starts_with?("use")))
+
+          split
+          |> List.insert_at(
+            first_use,
+            "alias #{inspect(context.schema.module)}"
+          )
+          |> Enum.join("\n")
+        end)
+        |> Sourceror.parse_string!()
+        |> Macro.postwalk(fn
+          {{bl, watch_meta, [:watchers]}, args} ->
+            {{bl, watch_meta, [:watchers]}, add_watcher(context.schema.alias, args)}
+
+          q ->
+            q
+        end)
+        |> Sourceror.to_string()
+
+      File.write(application_path, patched_source)
+    end
+
+    context
   end
 
   def input_aliases(schema) do
@@ -143,9 +179,44 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     do: Enum.map([1, 2], &{"#{&1}", &1})
 
   defp default_options({:array, _}), do: []
-  defp rename_to_sface(string), do: String.replace(string, "html.heex", "sface")
 
   def to_route(paths) do
     "~p\"/#{Enum.join(paths, "/")}\""
+  end
+
+  defp add_watcher(name, args) do
+    {:|>, [],
+     [
+       args,
+       {{:., [trailing_comments: [], line: 5, column: 15],
+         [
+           {:__aliases__,
+            [
+              trailing_comments: [],
+              leading_comments: [],
+              last: [line: 5, column: 4],
+              line: 5,
+              column: 4
+            ], [:EctoSync]},
+           :watchers
+         ]},
+        [
+          trailing_comments: [],
+          leading_comments: [],
+          closing: [line: 5, column: 31],
+          line: 5,
+          column: 16
+        ],
+        [
+          {:__aliases__,
+           [
+             trailing_comments: [],
+             leading_comments: [],
+             last: [line: 5, column: 27],
+             line: 5,
+             column: 27
+           ], [:"#{inspect(name)}"]}
+        ]}
+     ]}
   end
 end

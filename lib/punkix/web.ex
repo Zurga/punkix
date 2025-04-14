@@ -1,4 +1,6 @@
 defmodule Punkix.Web do
+  import Phoenix.LiveView, only: [put_flash: 3, push_patch: 2]
+
   defmacro sigil_a(expr, _modifiers) do
     socket = Macro.var(:socket, nil)
 
@@ -17,5 +19,23 @@ defmodule Punkix.Web do
       {from, to} -> [Date.from_iso8601!(from), Date.from_iso8601!(to)]
     end
     |> then(&apply(Date, :range, &1))
+  end
+
+  def on_create(struct, source \\ :myself) do
+    send(self(), {{struct.__struct__, :inserted}, struct, source})
+  end
+
+  def on_update(struct, source \\ :myself) do
+    send(self(), {{struct.__struct__, :updated}, struct, source})
+  end
+
+  def maybe_patch_and_flash(socket, :myself, path, flash) do
+    socket
+    |> put_flash(:info, flash)
+    |> push_patch(to: path)
+  end
+
+  def maybe_patch_and_flash(socket, _, _, _) do
+    socket
   end
 end

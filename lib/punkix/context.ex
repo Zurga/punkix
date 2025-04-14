@@ -48,6 +48,8 @@ defmodule Punkix.Context do
 
   defp maybe_group_aliasses(base, modules, map_fun \\ & &1)
 
+  defp maybe_group_aliasses(_base, [], _map_fun), do: ""
+
   defp maybe_group_aliasses(base, [module], map_fun) do
     base <> map_fun.(module)
   end
@@ -88,6 +90,8 @@ defmodule Punkix.Context do
     |> Enum.map_join(",", & &1.field)
   end
 
+  def context_fun_spec(schema), do: context_fun_spec("", schema)
+
   def context_fun_spec(%{assocs: _assocs} = schema, :create) do
     schema_spec = schema_spec_types(schema)
 
@@ -98,8 +102,6 @@ defmodule Punkix.Context do
 
     wrap_in_map([schema_spec, belongs_to_assocs])
   end
-
-  def context_fun_spec(schema), do: context_fun_spec("", schema)
 
   def context_fun_spec(argument, schema) do
     schema

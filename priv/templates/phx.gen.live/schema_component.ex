@@ -33,6 +33,8 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   prop title, :string
+  prop on_create, :fun, default: &on_create/1
+  prop on_update, :fun, default: &on_update/1
   prop <%= schema.singular %>, :any<%= for assoc <- Punkix.Schema.belongs_assocs(schema) do %>
   prop <%= assoc.plural %>, :any
   <% end %>
@@ -99,7 +101,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     socket = with {:ok, <%= schema.singular %>_params} <- <%= inspect schema.alias %>Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
       {:ok, <%= schema.singular %>} <-
           <%= context.name %>.create_<%= schema.singular %>(<%= schema.singular %>_params) do
-        notify_parent({:created, <%= schema.singular %>})
+        ~a|on_create|.(<%= schema.singular %>)
 
         socket
     else
@@ -114,7 +116,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     socket = with {:ok, <%= schema.singular %>_params} <- <%= inspect schema.alias %>Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, ~a[action]), 
       {:ok, <%= schema.singular %>} <-
           <%= context.name %>.update_<%= schema.singular %>(~a[<%= schema.singular %>].id, <%= schema.singular %>_params) do
-        notify_parent({:updated, <%= schema.singular %>})
+        ~a|on_update|.(<%= schema.singular %>)
         socket
     else
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -126,15 +128,11 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   @impl true
   def handle_event("delete", _, socket) do
     {:ok, <%= schema.singular %>} = <%= inspect context.alias %>.delete_<%= schema.singular %>(~a[<%= schema.singular %>].id)
-    notify_parent({:deleted, <%= schema.singular %>})
+
     {:noreply, socket}
-  end 
+  end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :changeset, changeset)
-  end
-
-  defp notify_parent(msg) do 
-    #send(self(), {__MODULE__, msg})
   end
 end

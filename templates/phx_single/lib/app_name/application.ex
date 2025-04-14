@@ -18,6 +18,10 @@ defmodule <%= @app_module %>.Application do
       {Phoenix.PubSub, name: <%= @app_module %>.PubSub},<%= if @mailer do %>
       # Start the Finch HTTP client for sending emails
       {Finch, name: <%= @app_module %>.Finch},<% end %>
+      {EctoSync,
+        repo: <%= @app_module %>.Repo,
+        cache_name: :live_cache,
+        watchers: []},
       # Start a worker by calling: <%= @app_module %>.Worker.start_link(arg)
       # {<%= @app_module %>.Worker, arg},
       # Start to serve requests, typically the last entry
