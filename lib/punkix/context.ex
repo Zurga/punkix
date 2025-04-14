@@ -13,12 +13,23 @@ defmodule Punkix.Context do
       |> add_opts(schema)
 
   def store_args(schema),
-    do:
-      "#{schema.singular}, #{schema_attrs(schema)}"
-      |> add_opts(schema)
+    do: "#{schema.singular}, #{schema_attrs(schema)}, opts"
 
   def schema_attrs(schema) do
     "#{schema.singular}_attrs"
+  end
+
+  def assocs_context_aliasses(schema) do
+    [base_app | _] = Module.split(schema.module)
+
+    schema
+    |> Schema.belongs_assocs()
+    |> Enum.map(& &1.context)
+    |> Enum.uniq()
+    |> then(fn contexts ->
+      base = "alias #{base_app}."
+      maybe_group_aliasses(base, contexts)
+    end)
   end
 
   # TODO add fixtures in tests
@@ -31,12 +42,18 @@ defmodule Punkix.Context do
     |> Enum.map_join("\n", fn {context, assocs} ->
       base = "alias #{base_app}.Schemas.#{context}."
 
-      if [%{schema: schema}] = assocs do
-        base <> schema
-      else
-        base <> "{#{Enum.map_join(assocs, ", ", & &1.schema)}}"
-      end
+      maybe_group_aliasses(base, assocs, & &1.schema)
     end)
+  end
+
+  defp maybe_group_aliasses(base, modules, map_fun \\ & &1)
+
+  defp maybe_group_aliasses(base, [module], map_fun) do
+    base <> map_fun.(module)
+  end
+
+  defp maybe_group_aliasses(base, modules, map_fun) do
+    base <> "{#{Enum.map_join(modules, ", ", map_fun)}}"
   end
 
   def build_assocs(schema) do
@@ -165,10 +182,10 @@ defmodule Punkix.Context do
   def maybe_prepend(other_args, argument), do: "#{argument}, #{other_args}"
 
   def add_opts(_schema) do
-    "preloads \\\\ nil"
+    "opts \\\\ [preloads: nil]"
   end
 
   def add_opts(args, _schema) do
-    args <> ", preloads \\\\ nil"
+    args <> ", opts \\\\ [preloads: nil]"
   end
 end
