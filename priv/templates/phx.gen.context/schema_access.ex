@@ -15,7 +15,7 @@
   @spec list_<%= schema.plural %>(nil | []) :: [<%= inspect schema.alias %>.t()]
   def list_<%= schema.plural %>(<%= Punkix.Context.add_opts(schema) %>) do
     Repo.all(<%= inspect schema.alias %>)
-    |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
+    |> Repo.maybe_preload(opts[:preloads] || @<%= schema.singular %>_preloads)
   end
 
   @doc """
@@ -37,7 +37,7 @@
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, :not_found}
   def get_<%= schema.singular %>(<%= Punkix.Context.add_opts("id", schema) %>) do
     Repo.fetch_one(<%= inspect schema.alias %>, id) 
-    |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
+    |> Repo.maybe_preload(opts[:preloads] || @<%= schema.singular %>_preloads)
   end
 
   @doc """
@@ -59,8 +59,7 @@
   def create_<%= schema.singular %>(<%= Punkix.Context.create_args(schema) %>) do
     %<%= inspect schema.alias %>{}<%= if Punkix.Schema.belongs_assocs(schema) != [] do %>
     |> Repo.with_assocs(<%= Punkix.Context.build_assocs(schema) %>)<% end %>
-    |> store_<%= schema.singular %>(<%= Punkix.Context.schema_attrs(schema) %>, preloads)
-    |> Repo.maybe_broadcast(:create, <%= context.base_module %>.PubSub)
+    |> store_<%= schema.singular %>(<%= Punkix.Context.schema_attrs(schema) %>, opts[:preloads])
   end
 
   @doc """
@@ -79,8 +78,7 @@
     {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def update_<%= schema.singular %>(<%= Punkix.Context.update_args(schema) %>) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
-      store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.schema_attrs(schema) %>, preloads)
-      |> Repo.maybe_broadcast(:update, <%= context.base_module %>.PubSub)
+      store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.schema_attrs(schema) %>, opts[:preloads])
     end
   end
 
@@ -101,16 +99,15 @@
   def delete_<%= schema.singular %>(<%= schema.singular %>_id) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
       Repo.delete(<%= schema.singular %>)
-      |> Repo.maybe_broadcast(:delete, <%= context.base_module %>.PubSub)
     end
   end
 
   @doc false
-  defp store_<%= schema.singular %>(<%= Punkix.Context.store_args(schema) %>, preloads) do
-    changeset = <%= schema.singular %>
+  defp store_<%= schema.singular %>(<%= Punkix.Context.store_args(schema) %>) do
+    <%= schema.singular %>
     |> change(<%= Punkix.Context.schema_attrs(schema) %>)
     |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])<%= for k <- schema.uniques do %>
     |> unique_constraint(<%= inspect k %>)<% end %>
     |> Repo.insert_or_update()
-    |> Repo.maybe_preload(preloads || @<%= schema.singular %>_preloads)
+    |> Repo.maybe_preload(opts[:preloads] || @<%= schema.singular %>_preloads)
   end
