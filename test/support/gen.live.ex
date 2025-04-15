@@ -72,28 +72,32 @@ defmodule Punkix.Test.Support.Gen.Live do
 
       File.write(router_path, router_file)
 
-      # assert_file(Path.join(schemas_path, "article.ex"), "typed_schema")
-      # assert_file(Path.join(project_path, "lib/#{project_name}_web/article/live/index.ex"))
+      assert_file(Path.join(schemas_path, "article.ex"), "typed_schema")
+      assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/index.ex"))
 
-      # assert_file(Path.join(project_path, "lib/#{project_name}_web/article/live/index.sface"))
+      assert_file(
+        Path.join(project_path, "lib/#{project_name}_web/live/article_live/index.sface")
+      )
 
-      # assert_file(Path.join(project_path, "lib/#{project_name}_web/article/live/show.ex"))
+      assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/show.ex"))
 
-      # assert_file(Path.join(project_path, "lib/#{project_name}_web/article/live/show.sface"))
+      assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/show.sface"))
 
-      # assert_file(
-      #   Path.join(project_path, "lib/#{project_name}_web/article/live/article_component.ex")
-      # )
+      assert_file(
+        Path.join(project_path, "lib/#{project_name}_web/live/article_live/article_component.ex")
+      )
 
-      # assert_file(
-      #   Path.join(
-      #     project_path,
-      #     "lib/#{project_name}_web/article/live/article_component.ex"
-      #   ),
-      #   &(not (&1 =~ "Elixir"))
-      # )
+      assert_file(Path.join(project_path, "lib/#{project_name}_web/live/article_live/assigns.ex"))
 
-      # refute_file(Path.join(project_path, "lib/#{project_name}_web/core_components.ex"))
+      assert_file(
+        Path.join(
+          project_path,
+          "lib/#{project_name}_web/live/article_live/article_component.ex"
+        ),
+        &(not (&1 =~ "Elixir"))
+      )
+
+      refute_file(Path.join(project_path, "lib/#{project_name}_web/core_components.ex"))
 
       assert {_, 0} = mix_cmd(project_path, "test")
     end
