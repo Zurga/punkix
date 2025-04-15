@@ -17,33 +17,37 @@ defmodule <%= @web_namespace %>.Components.Table do
   @doc "Whether or not the data prop comes from a stream or not"
   prop stream, :boolean
 
+  prop on_scroll, :fun
+
   @doc "The CSS class for the wrapping `<div>` element"
   prop class, :css_class
 
   @doc "The columns of the table"
-  slot cols, generator_prop: :data, required: true
+  prop columns, :list
+
+  @doc "The component that renders a row"
+  slot default, generator_prop: :data, required: true
 
   def render(assigns) do
+    assigns = assigns
+    |> Context.put(<%= @web_namespace %>, presentation: :table)
+    |> Context.put(__MODULE__, columns: assigns.columns)
+
     ~F"""
     <div {=@id} class={@class}>
       <table>
         <thead>
           <tr>
-            <th :for={col <- @cols}>
-              {col.label}
+            <th :for={{_, label} <- @columns}>
+              {label}
             </th>
           </tr>
         </thead>
         <tbody id={"#{@id}_container"} phx-update={(@stream && "stream") || ""}>
           {#if @stream}
-            <tr
-              id={"#{id}-row"}
-              :for={{id, _} = item <- @data}
-            >
-              <td :for={col <- @cols}>
-                <span><#slot {col} generator_value={item} /></span>
-              </td>
-            </tr>
+            {#for item <- @data}
+              <#slot {@default} generator_value={item} />
+            {/for}
           {#else}
             <tr
               :for={item <- @data}

@@ -1,6 +1,7 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component do
   use <%= inspect context.web_module %>.LiveComponent
   use <%= inspect context.web_module %>.FormComponent
+  use <%= inspect context.web_module %>.Components.Table
 
   alias <%= inspect context.module %>
   <%= Mix.Tasks.Punkix.Gen.Live.input_aliases(schema) %>
@@ -40,40 +41,47 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   <% end %>
   prop action, :atom, default: :new
   slot buttons
-  data presentation, :atom, from_context: {__MODULE__, :presentation}
-  
+  data presentation, :atom, from_context: {<%= inspect context.web_module %>, :presentation}
+  data columns, :list, from_context: {Table, :columns}
+
+  @impl true
+  def render(%{presentation: :table} = assigns) do
+    ~F"""
+    <tr {=@id}>
+      <td :for={{col,_} <- @columns}>
+        <span>{Map.get(@<%= schema.singular %>, col)}</span>
+      </td>
+      <td>
+        <div class="buttons">
+          <#slot {@buttons} />
+          <a :on-click="delete" data-confirm="Are you sure?">
+            Delete
+          </a>
+        </div>
+      </td>
+    </tr>
+    """
+  end 
+
   @impl true
   def render(assigns) do
     ~F"""
     <div>
-      {#case @presentation || :form}
-        {#match :form}
-          <header>
-            {@title}
-            <p>Use this form to manage <%= schema.singular %> records in your database.</p>
-          </header>
+      <header>
+        {@title}
+        <p>Use this form to manage <%= schema.singular %> records in your database.</p>
+      </header>
 
-          <Form
-            for={@changeset}
-            id={"<%= schema.singular %>-form"}
-            change="validate"
-            submit={@action == :new && "create" || "update"}
-            opts={"phx-target": @myself}
-          >
-    <%= Mix.Tasks.Phx.Gen.Html.indent_inputs(inputs, 8) %>
-            <button phx-disable-with="Saving...">Save <%= schema.human_singular %></button>
-          </Form>
-        {#match :list}
-          <div class="buttons">
-            <#slot {@buttons} />
-            <a
-              :on-click="delete"
-              data-confirm="Are you sure?"
-            >
-              Delete
-            </a>
-          </div>
-      {/case}
+      <Form
+        for={@changeset}
+        id={"<%= schema.singular %>-form"}
+        change="validate"
+        submit={@action == :new && "create" || "update"}
+        opts={"phx-target": @myself}
+      >
+        <%= Mix.Tasks.Phx.Gen.Html.indent_inputs(inputs, 2) %>
+        <button phx-disable-with="Saving...">Save <%= schema.human_singular %></button>
+      </Form>
     </div>
     """
   end

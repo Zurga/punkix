@@ -10,23 +10,17 @@
 <section>
   <Table id="<%= schema.singular %>_table"
     stream
+    columns={[<%= Enum.map_join(schema.attrs, ", ", fn {k, v} -> "#{k}: \"#{Phoenix.Naming.humanize(Atom.to_string(k))}\"" end) %>]}
     data={{id, <%= schema.singular %>} <- @streams.<%= schema.collection %>}
-  ><%= for {k, _} <- schema.attrs do %>
-    <Column label="<%= Phoenix.Naming.humanize(Atom.to_string(k)) %>">{ <%= schema.singular %>.<%= k %> }</Column><% end %>
-    <Column label="">
-      <Context put={<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, presentation: :list}>
-        <div id={id}>
-          <<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
-            {=<%= schema.singular %>}
-            {=id}>
-            <:buttons>
-              <.link patch={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}/edit"}>Edit</.link>
-              <.link to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}"}>Show</.link>
-            </:buttons>
-          </<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component>
-        </div>
-      </Context>
-    </Column>
+  >
+      <<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
+        {=<%= schema.singular %>}
+        {=id}>
+        <:buttons>
+          <.link patch={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}/edit"}>Edit</.link>
+          <.link to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}"}>Show</.link>
+        </:buttons>
+      </<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component>
   </Table>
 </section>
 
