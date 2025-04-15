@@ -42,9 +42,7 @@ defmodule Punkix.MixProject do
       # {:ecto_watch, "~> 0.12.2"},
       {:ecto_sql, "~> 3.11"},
       {:cachex, "~> 4.0.3"},
-      {:deep_merge, "~> 1.0.0"},
       {:postgrex, "~> 0.19"},
-      {:pathex, "~> 2.6"},
       {:plug_cowboy, "~> 2.0", only: :dev},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_ecto, "~> 4.6.2", only: :dev}
