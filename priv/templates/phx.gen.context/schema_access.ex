@@ -1,7 +1,9 @@
 
   alias <%= inspect schema.module %>
   <%= Punkix.Context.assocs_schema_aliasses(schema) %>
+
   @<%= schema.singular %>_preloads [<%= Enum.map_join(schema.assocs, ", ", &"#{&1.field}: []") %>]
+
   @doc """
   Returns the list of <%= schema.plural %>.
   Optionally uses the preloads that are given.
@@ -52,8 +54,6 @@
       {:error, %Ecto.Changeset{}}
 
   """
-  # TODO
-  # Create function to build from assocs with map as argument.
   @spec create_<%= schema.singular %>(<%= Punkix.Context.context_fun_spec(schema, :create) %>, nil | []) :: 
     {:ok, <%= Punkix.spec_alias(schema.alias) %>.t()} | {:error, Ecto.Changeset.t()}
   def create_<%= schema.singular %>(<%= Punkix.Context.create_args(schema) %>) do
