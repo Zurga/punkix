@@ -40,10 +40,34 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   prop <%= assoc.plural %>, :any
   <% end %>
   prop action, :atom, default: :new
+
+  slot default
   slot buttons
+
   data presentation, :atom, from_context: {<%= inspect context.web_module %>, :presentation}
   data columns, :list, from_context: {Table, :columns}
 
+  @impl true
+  def render(%{presentation: :list} = assigns) do
+    ~F"""
+    <div {=@id}>
+      {#if slot_assigned?(@default)}
+        <#slot {@default} />
+      {#else}
+        <dl><%= for {k, _} <- schema.attrs do %>
+          <dt><%= Phoenix.Naming.humanize(Atom.to_string(k)) %></dt>
+          <dd>@<%= schema.singular %>.<%= k %></dd><% end %>
+        </dl>
+      {/if}
+      <div :if={slot_assigned?(@buttons)} class="buttons">
+        <#slot {@buttons} />
+        <a :on-click="delete" data-confirm="Are you sure?">
+          Delete
+        </a>
+      </div>
+    </div>
+    """
+  end
   @impl true
   def render(%{presentation: :table} = assigns) do
     ~F"""
@@ -52,7 +76,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         <span>{Map.get(@<%= schema.singular %>, col)}</span>
       </td>
       <td>
-        <div class="buttons">
+        <div :if={slot_assigned?(@buttons)} class="buttons">
           <#slot {@buttons} />
           <a :on-click="delete" data-confirm="Are you sure?">
             Delete
@@ -141,6 +165,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
-    assign(socket, :changeset, changeset)
+    assign(socket, :changeset, to_form(changeset))
   end
 end
