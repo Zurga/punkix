@@ -46,24 +46,13 @@ defmodule Punkix.Context do
     end)
   end
 
-  defp maybe_group_aliasses(base, modules, map_fun \\ & &1)
-
-  defp maybe_group_aliasses(_base, [], _map_fun), do: ""
-
-  defp maybe_group_aliasses(base, [module], map_fun) do
-    base <> map_fun.(module)
-  end
-
-  defp maybe_group_aliasses(base, modules, map_fun) do
-    base <> "{#{Enum.map_join(modules, ", ", map_fun)}}"
-  end
-
   def build_assocs(schema) do
     schema
     |> Schema.belongs_assocs()
-    |> Enum.map_join(", ", fn assoc ->
-      "#{assoc.reverse}: #{schema_attrs(schema)}[:#{assoc.field}]"
-    end)
+    |> case do
+      [assoc] -> format_build_assoc(schema, assoc)
+      assocs -> Enum.map_join(assocs, ",\n", &format_build_assoc(schema, &1))
+    end
   end
 
   def assoc_fixtures(schema) do
@@ -110,41 +99,6 @@ defmodule Punkix.Context do
     |> maybe_prepend(argument)
   end
 
-  defp wrap_in_map(input) when is_list(input) do
-    input
-    |> Enum.reject(&(is_nil(&1) or &1 == ""))
-    |> Enum.join(", ")
-    |> wrap_in_map()
-  end
-
-  defp wrap_in_map(input) when is_binary(input) do
-    "%{#{input}}"
-  end
-
-  defp assocs_spec(assocs), do: Enum.map_join(assocs, ", ", &":#{&1.field} => #{&1.schema}.t()")
-
-  defp schema_spec_types(schema) do
-    required_fields = Enum.map(Mix.Phoenix.Schema.required_fields(schema), &elem(&1, 0))
-
-    Enum.map_join(
-      schema.types,
-      ", ",
-      fn {name, _} = type ->
-        spec_type =
-          case type do
-            {_name, {:enum, [values: values]}} ->
-              Enum.map_join(values, " | ", &inspect(&1))
-
-            {name, type} ->
-              EctoTypeMapper.type_for(type, nil, nil, null: name in required_fields)
-              |> Macro.to_string()
-          end
-
-        "optional(:#{name}) => #{spec_type}"
-      end
-    )
-  end
-
   def args_as_attributes(struct, schema), do: args_as_attributes("", struct, schema)
 
   def args_as_attributes(argument, struct, schema) do
@@ -189,5 +143,56 @@ defmodule Punkix.Context do
 
   def add_opts(args, _schema) do
     args <> ", opts \\\\ [preloads: nil]"
+  end
+
+  defp assocs_spec(assocs), do: Enum.map_join(assocs, ", ", &":#{&1.field} => #{&1.schema}.t()")
+
+  defp format_build_assoc(schema, assoc) do
+    "#{assoc.reverse}: #{schema_attrs(schema)}[:#{assoc.field}]"
+  end
+
+  defp maybe_group_aliasses(base, modules, map_fun \\ & &1)
+
+  defp maybe_group_aliasses(_base, [], _map_fun), do: ""
+
+  defp maybe_group_aliasses(base, [module], map_fun) do
+    base <> map_fun.(module)
+  end
+
+  defp maybe_group_aliasses(base, modules, map_fun) do
+    base <> "{#{Enum.map_join(modules, ", ", map_fun)}}"
+  end
+
+  defp schema_spec_types(schema) do
+    required_fields = Enum.map(Mix.Phoenix.Schema.required_fields(schema), &elem(&1, 0))
+
+    Enum.map_join(
+      schema.types,
+      ", ",
+      fn {name, _} = type ->
+        spec_type =
+          case type do
+            {_name, {:enum, [values: values]}} ->
+              Enum.map_join(values, " | ", &inspect(&1))
+
+            {name, type} ->
+              EctoTypeMapper.type_for(type, nil, nil, null: name in required_fields)
+              |> Macro.to_string()
+          end
+
+        "optional(:#{name}) => #{spec_type}"
+      end
+    )
+  end
+
+  defp wrap_in_map(input) when is_list(input) do
+    input
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+    |> Enum.join(", ")
+    |> wrap_in_map()
+  end
+
+  defp wrap_in_map(input) when is_binary(input) do
+    "%{#{input}}"
   end
 end
