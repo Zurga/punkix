@@ -8,7 +8,10 @@ defmodule Mix.Tasks.Punkix.Gen.Auth do
   patch(Mix.Tasks.Phx.Gen.Context)
   wrap(Auth, :generator_paths, 0, :add_punkix)
   wrap(Auth, :files_to_be_generated, 1, :files_to_be_generated)
+  replace(Auth, :validate_args!, 1, :validate_args!)
   replace(Auth, :maybe_inject_router_import, 2, :inject_router_import)
+
+  def run(args), do: patched(Auth).run(args)
 
   def files_to_be_generated(files) do
     Enum.map(files, fn
@@ -63,7 +66,8 @@ defmodule Mix.Tasks.Punkix.Gen.Auth do
     context
   end
 
-  def run(args), do: (patched(Auth) |> IO.inspect()).run(args)
+  def validate_args!([_, _, _ | _]), do: :ok
+  def validate_args!(_), do: patched(Auth).raise_with_help("Invalid arguments")
 
   def inputs(fields) do
     Enum.map(fields, fn
