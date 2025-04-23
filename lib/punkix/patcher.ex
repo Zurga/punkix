@@ -63,8 +63,7 @@ defmodule Punkix.Patcher do
     [
       quote do
         def patched(module) do
-          for {module, binary} <-
-                unquote(Macro.escape(modules_and_binary)) do
+          for {module, binary} <- unquote(Macro.escape(modules_and_binary)) do
             modname = Punkix.Patcher.namespace(module, unquote(env.module))
 
             {:module, _loaded_module} = :code.load_binary(modname, [], binary)
@@ -211,25 +210,31 @@ defmodule Punkix.Patcher do
   end
 
   defp replace_body(function_tuple, remote_module, remote_function) do
-    {:function, line, function, arity, [{:clause, clause_line, args, guards, _body}]} =
-      function_tuple
+    IO.inspect(remote_function)
 
-    # If pattern matching is used in the arguments, the args cannot be transplanted in the function call of the replacing function.
-    # instead we unmatch the arguments and create variables with the names of their Structs. 
-    # To avoid conflicts if two identical modules are used, we append the names with a counter.
-    # For example:
-    #   def foo(%Bar{buz: buz}, %Bar{})
-    # will be normalized to:
-    #   def foo(bar1)
-    args =
-      normalize_args(args)
+    {:function, line, function, arity, clauses} = function_tuple
 
-    body = [
-      {:call, line, {:remote, line, {:atom, line, remote_module}, {:atom, line, remote_function}},
-       args}
-    ]
+    new_clauses =
+      for {:clause, clause_line, args, guards, _body} <- clauses do
+        # If pattern matching is used in the arguments, the args cannot be transplanted in the function call of the replacing function.
+        # instead we unmatch the arguments and create variables with the names of their Structs. 
+        # To avoid conflicts if two identical modules are used, we append the names with a counter.
+        # For example:
+        #   def foo(%Bar{buz: buz}, %Bar{})
+        # will be normalized to:
+        #   def foo(bar1)
+        args =
+          normalize_args(args)
 
-    {:function, line, function, arity, [{:clause, clause_line, args, guards, body}]}
+        body = [
+          {:call, line,
+           {:remote, line, {:atom, line, remote_module}, {:atom, line, remote_function}}, args}
+        ]
+
+        {:clause, clause_line, args, guards, body}
+      end
+
+    {:function, line, function, arity, new_clauses}
   end
 
   defp normalize_args(args) do
@@ -243,7 +248,14 @@ defmodule Punkix.Patcher do
         variable_name = Module.split(struct) |> Enum.at(-1) |> to_string() |> String.downcase()
         {:var, line, :"_#{variable_name}_#{index}@1"}
 
-      {arg, _} ->
+      {{:var, line, :_}, index} ->
+        {:var, line, :"arg#{index}@1"}
+
+      {{:cons, line, _, _}, index} ->
+        {:var, line, :"list#{index}@1"}
+
+      # {:cons, line, {:var, 196, :_}, {:cons, 196, {:var, 196, :_}, {:cons, 196, {:var, 196, :_}, {nil, 196}}}}
+      {arg, _index} ->
         arg
     end)
   end
@@ -255,7 +267,12 @@ defmodule Punkix.Patcher do
         binary
 
       :error ->
-        IO.inspect(code, label: :could_not_compile)
+        File.write(
+          "/tmp/punkix_compile",
+          code
+        )
+
+        raise "compile error"
         :error
     end
   end
