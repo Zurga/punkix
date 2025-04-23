@@ -22,6 +22,7 @@ import {LiveSocket} from "phoenix_live_view"
 import { encode, decode, PunkixHooks} from "punkix";
 import Hooks from "./_hooks"
 import topbar from "../vendor/topbar"
+import "../css/app.css"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {

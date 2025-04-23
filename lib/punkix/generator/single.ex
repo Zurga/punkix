@@ -88,7 +88,7 @@ defmodule Punkix.Generator.Single do
     {
       :eex,
       :web,
-      "phx_assets/app.css": "assets/css/app.css"
+      "phx_assets/app.css": "assets/css/app.css", "phx_assets/pico.css": "assets/css/pico.css"
       # "phx_assets/tailwind.config.js": "assets/tailwind.config.js"}
     }
   ])
