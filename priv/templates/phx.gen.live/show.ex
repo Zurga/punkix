@@ -35,11 +35,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   defp page_title(:edit), do: "Edit <%= schema.human_singular %>"
 
   @impl true
-  def handle_info({<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component, {:updated, <%= schema.singular %>}}, socket) do
-  end
-
-  @impl true
-  def handle_info({{<%= inspect(schema.alias) %>, :updated}, <%= schema.singular %>, source}, socket) do
+  def handle_info({{<%= inspect(schema.alias) %>, :updated}, <%= schema.singular %>, _source}, socket) do
     {:noreply, 
       socket
       |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
