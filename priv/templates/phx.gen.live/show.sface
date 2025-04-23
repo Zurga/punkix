@@ -15,9 +15,9 @@
 <.link href={~p"<%= schema.route_prefix %>"}>Back to <%= schema.plural %></.link>
 
 <Modal :if={@live_action == :edit} id="<%= schema.singular %>-modal" show on_cancel={JS.patch(~p"<%= schema.route_prefix %>/#{@<%= schema.singular %>}")}>
+  <:title>{@page_title}</:title>
   <<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
     id={@<%= schema.singular %>.id}
-    title={@page_title}
     action={@live_action}
     <%= schema.singular %>={@<%= schema.singular %>}<%= for assoc <- Punkix.Context.required_assocs(schema) do %>
     {=@<%= assoc.plural %>}<% end %>

@@ -91,11 +91,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   def render(assigns) do
     ~F"""
     <div>
-      <header>
-        {@title}
-        <p>Use this form to manage <%= schema.singular %> records in your database.</p>
-      </header>
-
       <Form
         for={@changeset}
         id={"<%= schema.singular %>-form"}
