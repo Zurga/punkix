@@ -12,14 +12,12 @@ defmodule Punkix do
       patch(EEx)
       replace(EEx, :eval_file, 3, :eval_file)
 
-      def eval_file(source, binding, _) do
-        unformatted = EEx.eval_file(source, binding)
+      def eval_file(source, binding, other) do
+        {fun, _} = Mix.Tasks.Format.formatter_for_file(source)
 
-        if String.ends_with?(source, ".ex") do
-          Code.format_string!(unformatted)
-        else
-          unformatted
-        end
+        source
+        |> EEx.eval_file(binding)
+        |> fun.()
       end
     end
   end
