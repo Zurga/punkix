@@ -9,7 +9,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     <%= assign %> = <%= assoc.context %>.list_<%= assign %>()
     if connected?(socket) do
       EctoSync.subscribe({<%= assoc.schema %>, :inserted}, nil)
-      EctoSync.subscribe(<%= assign %>, inserted: true)
+      EctoSync.subscribe(<%= assign %>)
     end
 
     socket = socket
@@ -19,7 +19,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 <% end %>
 <%= for %{plural: assign} = assoc <- Punkix.Context.required_assocs(schema) do %>
-  def handle_info(%{schema: <%= assoc.schema %>} = sync_config, socket) do
+  def handle_info({{<%= assoc.schema %>, _event}, _} = sync_config, socket) do
     {:halt, update(socket, :<%= assign %>, &EctoSync.sync(&1, sync_config))}
   end
 <% end %>

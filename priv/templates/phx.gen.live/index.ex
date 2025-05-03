@@ -50,7 +50,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def handle_info({{<%= inspect(schema.alias) %>, :inserted}, <%= schema.singular %>, source}, socket) do
-    EctoSync.subscribe(<%= schema.singular %>)
     {:noreply,
      socket
      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
@@ -66,8 +65,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   @impl true
-  def handle_info(%{schema: <%= inspect(schema.alias) %>, event: event} = sync_config, socket) do
+  def handle_info({{<%= inspect(schema.alias) %>, event}, _} = sync_config, socket) do
     <%= schema.singular %> = EctoSync.sync(:cached, sync_config)
+
     socket = case event do
       :deleted ->  stream_delete(socket, :<%= schema.collection %>, <%= schema.singular %>)
       _ -> stream_insert(socket, :<%= schema.collection %>, <%= schema.singular %>)
