@@ -12,8 +12,7 @@ defmodule <%= @endpoint_module %> do
   ]
 
   socket "/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: @session_options], compress: true],
-    serializer: [{Punkix.MsgpackSerializer, "2.0.0"}]
+    websocket: [connect_info: [:user_agent, session: @session_options], compress: true]
 
   # Serve at "/" the static files from "priv/static" directory.
   #

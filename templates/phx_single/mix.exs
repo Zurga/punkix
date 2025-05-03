@@ -1,5 +1,8 @@
 defmodule <%= @app_module %>.MixProject do
   use Mix.Project
+  
+  @test_envs ~w/test integration_test/a
+
   def project do
     [
       app: :<%= @app_name %>,
@@ -10,6 +13,7 @@ defmodule <%= @app_module %>.MixProject do
       lockfile: "../../mix.lock",<% end %>
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
+      test_paths: test_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
@@ -28,9 +32,18 @@ defmodule <%= @app_module %>.MixProject do
   end
 
   # Specifies which paths to compile per environment.
+  defp elixirc_paths(:integration_test), do: ["lib", "test/support"]
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(:dev), do: ["lib"] ++ catalogues()
   defp elixirc_paths(_), do: ["lib"]
+
+  defp test_paths(:integration_test) do
+    ["integration_test"]
+  end
+
+  defp test_paths(_) do
+    ["test"]
+  end
 
   # Specifies your project dependencies.
   #
@@ -67,8 +80,9 @@ defmodule <%= @app_module %>.MixProject do
       <%= if @binary_id do %>{:uuid_v7, "~> 0.3.0"},<% end %>
 
       # Testing deps
-      {:skipper, "~> 0.3.0", only: :test},
-      {:credo, "~> 1.7", only: [:dev, :test]}
+      {:skipper, "~> 0.3.0", only: @test_envs},
+      {:wallaby, github: "Zurga/wallaby", only: @test_envs},
+      {:credo, "~> 1.7", only: [:dev | @test_envs]}
     ]
   end
 
@@ -92,6 +106,8 @@ defmodule <%= @app_module %>.MixProject do
       setup: ["deps.get"<%= if @ecto do %>, "ecto.setup"<% end %><%= if @asset_builders != [] do %>, "assets.setup", "assets.build"<% end %>]<%= if @ecto do %>,
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
+      integration_test: &run_integration_tests/1,
+      "test.all": ["test", "integration_test"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]<% end %><%= if asset_builders != [] do %>,
       "assets.setup": <%= inspect Enum.map(asset_builders, &"#{&1}.install --if-missing") %>,
       "assets.build": <%= inspect Enum.map(asset_builders, &"#{&1} #{@app_name}") %>,
@@ -99,5 +115,25 @@ defmodule <%= @app_module %>.MixProject do
 <%= Enum.map(asset_builders, &"        \"#{&1} #{@app_name} --minify\",\n") ++ ["        \"phx.digest\""] %>
       ]<% end %>
     ]
+  end
+
+  defp run_integration_tests(args) do
+    env = "integration_test"
+    args = if(IO.ANSI.enabled?(), do: ["--color" | args], else: ["--no-color" | args])
+    IO.puts("==> Running tests with MIX_ENV=#{env}")
+
+    ~w/compile assets.build/ ++ ["test" | args]
+    |> Enum.reduce_while(0, fn command, res ->
+      {_, res} =
+        System.cmd("mix", List.flatten([command]),
+          into: IO.binstream(:stdio, :line),
+          env: [{"MIX_ENV", env}]
+        )
+      if res > 0 do
+        {:halt, System.at_exit(fn _ -> exit({:shutdown, 1}) end)}
+      else
+        {:cont, res}
+      end
+    end)
   end
 end
