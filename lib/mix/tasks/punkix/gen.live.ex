@@ -34,7 +34,10 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     web_path = to_string(schema.web_path)
     live_subdir = "#{schema.singular}_live"
     web_live = Path.join([web_prefix, "live", web_path, live_subdir])
-    test_live = Path.join([test_prefix, "live", web_path])
+    # test_live = Path.join([test_prefix, "live", web_path])
+
+    integration_test_live =
+      Path.join(["integration_test", "#{context_app}_web", "live", web_path])
 
     [
       {:eex, "assigns.ex", Path.join(web_live, "assigns.ex")},
@@ -43,7 +46,9 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
       {:eex, "schema_component.ex", Path.join(web_live, "#{schema.singular}_component.ex")},
       {:eex, "index.sface", Path.join(web_live, "index.sface")},
       {:eex, "show.sface", Path.join(web_live, "show.sface")},
-      {:eex, "live_test.exs", Path.join(test_live, "#{schema.singular}_live_test.exs")}
+      # {:eex, "live_test.exs", Path.join(test_live, "#{schema.singular}_live_test.exs")}
+      {:eex, "live_test.exs",
+       Path.join(integration_test_live, "#{schema.singular}_live_test.exs")}
     ]
   end
 
@@ -123,12 +128,14 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
       (Punkix.Schema.belongs_assocs(schema)
        |> Enum.map(fn
          %{field: field, plural: plural, schema: assoc_schema} ->
+           key = :"#{field}_id"
+           singular = String.downcase(assoc_schema)
+
+           input = """
+           Select options={@#{plural} |> Enum.with_index(1) |> Enum.map(fn {#{singular}, index} -> {"#{assoc_schema} \#{index}", #{singular}.id} end)}
            """
-           <Select
-             field={#{inspect(field)}_id}
-             options={@#{plural} |> Enum.map(&{"#{assoc_schema} \#{&1.id}", &1.id})}
-           />
-           """
+
+           wrap_input(key, input, field)
        end))
   end
 

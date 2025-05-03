@@ -16,6 +16,7 @@ defmodule Punkix.Generator.Single do
      "phx_web/endpoint.ex": "lib/:lib_web_name/endpoint.ex",
      "phx_web/router.ex": "lib/:lib_web_name/router.ex",
      "phx_web/telemetry.ex": "lib/:lib_web_name/telemetry.ex",
+     "phx_web/config/integration_test.exs": "config/integration_test.exs",
      "phx_single/lib/app_name_web.ex": "lib/:lib_web_name.ex",
      "phx_single/lib/app_name_web/channel.ex": "lib/:lib_web_name/channel.ex",
      "phx_single/lib/app_name_web/controller.ex": "lib/:lib_web_name/controller.ex",
@@ -25,6 +26,7 @@ defmodule Punkix.Generator.Single do
      "phx_single/lib/app_name_web/live_component.ex": "lib/:lib_web_name/live_component.ex",
      "phx_single/lib/app_name_web/live_view.ex": "lib/:lib_web_name/live_view.ex",
      "phx_single/lib/app_name_web/live/index_live.ex": "lib/:lib_web_name/live/index_live.ex",
+     "phx_single/lib/app_name_web/live/hooks.ex": "lib/:lib_web_name/live/hooks.ex",
      "phx_single/mix.exs": "mix.exs",
      "phx_single/README.md": "README.md",
      "phx_single/LICENSE.md": "LICENSE.md",
@@ -34,7 +36,9 @@ defmodule Punkix.Generator.Single do
      "phx_single/default.nix": "default.nix",
      "phx_single/service.nix": "service.nix",
      "phx_test/support/conn_case.ex": "test/support/conn_case.ex",
+     "phx_test/support/live_case.ex": "test/support/live_case.ex",
      "phx_single/test/test_helper.exs": "test/test_helper.exs",
+     "phx_single/integration_test/test_helper.exs": "integration_test/test_helper.exs",
      "phx_test/controllers/error_json_test.exs":
        "test/:lib_web_name/controllers/error_json_test.exs"},
     {:keep, :web,
@@ -142,9 +146,52 @@ defmodule Punkix.Generator.Single do
     copy_from(project, __MODULE__, :gettext)
   end
 
-  def gen_ecto(project) do
+  def gen_ecto(%{binding: binding, project_path: project_path} = project) do
     copy_from(project, __MODULE__, :ecto)
-    gen_ecto_config(project)
+
+    adapter_config =
+      binding[:adapter_config]
+      |> put_in(
+        [:integration_test],
+        Keyword.drop(binding[:adapter_config][:test], [:pool])
+      )
+      |> IO.inspect()
+
+    config_inject(project_path, "config/dev.exs", """
+    import Config
+
+    # Configure your database
+    config :#{binding[:app_name]}, #{binding[:app_module]}.Repo#{kw_to_config(adapter_config[:dev])}
+    """)
+
+    config_inject(project_path, "config/test.exs", """
+    import Config
+
+    # Configure your database
+    #
+    # The MIX_TEST_PARTITION environment variable can be used
+    # to provide built-in test partitioning in CI environment.
+    # Run `mix help test` for more information.
+    config :#{binding[:app_name]}, #{binding[:app_module]}.Repo#{kw_to_config(adapter_config[:test])}
+    """)
+
+    config_inject(project_path, "config/integration_test.exs", """
+    import Config
+
+    # Configure your database
+    #
+    # The MIX_TEST_PARTITION environment variable can be used
+    # to provide built-in test partitioning in CI environment.
+    # Run `mix help test` for more information.
+    config :#{binding[:app_name]}, #{binding[:app_module]}.Repo#{kw_to_config(adapter_config[:integration_test])}
+    """)
+
+    prod_only_config_inject(project_path, "config/runtime.exs", """
+    #{adapter_config[:prod_variables]}
+
+    config :#{binding[:app_name]}, #{binding[:app_module]}.Repo,
+      #{adapter_config[:prod_config]}
+    """)
   end
 
   def gen_assets(%Project{} = project) do
@@ -171,5 +218,12 @@ defmodule Punkix.Generator.Single do
 
   defp set_git_hook_permissions(project) do
     File.chmod(Project.join_path(project, :web, ".git/hooks/post-commit"), 0o755)
+  end
+
+  defp kw_to_config(kw) do
+    Enum.map(kw, fn
+      {k, {:literal, v}} -> ",\n  #{k}: #{v}"
+      {k, v} -> ",\n  #{k}: #{inspect(v)}"
+    end)
   end
 end

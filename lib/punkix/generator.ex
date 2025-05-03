@@ -3,7 +3,7 @@ defmodule Punkix.Generator do
     quote do
       @behaviour Phx.New.Generator
       import Mix.Generator
-      import Phx.New.Generator
+      import Phx.New.Generator, except: [gen_ecto_config: 2]
       Module.register_attribute(__MODULE__, :templates, accumulate: true)
       @before_compile unquote(__MODULE__)
     end

@@ -99,7 +99,7 @@ defmodule Punkix.Test.Support.Gen.Live do
 
       refute_file(Path.join(project_path, "lib/#{project_name}_web/core_components.ex"))
 
-      assert {_, 0} = mix_cmd(project_path, "test")
+      assert {_, 0} = mix_cmd(project_path, "test.all")
     end
   end
 end
