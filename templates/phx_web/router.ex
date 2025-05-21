@@ -20,10 +20,12 @@ defmodule <%= @web_namespace %>.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", <%= @web_namespace %> do
-    pipe_through :browser
-    live "/", IndexLive, :index
-    # TODO add your routes here
+  live_session :default do
+    scope "/", <%= @web_namespace %> do
+      pipe_through :browser
+      live "/", IndexLive, :index
+      # TODO add your routes here
+    end
   end
 
   if Mix.env() == :dev do
