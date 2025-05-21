@@ -122,16 +122,16 @@ defmodule <%= @app_module %>.MixProject do
     args = if(IO.ANSI.enabled?(), do: ["--color" | args], else: ["--no-color" | args])
     IO.puts("==> Running tests with MIX_ENV=#{env}")
 
-    ~w/compile assets.build/ ++ ["test" | args]
+    ~w/compile assets.build/ ++ [["test" | args]]
     |> Enum.reduce_while(0, fn command, res ->
-      {_, res} =
-        System.cmd("mix", List.flatten([command]),
-          into: IO.binstream(:stdio, :line),
-          env: [{"MIX_ENV", env}]
-        )
       if res > 0 do
         {:halt, System.at_exit(fn _ -> exit({:shutdown, 1}) end)}
       else
+        {_, res} =
+          System.cmd("mix", List.flatten([command]),
+            into: IO.binstream(:stdio, :line),
+            env: [{"MIX_ENV", env}]
+          )
         {:cont, res}
       end
     end)

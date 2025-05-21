@@ -25,18 +25,23 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       <%= function %>("<%= field %>") => "<%= value %>",
     <% end %>}
   @invalid_attrs <%= Mix.Phoenix.to_text for {key, value} <- schema.params.create, into: %{}, do: {key, value |> Mix.Phoenix.Schema.live_form_value() |> Mix.Phoenix.Schema.invalid_form_value()} %>
-  
+
   defp create_<%= schema.singular %>(_) do
     <%= schema.singular %> = <%= schema.singular %>_fixture()
     %{<%= schema.singular %>: <%= schema.singular %>}
   end
 
   defp cleanup(_) do
-    <%= context.base_module %>.Repo.delete_all(<%= inspect context.module %>)
+    <%= for assoc <- Punkix.Context.required_assocs(context.schema) do %>
+      <%= context.base_module %>.Repo.delete_all(<%= inspect context.base_module %>.Schemas.<%= assoc.alias %>)
+    <% end %>
+    <%= inspect context.base_module %>.Repo.delete_all(<%= inspect schema.module %>)
+
+    :ok
   end
 
   describe "Index" do
-    setup [:create_<%= schema.singular %>]
+    setup [:cleanup, :create_<%= schema.singular %>]
 
     feature "lists all <%= schema.plural %>", <%= if schema.string_attr do %>%{session: session, <%= schema.singular %>: <%= schema.singular %>}<% else %>%{session: session}<% end %> do
       session
@@ -84,6 +89,8 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   describe "Session interactions" do
+    setup :cleanup
+
     @sessions 2
     feature "Inserts, updates and deletes are distributed to other sessions", %{sessions: sessions} do
       <%= for assoc <- Punkix.Context.required_assocs(context.schema) do %>
@@ -98,7 +105,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
       session2<%= if schema.string_attr do %>
       |> assert_text("some <%= schema.string_attr %>")
-      |> click(css(~s{a[href="/<%= schema.plural %>/#{<%= schema.singular %>.id}/edit"]}))
+      |> click(css("a", text: "Edit"))
       |> fill_form(@update_attrs)
       |> click(button("Save <%= schema.human_singular %>"))
       |> assert_text("<%= schema.human_singular %> updated successfully")
@@ -109,7 +116,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   describe "Show" do
-    setup [:create_<%= schema.singular %>]
+    setup [:cleanup, :create_<%= schema.singular %>]
 
     feature "displays <%= schema.singular %>", %{session: session, <%= schema.singular %>: <%= schema.singular %>} do
       session
