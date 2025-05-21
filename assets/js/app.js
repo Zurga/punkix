@@ -19,41 +19,19 @@ import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
-import { encode, decode, PunkixHooks} from "./punkix";
+import { preserveDetailsOpenState, PunkixHooks} from "./punkix";
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
 	hooks: {...PunkixHooks },
-	// encode: encode,
-	// decode: decode,
+	dom: {
+		onBeforeElUpdated: (fromEl, toEl) => {
+			preserveDetailsOpenState(fromEl, toEl)
+		},
+	},
   longPollFallbackMs: null,
   params: {_csrf_token: csrfToken}
 })
-
-// Store the state of details in localStorage and restore them on update
-function initDetails() {
-	for (detail of document.querySelectorAll("details")) {
-		detail.addEventListener("toggle", (event) => {
-			const key = `details_${detail.id}`
-			if (detail.open) {
-				localStorage.setItem(key, true)
-			} else
-				localStorage.removeItem(key)
-			}
-			)
-	}
-}
-function restoreDetailsStates() {
-	for (detail of document.querySelectorAll("details")) {
-		if (detail.id) {
-			if (localStorage.getItem(`details_${detail.id}`)) {
-				detail.setAttribute("open", "")
-			}
-		}
-	}
-}
-document.addEventListener("phx:update", restoreDetailsStates)
-document.addEventListener('DOMContentLoaded', initDetails);
 
 // Show progress bar on live navigation and form submits
 // connect if there are any LiveViews on the page
