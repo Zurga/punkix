@@ -11,7 +11,7 @@ defmodule MixHelper do
   end
 
   defp random_string(len) do
-    len |> :crypto.strong_rand_bytes() |> Base.encode32() |> binary_part(0, len)
+    len |> :crypto.strong_rand_bytes() |> Base.encode32() |> binary_part(0, len) |> String.downcase()
   end
 
   def in_tmp(which, function, install_args \\ []) do
@@ -30,6 +30,7 @@ defmodule MixHelper do
       Mix.Tasks.Punkix.run(install_args ++ ~w"--no-install #{project_path}")
       put_cache(project_path)
       mix_cmd(project_path, "deps.get")
+      mix_cmd(project_path, "phx.gen.release")
 
       function.(project_path, project_name)
     after
@@ -182,7 +183,8 @@ defmodule MixHelper do
     do:
       System.shell("echo yes | mix #{cmd} #{args}",
         env: [{"MIX_ENV", "test"}],
-        cd: path
+        cd: path,
+        into: IO.stream()
       )
 
   def put_cache(project_path) do

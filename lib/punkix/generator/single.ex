@@ -148,13 +148,13 @@ defmodule Punkix.Generator.Single do
   def gen_ecto(%{binding: binding, project_path: project_path} = project) do
     copy_from(project, __MODULE__, :ecto)
 
+
     adapter_config =
       binding[:adapter_config]
       |> put_in(
         [:integration_test],
         Keyword.drop(binding[:adapter_config][:test], [:pool])
       )
-      |> IO.inspect()
 
     config_inject(project_path, "config/dev.exs", """
     import Config
@@ -186,10 +186,18 @@ defmodule Punkix.Generator.Single do
     """)
 
     prod_only_config_inject(project_path, "config/runtime.exs", """
-    #{adapter_config[:prod_variables]}
+    database =
+      System.get_env(\"DATABASE\") ||
+        raise \"\"\"
+        environment variable DATABASE is missing."
+        \"\"\"
 
     config :#{binding[:app_name]}, #{binding[:app_module]}.Repo,
-      #{adapter_config[:prod_config]}
+      database: database,
+      hostname: "/run/postgresql",
+      socket_dir: "/run/postgresql",
+      port: 5432,
+      pool_size: String.to_integer(System.get_env(\"POOL_SIZE\") || \"10\")
     """)
   end
 
