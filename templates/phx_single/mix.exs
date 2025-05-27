@@ -77,6 +77,7 @@ defmodule <%= @app_module %>.MixProject do
       {:boundary, "~> 0.10.0"},
       {:typed_ecto_schema, "~> 0.4.1"},
       {:flop, "~> 0.25.0"},
+      {:deps_nix, "~> 2.0", only: :dev},
       <%= if @binary_id do %>{:uuid_v7, "~> 0.3.0"},<% end %>
 
       # Testing deps
@@ -113,7 +114,9 @@ defmodule <%= @app_module %>.MixProject do
       "assets.build": <%= inspect Enum.map(asset_builders, &"#{&1} #{@app_name}") %>,
       "assets.deploy": [
 <%= Enum.map(asset_builders, &"        \"#{&1} #{@app_name} --minify\",\n") ++ ["        \"phx.digest\""] %>
-      ]<% end %>
+      ]<% end %>,
+      "deps.get": ["deps.get", "deps.nix"],
+      "deps.update": ["deps.update", "deps.nix"]
     ]
   end
 
