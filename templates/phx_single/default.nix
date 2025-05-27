@@ -1,53 +1,45 @@
-{ pkgs ? import <nixpkgs> { }, port ? 4000, ...}:
-let beamPackages = pkgs.beamPackages;
-   # Define you local dependencies here 
-   # localDepSources = somepath/. ;
-   commit = "LATESTCOMMIT";
-   inherit (beamPackages) mixRelease;
-  
-in mixRelease {
-  pname = "<%= @app_name %>";
+{ pkgs ? import <nixpkgs> { }, port ? 4000, appName, branch ? "main", commit ? "", ... }:
+let
+  beamPackages = pkgs.beamPackages;
+  fs = pkgs.lib.fileset;
+  inherit (beamPackages) mixRelease;
+in 
+mixRelease rec {
+  pname = appName;
   version = "0.0.1";
-
-  # Fetch from Git
-  src = builtins.fetchGit {
-    url = "url to repo";
-    rev = commit;
-    ref = "master";
-  };
-  # Build from local source
-  # src = fs.toSource { root = ./.; fileset = sources;};
-
-  mixNixDeps = import ./mix.nix {
-    inherit (pkgs) lib;
-    inherit beamPackages;
-    overrides = final: prev: {
-      # Maybe set other elixir version?
-      # elixir = pkgs.elixir_1_16;
-
-      # To include dependencies that exist only on disk on your computer do use the following override:
-      # dep_name = beamPackages.buildMix rec {
-      #   name = "dep_name";
-      #   version = "dep_version"; # E.G. 0.1.0
-      #   src = fs.toSource {root = directory/.; fileset = localDepSources;};
-      #   beamDeps = with final; []; # All the dependencies that are needed. 
-      # };
-    };
-  };
-
-  #nodeDependencies = (pkgs.callPackage ./assets/default.nix { }).shell.nodeDependencies;
-
-  # If you have build time environment variables add them here
-  MIX_ENV = "prod";
-  PORT = "${toString(port)}";
-  nativeBuildInputs = with pkgs; [ esbuild ];
   removeCookie = false;
-
-  # This is set to false, because Surface needs to know the filepaths to generate colocated javascript.
+  nativeBuildInputs = with pkgs; [ esbuild ];
   erlangDeterministicBuilds = false;
 
+  PORT = "${toString (port)}";
+  RELEASE_COOKIE = "SUPER_SECRET_SECRET_COOKIE_THAT_NEVER_TO_BE_SHARED";
+  SECRET_KEY_BASE = "SUPER_SECRET_SECRET_KEYBASE_THAT_NEVER_TO_BE_SHARED";
+
+  # Uncomment to use a git repo to pull in the source
+  # src = builtins.fetchGit {
+  #   url = "git@host/repo.git";
+  #   rev = commit;
+  #   ref = branch;
+  # };
+
+  # This will use the current directory as source
+  src = fs.toSource {
+    root = ./.;
+    fileset = fs.difference ./. ( fs.unions [ (fs.maybeMissing ./result) ./deps ./_build ]);
+  };
+
+  mixNixDeps = import "${src}/mix.nix" {
+    inherit (pkgs) lib;
+    inherit beamPackages;
+    overrides = final: prev: {  };
+  };
+
+  # Uncomment if you have node dependencies.
+  # nodeDependencies =
+  #   (pkgs.callPackage "${src}/assets/default.nix" { }).shell.nodeDependencies;
+
+  # ln -sf ${nodeDependencies}/lib/node_modules assets/node_modules
   postBuild = ''
-    ln -sf ${nodeDependencies}/lib/node_modules assets/node_modules
     cp ${pkgs.esbuild}/bin/esbuild _build/esbuild-linux-x64
 
     # for external task you need a workaround for the no deps check flag
