@@ -25,3 +25,5 @@ punkix-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 /priv/repo
+
+/test_cache/
