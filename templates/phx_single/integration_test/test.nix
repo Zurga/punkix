@@ -8,8 +8,8 @@ in
       imports = [ ../service.nix ];
       services.test = {
         enable = true;
-        migrateCommand = "TestXP76ASEU7K.Release.migrate";
-        seedCommand = "TestXP76ASEU7K.Release.seed";
+        migrateCommand = "<%= @app_module %>.Release.migrate";
+        seedCommand = "<%= @app_module %>.Release.seed";
         environments = {
           prod = {
             host = "localhost";
