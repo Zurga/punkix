@@ -13,6 +13,9 @@ defmodule <%= app_namespace %>.Release do
     end
   end
 
+  def seed do
+  end
+
   def rollback(repo, version) do
     load_app()
     {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :down, to: version))
