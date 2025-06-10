@@ -38,6 +38,7 @@ defmodule Punkix.Generator.Single do
      "phx_test/support/live_case.ex": "test/support/live_case.ex",
      "phx_single/test/test_helper.exs": "test/test_helper.exs",
      "phx_single/integration_test/test_helper.exs": "integration_test/test_helper.exs",
+     "phx_single/integration_test/test.nix": "integration_test/test.nix",
      "phx_test/controllers/error_json_test.exs":
        "test/:lib_web_name/controllers/error_json_test.exs"},
     {:keep, :web,
@@ -147,7 +148,6 @@ defmodule Punkix.Generator.Single do
 
   def gen_ecto(%{binding: binding, project_path: project_path} = project) do
     copy_from(project, __MODULE__, :ecto)
-
 
     adapter_config =
       binding[:adapter_config]
