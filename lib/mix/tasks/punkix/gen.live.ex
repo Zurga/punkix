@@ -3,7 +3,6 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
   use Mix.Task
   use Punkix
 
-  use Punkix.Patcher
   use Punkix.Patches.Schema
   import Punkix.Web.FormUtils
   alias Mix.Phoenix.Schema
@@ -30,7 +29,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
   def files_to_be_generated(%Context{schema: schema, context_app: context_app}) do
     web_prefix = Mix.Phoenix.web_path(context_app)
-    test_prefix = Mix.Phoenix.web_test_path(context_app)
+    # test_prefix = Mix.Phoenix.web_test_path(context_app)
     web_path = to_string(schema.web_path)
     live_subdir = "#{schema.singular}_live"
     web_live = Path.join([web_prefix, "live", web_path, live_subdir])
@@ -62,41 +61,6 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
       ~s|  live "/:id/show/edit", #{inspect(schema.alias)}Live.Show, :edit\n|,
       ~s|end|
     ]
-  end
-
-  def add_watchers(context) do
-    application_path = Mix.Phoenix.context_lib_path(context.context_app, "application.ex")
-
-    with {:ok, application_source} <- File.read(application_path) do
-      patched_source =
-        application_source
-        |> then(fn source ->
-          split = String.split(source, "\n")
-
-          first_use =
-            Enum.find_index(split, &(String.trim_leading(&1) |> String.starts_with?("use")))
-
-          split
-          |> List.insert_at(
-            first_use,
-            "alias #{inspect(context.schema.module)}"
-          )
-          |> Enum.join("\n")
-        end)
-        |> Sourceror.parse_string!()
-        |> Macro.postwalk(fn
-          {{bl, watch_meta, [:watchers]}, args} ->
-            {{bl, watch_meta, [:watchers]}, add_watcher(context.schema.alias, args)}
-
-          q ->
-            q
-        end)
-        |> Sourceror.to_string()
-
-      File.write(application_path, patched_source)
-    end
-
-    context
   end
 
   def input_aliases(schema) do
@@ -185,41 +149,5 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
   def to_route(paths) do
     "~p\"/#{Enum.join(paths, "/")}\""
-  end
-
-  defp add_watcher(name, args) do
-    {:|>, [],
-     [
-       args,
-       {{:., [trailing_comments: [], line: 5, column: 15],
-         [
-           {:__aliases__,
-            [
-              trailing_comments: [],
-              leading_comments: [],
-              last: [line: 5, column: 4],
-              line: 5,
-              column: 4
-            ], [:EctoSync]},
-           :watchers
-         ]},
-        [
-          trailing_comments: [],
-          leading_comments: [],
-          closing: [line: 5, column: 31],
-          line: 5,
-          column: 16
-        ],
-        [
-          {:__aliases__,
-           [
-             trailing_comments: [],
-             leading_comments: [],
-             last: [line: 5, column: 27],
-             line: 5,
-             column: 27
-           ], [:"#{inspect(name)}"]}
-        ]}
-     ]}
   end
 end
