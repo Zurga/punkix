@@ -73,7 +73,7 @@ defmodule <%= @app_module %>.MixProject do
       {:surface, "~> 0.12.0"},
       {:surface_form_helpers, "~> 0.2.0"},
       {:surface_catalogue, "~> 0.6.2"},
-      {:punkix, <%= Application.get_env(:punkix, :dep, "~> 0.0.1") %>},
+      {:punkix, <%= Application.get_env(:punkix, :dep, ~s["~> 0.1.0"]) %>},
       {:boundary, "~> 0.10.0"},
       {:typed_ecto_schema, "~> 0.4.1"},
       {:flop, "~> 0.25.0"},
