@@ -115,22 +115,22 @@ defmodule Punkix.Repo do
 
       def maybe_preload(struct, preloads), do: preload(struct, preloads)
 
-      def transact(fun, opts \\ []) do
-        transaction(
-          fn repo ->
-            Function.info(fun, :arity)
-            |> case do
-              {:arity, 0} -> fun.()
-              {:arity, 1} -> fun.(repo)
-            end
-            |> case do
-              {:ok, result} -> result
-              {:error, reason} -> repo.rollback(reason)
-            end
-          end,
-          opts
-        )
-      end
+      # def transact(fun, opts \\ []) do
+      #   transaction(
+      #     fn repo ->
+      #       Function.info(fun, :arity)
+      #       |> case do
+      #         {:arity, 0} -> fun.()
+      #         {:arity, 1} -> fun.(repo)
+      #       end
+      #       |> case do
+      #         {:ok, result} -> result
+      #         {:error, reason} -> repo.rollback(reason)
+      #       end
+      #     end,
+      #     opts
+      #   )
+      # end
 
       defdelegate authorize(condition), to: Punkix.Repo
       defdelegate nil_to_error(result), to: Punkix.Repo
