@@ -64,7 +64,7 @@ defmodule Punkix.Schema do
         Punkix.Schema.find_key(opts, :reverse, "")
         |> String.split(".")
         |> Enum.reduce({"", nil}, fn input, {alias, reverse} ->
-          if String.capitalize(input) == input do
+          if :string.titlecase(input) == input do
             alias =
               if alias == "" do
                 input

@@ -8,7 +8,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 <%= if Punkix.Context.required_assocs(schema) != [] do %>
   alias <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.Assigns
 <% end %>
-<%= for assoc <- Punkix.Context.required_assocs(schema) do %>
+<%= for assoc <- Punkix.Context.required_belongs_assocs(schema) do %>
   on_mount({Assigns, :<%= assoc.plural %>})
 <% end %>
 

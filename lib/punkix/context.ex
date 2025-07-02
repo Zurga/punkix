@@ -72,6 +72,12 @@ defmodule Punkix.Context do
     end
   end
 
+  def required_belongs_assocs(schema) do
+    for %{required: true, assoc_fun: :belongs_to} = assoc <- schema.assocs do
+      assoc
+    end
+  end
+
   def required_assocs_as_arguments(schema) do
     for %{required: true} = assoc <- schema.assocs do
       assoc
