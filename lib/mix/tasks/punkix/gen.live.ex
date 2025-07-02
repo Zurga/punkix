@@ -99,7 +99,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
            Select options={@#{plural} |> Enum.with_index(1) |> Enum.map(fn {#{singular}, index} -> {"#{assoc_schema} \#{index}", #{singular}.id} end)}
            """
 
-           wrap_input(key, input, field)
+           wrap_input(key, input)
        end))
   end
 
