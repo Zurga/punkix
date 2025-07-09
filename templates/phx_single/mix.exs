@@ -31,6 +31,10 @@ defmodule <%= @app_module %>.MixProject do
     ]
   end
 
+  def cli() do
+    [preferred_envs: ["test.all": :test, "integeration_test": :test]]
+  end
+
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:integration_test), do: ["lib", "test/support"]
   defp elixirc_paths(:test), do: ["lib", "test/support"]
