@@ -2,8 +2,8 @@
   <%= schema.human_singular %> { @<%= schema.singular %>.id }
   <p>This is a <%= schema.singular %> record from your database.</p>
   <footer>
-    <.link patch={~p"<%= schema.route_prefix %>/#{@<%= schema.singular %>}/show/edit"} phx-click={JS.push_focus()}>
-      <button>Edit <%= schema.singular %></button>
+    <.link patch={~p"<%= schema.route_prefix %>/#{@<%= schema.singular %>}/show/edit"} phx-click={JS.push_focus()} role="button">
+      Edit <%= schema.singular %>
     </.link>
   </footer>
 </header>

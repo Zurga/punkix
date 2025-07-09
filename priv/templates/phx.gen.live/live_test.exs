@@ -59,7 +59,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       # |> change_form("#<%= schema.singular %>-form", <%= schema.singular %>_form: @invalid_attrs)
       # |> assert_text("<%= Mix.Phoenix.Schema.failed_render_change_message(schema) %>")
       # |> submit_form("#<%= schema.singular %>-form", <%= schema.singular %>_form: @create_attrs)
-      |> click(button("Save <%= schema.human_singular %>"))
+      |> click(css("a", text: "Save <%= schema.human_singular %>"))
       |> assert_text("<%= schema.human_singular %> created successfully")<%= if schema.string_attr do %>
       |> assert_text("some <%= schema.string_attr %>")<% end %>
     end
@@ -72,7 +72,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       # |> change_form("#<%= schema.singular %>-form", <%= schema.singular %>_form: @invalid_attrs)
       # |> assert_text("<%= Mix.Phoenix.Schema.failed_render_change_message(schema) %>")
       |> fill_form(@update_attrs)
-      |> click(button("Save <%= schema.human_singular %>"))
+      |> click(css("a", text: "Save <%= schema.human_singular %>"))
       # |> submit_form("#<%= schema.singular %>-form", <%= schema.singular %>_form: @update_attrs)
       |> assert_text("<%= schema.human_singular %> updated successfully")<%= if schema.string_attr do %>
       |> assert_text("some updated <%= schema.string_attr %>")<% end %>
@@ -101,13 +101,13 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       session1
       |> click(css("a", text: "New <%= schema.human_singular %>"))
       |> fill_form(@create_attrs)
-      |> click(button("Save <%= schema.human_singular %>"))
+      |> click(css("a", text: "Save <%= schema.human_singular %>"))
 
       session2<%= if schema.string_attr do %>
       |> assert_text("some <%= schema.string_attr %>")
       |> click(css("a", text: "Edit"))
       |> fill_form(@update_attrs)
-      |> click(button("Save <%= schema.human_singular %>"))
+      |> click(css("a", text: "Save <%= schema.human_singular %>"))
       |> assert_text("<%= schema.human_singular %> updated successfully")
 
       session1
@@ -133,7 +133,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       # |> change_form("#<%= schema.singular %>-form", <%= schema.singular %>_form: @invalid_attrs)
       # |> assert_text("<%= Mix.Phoenix.Schema.failed_render_change_message(schema) %>")
       # |> submit_form("#<%= schema.singular %>-form", <%= schema.singular %>_form: @update_attrs)
-      |> click(button("Save <%= schema.human_singular %>"))
+      |> click(css("a", text: "Save <%= schema.human_singular %>"))
       |> assert_text("<%= schema.human_singular %> updated successfully")<%= if schema.string_attr do %>
       |> assert_text("some updated <%= schema.string_attr %>")<% end %>
     end
