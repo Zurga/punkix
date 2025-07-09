@@ -8,13 +8,13 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   def render(assigns) do
     ~F"""
-    <div class="mx-auto max-w-sm">
-      <header class="text-center">
+    <article>
+      <header>
         Register for an account
         <p>
           Already registered?
-          <.link navigate={~p"<%= schema.route_prefix %>/log_in"} class="font-semibold text-brand hover:underline">
-            Log in
+          <.link navigate={~p"<%= schema.route_prefix %>/log_in"}>
+            <strong>Log in</strong>
           </.link>
           to your account now.
         </p>
@@ -32,14 +32,14 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         <p class="error" :if={@check_errors}>
           Oops, something went wrong! Please check the errors below.
         </p>
-<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email, :password])
- |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
+        <%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email, :password])
+         |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
 
         <fieldset>
-          <button phx-disable-with="Creating account..." class="w-full">Create an account</button>
+          <button phx-disable-with="Creating account...">Create an account</button>
         </fieldset>
       </Form>
-    </div>
+    </article>
     """
   end
 

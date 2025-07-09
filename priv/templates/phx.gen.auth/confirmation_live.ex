@@ -8,8 +8,8 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   def render(%{live_action: :edit} = assigns) do
     ~F"""
-    <div class="mx-auto max-w-sm">
-      <header class="text-center">Confirm Account</header>
+    <article>
+      <header>Confirm Account</header>
 
       <Form for={@changeset} :let={form: form} as={:<%= schema.singular %>} id="confirmation_form" submit="confirm_account">
         <Field name={:token}>
@@ -18,11 +18,11 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         <button phx-disable-with="Confirming..." class="w-full">Confirm my account</button>
       </Form>
 
-      <p class="text-center mt-4">
+      <p>
         <.link href={~p"<%= schema.route_prefix %>/register"}>Register</.link>
         | <.link href={~p"<%= schema.route_prefix %>/log_in"}>Log in</.link>
       </p>
-    </div>
+    </article>
     """
   end
 

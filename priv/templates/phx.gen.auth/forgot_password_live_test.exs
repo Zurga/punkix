@@ -5,6 +5,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   import <%= inspect context.module %>Fixtures
 
   alias <%= inspect context.module %>
+  alias <%= inspect schema.module %>Token
   alias <%= inspect schema.repo %>
 
   describe "Forgot password page" do
@@ -43,7 +44,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "If your email is in our system"
 
-      assert Repo.get_by!(<%= inspect context.alias %>.<%= inspect schema.alias %>Token, <%= schema.singular %>_id: <%= schema.singular %>.id).context ==
+      assert Repo.get_by!(<%= inspect schema.alias %>Token, <%= schema.singular %>_id: <%= schema.singular %>.id).context ==
                "reset_password"
     end
 
@@ -57,7 +58,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         |> follow_redirect(conn, "/")
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "If your email is in our system"
-      assert Repo.all(<%= inspect context.alias %>.<%= inspect schema.alias %>Token) == []
+      assert Repo.all(<%= inspect schema.alias %>Token) == []
     end
   end
 end

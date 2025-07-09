@@ -7,22 +7,21 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   def render(assigns) do
     ~F"""
-    <header class="text-center">
+    <article>
+    <header>
       Account Settings
       <p>Manage your account email address and password settings</p>
     </header>
-
-    <div class="space-y-12 divide-y">
       <div>
+
         <Form
           for={@email_form}
           id="email_form"
           submit="update_email"
           change="validate_email"
         >
-<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email]) 
- |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
-          <EmailInput field={:email} label="Email" />
+          <%= Mix.Tasks.Punkix.Gen.Auth.inputs([:email]) 
+           |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
           <Field name={:current_password}>
             <Label>Current password</Label>
             <PasswordInput name="current_password" value={@email_form_current_password} />
@@ -48,8 +47,8 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
             id="hidden_<%= schema.singular %>_email"
             value={@current_email}
           />
-<%= Mix.Tasks.Punkix.Gen.Auth.inputs([:password, :password_confirmation])
- |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
+          <%= Mix.Tasks.Punkix.Gen.Auth.inputs([:password, :password_confirmation])
+           |> Mix.Tasks.Phx.Gen.Html.indent_inputs(8) %>
           <PasswordInput
             field={:current_password}
             name="current_password"
@@ -62,7 +61,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
           </fieldset>
         </Form>
       </div>
-    </div>
+    </article>
     """
   end
 

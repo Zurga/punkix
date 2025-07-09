@@ -32,6 +32,15 @@ defmodule Punkix.GenAuthTest do
       assert_file(Path.join(schemas_path, "user.ex"))
       assert_file(Path.join(schemas_path, "user.ex"), "belongs_to :organization, Organization")
 
+      root_layout =
+        Path.join(project_path, "lib/#{project_name}_web/components/layouts/root.html.heex")
+
+      assert_file(root_layout, "Log in")
+
+      assert_file(root_layout, fn content ->
+        refute content =~ "font-semibold"
+      end)
+
       mix_cmd(project_path, "test")
     end)
   end

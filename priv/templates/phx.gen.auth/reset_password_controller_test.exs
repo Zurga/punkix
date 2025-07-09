@@ -3,6 +3,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   alias <%= inspect context.module %>
   alias <%= inspect schema.repo %>
+  alias <%= inspect schema.module %>Token
   import <%= inspect context.module %>Fixtures
 
   setup do
@@ -30,7 +31,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "If your email is in our system"
 
-      assert Repo.get_by!(<%= inspect context.alias %>.<%= inspect schema.alias %>Token, <%= schema.singular %>_id: <%= schema.singular %>.id).context == "reset_password"
+      assert Repo.get_by!(<%= inspect schema.alias %>Token, <%= schema.singular %>_id: <%= schema.singular %>.id).context == "reset_password"
     end
 
     test "does not send reset password token if email is invalid", %{conn: conn} do
@@ -44,7 +45,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "If your email is in our system"
 
-      assert Repo.all(<%= inspect context.alias %>.<%= inspect schema.alias %>Token) == []
+      assert Repo.all(<%= inspect schema.alias %>Token) == []
     end
   end
 

@@ -3,6 +3,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   alias <%= inspect context.module %>
   alias <%= inspect schema.repo %>
+  alias <%= inspect schema.module %>Token
   import <%= inspect context.module %>Fixtures
 
   setup do
@@ -30,7 +31,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "If your email is in our system"
 
-      assert Repo.get_by!(<%= inspect context.alias %>.<%= inspect schema.alias %>Token, <%= schema.singular %>_id: <%= schema.singular %>.id).context == "confirm"
+      assert Repo.get_by!(<%= inspect schema.alias %>Token, <%= schema.singular %>_id: <%= schema.singular %>.id).context == "confirm"
     end
 
     test "does not send confirmation token if <%= schema.human_singular %> is confirmed", %{conn: conn, <%= schema.singular %>: <%= schema.singular %>} do
@@ -46,7 +47,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "If your email is in our system"
 
-      refute Repo.get_by(<%= inspect context.alias %>.<%= inspect schema.alias %>Token, <%= schema.singular %>_id: <%= schema.singular %>.id)
+      refute Repo.get_by(<%= inspect schema.alias %>Token, <%= schema.singular %>_id: <%= schema.singular %>.id)
     end
 
     test "does not send confirmation token if email is invalid", %{conn: conn} do
@@ -60,7 +61,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "If your email is in our system"
 
-      assert Repo.all(<%= inspect context.alias %>.<%= inspect schema.alias %>Token) == []
+      assert Repo.all(<%= inspect schema.alias %>Token) == []
     end
   end
 
@@ -90,7 +91,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
       assert <%= inspect context.alias %>.get_<%= schema.singular %>!(<%= schema.singular %>.id).confirmed_at
       refute get_session(conn, :<%= schema.singular %>_token)
-      assert Repo.all(<%= inspect context.alias %>.<%= inspect schema.alias %>Token) == []
+      assert Repo.all(<%= inspect schema.alias %>Token) == []
 
       # When not logged in
       conn = post(conn, ~p"<%= schema.route_prefix %>/confirm/#{token}")

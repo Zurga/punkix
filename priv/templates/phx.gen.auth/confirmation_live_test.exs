@@ -4,6 +4,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   import Phoenix.LiveViewTest
   import <%= inspect context.module %>Fixtures
 
+  alias <%= inspect schema.module %>Token
   alias <%= inspect context.module %>
   alias <%= inspect schema.repo %>
 
@@ -38,7 +39,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
       assert <%= inspect context.alias %>.get_<%= schema.singular %>!(<%= schema.singular %>.id).confirmed_at
       refute get_session(conn, :<%= schema.singular %>_token)
-      assert Repo.all(<%= inspect context.alias %>.<%= inspect schema.alias %>Token) == []
+      assert Repo.all(<%= inspect schema.alias %>Token) == []
 
       # when not logged in
       {:ok, lv, _html} = live(conn, ~p"<%= schema.route_prefix %>/confirm/#{token}")

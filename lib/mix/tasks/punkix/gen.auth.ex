@@ -6,6 +6,9 @@ defmodule Mix.Tasks.Punkix.Gen.Auth do
   import Punkix.Web.FormUtils
   # Remove this after Phoenix 1.7.13 is available
   patch(Mix.Tasks.Phx.Gen.Context)
+  patch(Auth.Injector)
+
+  wrap(Auth.Injector, :app_layout_menu_code_to_inject, 3, :menu_code)
   wrap(Auth, :generator_paths, 0, :add_punkix)
   wrap(Auth, :files_to_be_generated, 1, :files_to_be_generated)
   replace(Auth, :validate_args!, 1, :validate_args!)
@@ -89,5 +92,9 @@ defmodule Mix.Tasks.Punkix.Gen.Auth do
           wrap_input(field, "EmailInput", label)
       end
     end)
+  end
+
+  def menu_code({already_injected_str, html}) do
+    {already_injected_str, String.replace(html, ~r/class="[a-zA-Z0-9:;_\.\s\(\)\[\]\-]*"/, "")}
   end
 end
