@@ -43,7 +43,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   @impl true
-  def handle_info({{<%= inspect(schema.alias) %>, _event}, _} = sync_config, socket) do
+  def handle_info({EctoSync, {<%= inspect(schema.alias) %>, _event, _} = sync_config}, socket) do
     {:noreply, update(socket, :<%= schema.singular %>, &EctoSync.sync(&1, sync_config))}
   end
 end

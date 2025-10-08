@@ -19,7 +19,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 <% end %>
 <%= for %{plural: assign} = assoc <- Punkix.Context.required_belongs_assocs(schema) do %>
-  def handle_info({{<%= assoc.schema %>, _event}, _} = sync_config, socket) do
+  def handle_info({EctoSync, {<%= assoc.schema %>, _event, _} = sync_config}, socket) do
     {:halt, update(socket, :<%= assign %>, &EctoSync.sync(&1, sync_config))}
   end
 <% end %>

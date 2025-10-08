@@ -57,7 +57,7 @@ defmodule <%= @app_module %>.MixProject do
       {:phoenix, "1.7.18"},<%= if @ecto do %>
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.10"},
-      {:ecto_sync, "~> 0.1.0"},
+      {:ecto_sync, "~> 0.2.0"},
       {<%= inspect @adapter_app %>, ">= 0.0.0"},<% end %>
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
