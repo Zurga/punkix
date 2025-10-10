@@ -1,10 +1,8 @@
 <header>
   Listing <%= schema.human_plural %>
-  <footer>
-    <.link href={~p"<%= schema.route_prefix %>/new"} role="button">
-      New <%= schema.human_singular %>
-    </.link>
-  </footer>
+  <.link href={~p"<%= schema.route_prefix %>/new"} role="button">
+    New <%= schema.human_singular %>
+  </.link>
 </header>
 
 <section>
