@@ -107,12 +107,16 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def update(%{<%= schema.singular %>: <%= schema.singular %>} = assigns, socket) do
-    changeset = <%= inspect schema.alias %>Form.changeset(<%= schema.singular %>)
+    socket = 
+      if ~a|changeset| do
+        socket
+      else
+        changeset = <%= inspect schema.alias %>Form.changeset(<%= schema.singular %>)
+        assign_form(socket, changeset)
+      end
+      |> assign(assigns)
 
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_form(changeset)}
+    {:ok, socket}
   end
 
   @impl true
