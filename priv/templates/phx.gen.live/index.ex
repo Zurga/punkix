@@ -1,6 +1,7 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.Index do
   use <%= inspect context.web_module %>.LiveView
 
+  alias <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
   alias <%= inspect context.web_module %>.Components.{Table, Modal}
 
   alias <%= inspect context.module %>
@@ -49,19 +50,19 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   @impl true
-  def handle_info({{<%= inspect(schema.alias) %>, :inserted}, <%= schema.singular %>, source}, socket) do
+  def handle_info({%<%= inspect(schema.alias) %>{} = <%= schema.singular %>, :inserted}, socket) do
     {:noreply,
      socket
      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
-     |> maybe_patch_and_flash(source, ~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> created successfully")}
+     |> maybe_patch_and_flash(~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> created successfully")}
   end
 
   @impl true
-  def handle_info({{<%= inspect(schema.alias) %>, :updated}, <%= schema.singular %>, source}, socket) do
+  def handle_info({%<%= inspect(schema.alias) %>{} = <%= schema.singular %>, :updated}, socket) do
     {:noreply,
      socket
      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
-     |> maybe_patch_and_flash(source, ~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> updated successfully")}
+     |> maybe_patch_and_flash(~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> updated successfully")}
   end
 
   @impl true

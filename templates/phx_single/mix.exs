@@ -54,7 +54,7 @@ defmodule <%= @app_module %>.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "1.7.18"},<%= if @ecto do %>
+      {:phoenix, "1.8.0"},<%= if @ecto do %>
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.10"},
       {:ecto_sync, "~> 0.2.0"},

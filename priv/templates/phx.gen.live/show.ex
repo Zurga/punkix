@@ -3,6 +3,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   alias <%= inspect context.module %>
   alias <%= inspect schema.module %>
+  alias <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
   alias <%= inspect context.web_module %>.Components.Modal
 
 <%= if Punkix.Context.required_assocs(schema) != [] do %>
@@ -35,11 +36,11 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   defp page_title(:edit), do: "Edit <%= schema.human_singular %>"
 
   @impl true
-  def handle_info({{<%= inspect(schema.alias) %>, :updated}, <%= schema.singular %>, _source}, socket) do
-    {:noreply, 
-      socket
-      |> put_flash(:info, "<%= schema.human_singular %> updated successfully")
-      |> assign(:<%= schema.singular %>, <%= schema.singular %>)}
+  def handle_info({%<%= inspect(schema.alias) %>{} = <%= schema.singular %>, :updated}, socket) do
+    {:noreply,
+     socket
+     |> put_flash(~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> updated successfully")
+     |> assign(:<%= schema.singular%>, <%= schema.singular %>)}
   end
 
   @impl true

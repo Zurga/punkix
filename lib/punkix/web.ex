@@ -21,21 +21,17 @@ defmodule Punkix.Web do
     |> then(&apply(Date, :range, &1))
   end
 
-  def on_create(struct, source \\ :myself) do
-    send(self(), {{struct.__struct__, :inserted}, struct, source})
+  def on_create(struct) do
+    send(self(), {struct, :inserted})
   end
 
-  def on_update(struct, source \\ :myself) do
-    send(self(), {{struct.__struct__, :updated}, struct, source})
+  def on_update(struct) do
+    send(self(), {struct, :updated})
   end
 
-  def maybe_patch_and_flash(socket, :myself, path, flash) do
+  def maybe_patch_and_flash(socket, path, flash) do
     socket
     |> put_flash(:info, flash)
     |> push_patch(to: path)
-  end
-
-  def maybe_patch_and_flash(socket, _, _, _) do
-    socket
   end
 end
