@@ -19,30 +19,55 @@ defmodule Punkix.Context do
     "#{schema.singular}_attrs"
   end
 
-  def assocs_context_aliasses(schema) do
+  def maybe_separate_assoc(schema) do
+    many_to_manys = schema.assocs |> Enum.filter(&(&1.assoc_fun != :belongs_to))
+
+    if many_to_manys do
+      schema_attrs = schema_attrs(schema)
+      fields = Enum.map(many_to_manys, & &1.field)
+
+      """
+      {%{#{Enum.map_join(fields, ",", &"#{&1}: #{&1}")}}, #{schema_attrs}} = Map.split(#{schema_attrs}, [#{Enum.map_join(fields, ",", &inspect/1)}])
+      """
+    end
+  end
+
+  def maybe_put_assoc(schema) do
+    many_to_manys = schema.assocs |> Enum.filter(&(&1.assoc_fun != :belongs_to))
+
+    if many_to_manys do
+      fields = Enum.map(many_to_manys, & &1.field)
+
+      Enum.map_join(fields, "\n", fn field ->
+        "|> put_assoc(#{inspect(field)}, #{field})"
+      end)
+    end
+  end
+
+  def assocs_context_aliases(schema) do
     [base_app | _] = Module.split(schema.module)
 
-    schema
-    |> Schema.belongs_assocs()
+    schema.assocs
+    # |> Schema.belongs_assocs()
     |> Enum.map(& &1.context)
     |> Enum.uniq()
     |> then(fn contexts ->
       base = "alias #{base_app}."
-      maybe_group_aliasses(base, contexts)
+      maybe_group_aliases(base, contexts)
     end)
   end
 
   # TODO add fixtures in tests
-  def assocs_schema_aliasses(schema) do
+  def assocs_schema_aliases(schema) do
     [base_app | _] = Module.split(schema.module)
 
-    schema
-    |> Schema.belongs_assocs()
+    schema.assocs
+    # |> Schema.belongs_assocs()
     |> Enum.group_by(& &1.context)
     |> Enum.map_join("\n", fn {context, assocs} ->
       base = "alias #{base_app}.Schemas.#{context}."
 
-      maybe_group_aliasses(base, assocs, & &1.schema)
+      maybe_group_aliases(base, assocs, & &1.schema)
     end)
   end
 
@@ -157,15 +182,15 @@ defmodule Punkix.Context do
     "#{assoc.reverse}: #{schema_attrs(schema)}[:#{assoc.field}]"
   end
 
-  defp maybe_group_aliasses(base, modules, map_fun \\ & &1)
+  defp maybe_group_aliases(base, modules, map_fun \\ & &1)
 
-  defp maybe_group_aliasses(_base, [], _map_fun), do: ""
+  defp maybe_group_aliases(_base, [], _map_fun), do: ""
 
-  defp maybe_group_aliasses(base, [module], map_fun) do
+  defp maybe_group_aliases(base, [module], map_fun) do
     base <> map_fun.(module)
   end
 
-  defp maybe_group_aliasses(base, modules, map_fun) do
+  defp maybe_group_aliases(base, modules, map_fun) do
     base <> "{#{Enum.map_join(modules, ", ", map_fun)}}"
   end
 

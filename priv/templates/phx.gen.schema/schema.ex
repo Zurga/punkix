@@ -1,6 +1,6 @@
 defmodule <%= inspect schema.module %> do
   use <%= Mix.Phoenix.base() %>.Schema<%= if schema.assocs != [] do %>
-  alias <%= Mix.Phoenix.base() %>.Schemas.{<%= Punkix.Schema.assoc_aliasses(schema) %>}<% end %>
+  alias <%= Mix.Phoenix.base() %>.Schemas.{<%= Punkix.Schema.assoc_aliases(schema) %>}<% end %>
 <%= if schema.prefix do %>
   @schema_prefix :<%= schema.prefix %><% end %><%= if schema.binary_id do %>
   @primary_key {:id, UUIDv7, autogenerate: true}

@@ -11,7 +11,11 @@ defmodule MixHelper do
   end
 
   defp random_string(len) do
-    len |> :crypto.strong_rand_bytes() |> Base.encode32() |> binary_part(0, len) |> String.downcase()
+    len
+    |> :crypto.strong_rand_bytes()
+    |> Base.encode32()
+    |> binary_part(0, len)
+    |> String.downcase()
   end
 
   def in_tmp(which, function, install_args \\ []) do

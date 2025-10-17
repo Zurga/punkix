@@ -17,6 +17,7 @@ defmodule <%= @app_module %>.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      listeners: [Phoenix.CodeReloader],
       compilers: Mix.compilers() ++ [:surface, :boundary]
     ]
   end

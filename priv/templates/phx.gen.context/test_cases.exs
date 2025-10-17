@@ -1,5 +1,5 @@
   <%= Punkix.Context.assoc_fixtures(schema) %>
-  <%= Punkix.Context.assocs_schema_aliasses(schema) %>
+  <%= Punkix.Context.assocs_schema_aliases(schema) %>
   @create_attrs <%= Punkix.Context.args_to_params(schema, :create) %>
   @update_attrs <%= Punkix.Context.args_to_params(schema, :update) %>
   @invalid_attrs %{<%= Punkix.Context.invalid_args_to_params(schema, :update) %>}

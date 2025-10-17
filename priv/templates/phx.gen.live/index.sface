@@ -27,7 +27,7 @@
   <<%= inspect(schema.alias) %>Component
     {=@<%= schema.singular %>}
     id={@<%= schema.singular %>.id || :new}
-    action={@live_action}<%= for assoc <- Punkix.Context.required_belongs_assocs(schema) do %>
+    action={@live_action}<%= for assoc <- schema.assocs do %>
     {=@<%= assoc.plural %>}<% end %>
   />
 </Modal>

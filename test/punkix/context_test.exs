@@ -10,7 +10,7 @@ defmodule Punkix.ContextTest do
     [
       schema:
         Gen.Schema.build(
-          ~w"Article articles name:string description:string category_id:references:article_categories,required:true,reverse:Article.Category.articles",
+          ~w"Article articles name:string description:string category_id:references:article_categories,type:belongs_to,required:true,reverse:Article.Category.articles",
           []
         )
         |> Punkix.Schema.set_assocs()
@@ -71,6 +71,34 @@ defmodule Punkix.ContextTest do
         Gen.Schema.build(~w/Shop.Article articles name:string/, [])
 
       assert Context.invalid_args_to_params(schema, :create) == "name: nil"
+    end
+  end
+
+  describe "maybe_separate_assoc" do
+    test "splits args up correctly" do
+      schema =
+        Gen.Schema.build(
+          ~w/Shop.Post posts name:string tags:references:tags,type:many_to_many,through:test,reverse:Tags/,
+          []
+        )
+        |> Punkix.Schema.set_assocs()
+
+      assert "{%{tags: tags}, post_attrs} = Map.split(post_attrs, [:tags])\n" =
+               Context.maybe_separate_assoc(schema)
+    end
+  end
+
+  describe "maybe_put_assoc" do
+    test "splits args up correctly" do
+      schema =
+        Gen.Schema.build(
+          ~w/Shop.Post posts name:string tags:references:tags,type:many_to_many,through:test,reverse:Tags articles:references:articles,type:many_to_many,through:test,reverse:Articles/,
+          []
+        )
+        |> Punkix.Schema.set_assocs()
+
+      assert "|> put_assoc(:tags, tags)\n|> put_assoc(:articles, articles)" ==
+               Context.maybe_put_assoc(schema)
     end
   end
 end

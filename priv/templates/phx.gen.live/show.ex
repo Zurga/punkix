@@ -6,10 +6,10 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   alias <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component
   alias <%= inspect context.web_module %>.Components.Modal
 
-<%= if Punkix.Context.required_assocs(schema) != [] do %>
+<%= if schema.assocs != [] do %>
   alias <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.Assigns
 <% end %>
-<%= for assoc <- Punkix.Context.required_belongs_assocs(schema) do %>
+<%= for assoc <- schema.assocs do %>
   on_mount({Assigns, :<%= assoc.plural %>})
 <% end %>
 

@@ -77,7 +77,20 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
         type in types && name
       end)
     end)
-    |> then(&if schema.assocs == [], do: &1, else: ["Select" | &1])
+    |> then(fn aliases ->
+      if schema.assocs == [] do
+        aliases
+      else
+        aliases ++
+          Enum.map(schema.assocs, fn
+            %{assoc_fun: fun} when fun in ~w/has_many many_to_many/a ->
+              "MultipleSelect"
+
+            _ ->
+              "Select"
+          end)
+      end
+    end)
     |> Enum.uniq()
     |> Enum.sort()
     |> Enum.join(", ")
@@ -88,19 +101,27 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
   end
 
   def inputs(schema) do
-    attr_inputs(schema) ++
-      (Punkix.Schema.belongs_assocs(schema)
-       |> Enum.map(fn
-         %{field: field, plural: plural, schema: assoc_schema} ->
-           key = :"#{field}_id"
-           singular = String.downcase(assoc_schema)
+    assoc_inputs =
+      Enum.map(schema.assocs, fn
+        %{assoc_fun: :belongs_to, field: field, plural: plural, schema: assoc_schema} ->
+          key = :"#{field}_id"
+          singular = String.downcase(assoc_schema)
 
-           input = """
-           Select options={@#{plural} |> Enum.with_index(1) |> Enum.map(fn {#{singular}, index} -> {"#{assoc_schema} \#{index}", #{singular}.id} end)}
-           """
+          input = """
+          Select options={@#{plural} |> Enum.with_index(1) |> Enum.map(fn {#{singular}, index} -> {"#{assoc_schema} \#{index}", #{singular}} end)}
+          """
 
-           wrap_input(key, input)
-       end))
+          wrap_input(key, input)
+
+        %{assoc_fun: :many_to_many, field: field, plural: plural, schema: assoc_schema} ->
+          singular = String.downcase(assoc_schema)
+          input = """
+          MultipleSelect options={@#{plural} |> Enum.with_index(1) |> Enum.map(fn {#{singular}, index} -> {"#{assoc_schema} \#{index}", #{singular}} end)}
+          """
+          wrap_input(field, input)
+      end)
+
+    attr_inputs(schema) ++ assoc_inputs
   end
 
   @doc false

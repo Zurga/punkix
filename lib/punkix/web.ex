@@ -34,4 +34,23 @@ defmodule Punkix.Web do
     |> put_flash(:info, flash)
     |> push_patch(to: path)
   end
+
+  def find_by_id(%Phoenix.LiveView.Socket{assigns: assigns}, key, ids) do
+    with [schema | _] = schemas <- Map.get(assigns, key, []) do
+      primary_keys = schema.__struct__.__schema__(:primary_key)
+
+      case primary_keys do
+        [key] ->
+          for id <- ids do
+            Enum.find(schemas, &(Map.get(&1, key) == id))
+          end
+
+        keys ->
+          for id <- ids do
+            Enum.find(schemas, &(Map.filter(&1, Map.keys(keys)) == id))
+          end
+      end
+      |> Enum.reject(&is_nil/1)
+    end
+  end
 end

@@ -68,6 +68,16 @@ defmodule Punkix.Repo do
   def validate(true, _), do: :ok
   def validate(false, reason), do: {:error, reason}
 
+  def maybe_cast_assoc(changeset, key, attrs) do
+    assoc = attrs[key]
+
+    if not is_nil(assoc) do
+      changeset
+    else
+      Ecto.Changeset.cast_assoc(changeset, key, assoc)
+    end
+  end
+
   def with_assocs(struct, assocs) do
     for {key, assoc_struct} <- assocs, reduce: %{} do
       acc ->
@@ -115,6 +125,20 @@ defmodule Punkix.Repo do
 
       def maybe_preload(struct, preloads), do: preload(struct, preloads)
 
+      def insert_many_to_many({:ok, struct}, field, related) do
+        %{join_through: schema, join_keys: join_keys} =
+          struct.__struct__.__schema__(:association, field)
+
+        [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+
+        insert(
+          struct(schema, [
+            {join_owner_key, Map.get(struct, owner_key)},
+            {join_related_key, Map.get(related, related_key)}
+          ])
+        )
+      end
+
       # def transact(fun, opts \\ []) do
       #   transaction(
       #     fn repo ->
@@ -135,6 +159,7 @@ defmodule Punkix.Repo do
       defdelegate authorize(condition), to: Punkix.Repo
       defdelegate nil_to_error(result), to: Punkix.Repo
       defdelegate validate(valid, reason), to: Punkix.Repo
+      defdelegate maybe_cast_assoc(changeset, key, attrs), to: Punkix.Repo
       defdelegate with_assocs(struct, assocs), to: Punkix.Repo
       defdelegate maybe_broadcast(schema, type, pubsub, topic_fun), to: Punkix.Repo
     end

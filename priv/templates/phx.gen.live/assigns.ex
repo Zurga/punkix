@@ -1,10 +1,10 @@
 defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.Assigns do
   import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1]
   import Phoenix.Component
-  <%= Punkix.Context.assocs_context_aliasses(schema) %>
-  <%= Punkix.Context.assocs_schema_aliasses(schema) %>
+  <%= Punkix.Context.assocs_context_aliases(schema) %>
+  <%= Punkix.Context.assocs_schema_aliases(schema) %>
 
-<%= for %{plural: assign} = assoc <- Punkix.Context.required_belongs_assocs(schema) do %>
+<%= for %{plural: assign} = assoc <- schema.assocs do %>
   def on_mount(:<%= assign %>, _params, _session, socket) do
     <%= assign %> = <%= assoc.context %>.list_<%= assign %>()
     if connected?(socket) do
@@ -18,7 +18,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     {:cont, socket}
   end
 <% end %>
-<%= for %{plural: assign} = assoc <- Punkix.Context.required_belongs_assocs(schema) do %>
+<%= for %{plural: assign} = assoc <- schema.assocs do %>
   def handle_info({EctoSync, {<%= assoc.schema %>, _event, _} = sync_config}, socket) do
     {:halt, update(socket, :<%= assign %>, &EctoSync.sync(&1, sync_config))}
   end

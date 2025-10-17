@@ -1,6 +1,6 @@
 
   alias <%= inspect schema.module %>
-  <%= Punkix.Context.assocs_schema_aliasses(schema) %>
+  <%= Punkix.Context.assocs_schema_aliases(schema) %>
 
   @<%= schema.singular %>_preloads [<%= Enum.map_join(schema.assocs, ", ", &"#{&1.field}: []") %>]
 
@@ -59,7 +59,7 @@
   def create_<%= schema.singular %>(<%= Punkix.Context.create_args(schema) %>) do
     %<%= inspect schema.alias %>{}<%= if Punkix.Schema.belongs_assocs(schema) != [] do %>
     |> Repo.with_assocs(<%= Punkix.Context.build_assocs(schema) %>)<% end %>
-    |> store_<%= schema.singular %>(<%= Punkix.Context.schema_attrs(schema) %>, opts[:preloads])
+    |> store_<%= schema.singular %>(<%= Punkix.Context.schema_attrs(schema) %>, opts)
   end
 
   @doc """
@@ -78,7 +78,7 @@
     {:ok, <%= inspect schema.alias %>.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def update_<%= schema.singular %>(<%= Punkix.Context.update_args(schema) %>) do
     with {:ok, <%= schema.singular %>} <- get_<%= schema.singular %>(<%= schema.singular %>_id) do
-      store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.schema_attrs(schema) %>, opts[:preloads])
+      store_<%= schema.singular %>(<%= schema.singular %>, <%= Punkix.Context.schema_attrs(schema) %>, opts)
     end
   end
 
@@ -104,8 +104,10 @@
 
   @doc false
   defp store_<%= schema.singular %>(<%= Punkix.Context.store_args(schema) %>) do
+    <%= Punkix.Context.maybe_separate_assoc(schema) %>
     <%= schema.singular %>
     |> change(<%= Punkix.Context.schema_attrs(schema) %>)
+    <%= Punkix.Context.maybe_put_assoc(schema) %>
     |> validate_required([<%= Enum.map_join(Mix.Phoenix.Schema.required_fields(schema), ", ", &inspect(elem(&1, 0))) %>])<%= for k <- schema.uniques do %>
     |> unique_constraint(<%= inspect k %>)<% end %>
     |> Repo.insert_or_update()
