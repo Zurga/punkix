@@ -27,6 +27,7 @@ defmodule Punkix.Patches.Schema do
     schema
     |> set_path()
     |> set_module_name()
+    |> Map.put(:scope, nil)
     # |> Map.put(:plural, Exflect.pluralize(schema.singular))
     |> Punkix.Schema.set_assocs()
   end

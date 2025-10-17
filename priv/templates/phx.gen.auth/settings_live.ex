@@ -52,7 +52,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
           <PasswordInput
             field={:current_password}
             name="current_password"
-            label="Current password"
             id="current_password_for_password"
             value={@current_password}
           />

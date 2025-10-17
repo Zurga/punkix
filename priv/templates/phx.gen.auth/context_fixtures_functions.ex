@@ -9,12 +9,11 @@
   end
 
   def <%= schema.singular %>_fixture(attrs \\ %{}) do
+    attrs = valid_<%= schema.singular %>_attributes(attrs)
     {:ok, <%= schema.singular %>} =
-      attrs
-      |> valid_<%= schema.singular %>_attributes()
       |> <%= inspect context.module %>.register_<%= schema.singular %>()
 
-    <%= schema.singular %>
+    Map.merge(<%= schema.singular %>, attrs)
   end
 
   def extract_<%= schema.singular %>_token(fun) do

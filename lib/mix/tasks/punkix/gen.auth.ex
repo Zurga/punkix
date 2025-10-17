@@ -13,22 +13,31 @@ defmodule Mix.Tasks.Punkix.Gen.Auth do
   wrap(Auth, :files_to_be_generated, 1, :files_to_be_generated)
   replace(Auth, :validate_args!, 1, :validate_args!)
   replace(Auth, :maybe_inject_router_import, 2, :inject_router_import)
+  replace(Auth, :maybe_inject_scope_config, 2, :do_nothing)
+  replace(Auth, :maybe_inject_router_plug, 2, :do_nothing)
+  replace(Auth, :maybe_inject_app_layout_menu, 2, :do_nothing)
 
   def run(args), do: patched(Auth).run(args)
 
+  def do_nothing(context, _) do
+    context
+  end
+
+  @add_schema_path ~w/schema.ex schema_token.ex/
+  @rejected_files ["scope.ex"]
   def files_to_be_generated(files) do
     Enum.map(files, fn
-      {_, "schema.ex", path} ->
+      {type, file, path} when file in @add_schema_path ->
         path = Path.split(path)
-        {:eex, "schema.ex", Path.join(List.insert_at(path, 2, "schemas"))}
+        {type, file, Path.join(List.insert_at(path, 2, "schemas"))}
 
-      {_, "schema_token.ex", path} ->
-        path = Path.split(path)
-        {:eex, "schema_token.ex", Path.join(List.insert_at(path, 2, "schemas"))}
+      {_, file, _} when file in @rejected_files ->
+        nil
 
       other ->
         other
     end)
+    |> Enum.reject(&is_nil/1)
   end
 
   def inject_router_import(context, binding) do
