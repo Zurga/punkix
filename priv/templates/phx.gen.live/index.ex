@@ -40,7 +40,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:page_title, "New <%= schema.human_singular %>")
-    |> assign(:<%= schema.singular %>, %<%= inspect schema.alias %>{<%= Punkix.Schema.belongs_assocs(schema) |> Enum.map_join(", ", &"#{&1.field}: nil") %>})
+    |> assign(:<%= schema.singular %>, %<%= inspect schema.alias %>{<%= Punkix.Schema.new_assocs(schema) %>})
   end
 
   defp apply_action(socket, :index, _params) do

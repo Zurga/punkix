@@ -84,13 +84,21 @@ defmodule Punkix.Schema.Assoc do
     on_replace =
       String.to_atom(Schema.find_key(opts, :on_replace, defaults(assoc_fun, :on_replace)))
 
-    through = Schema.find_key(opts, :through) |> String.to_atom()
+    through = Schema.find_key(opts, :through)
 
     if assoc_fun == :many_to_many and is_nil(through) do
       raise "A many to many must set a through option"
     end
 
+    schema =  (alias && String.split(alias, ".") |> Enum.at(-1)) || ""
     required = !!Schema.find_key(opts, :required, false)
+
+    plural =
+      case assoc_fun do
+        :many_to_many -> schema |> String.downcase() |> Exflect.pluralize()
+        :has_many -> field
+        _ -> assoc_table
+      end
 
     %__MODULE__{
       alias: alias,
@@ -101,18 +109,20 @@ defmodule Punkix.Schema.Assoc do
       foreign_key: foreign_key,
       key: key,
       on_replace: on_replace,
-      plural: if(assoc_fun in ~w/:belongs_to :has_one/a, do: assoc_table, else: field),
+      plural: plural,
       required: required,
       reverse: reverse,
-      schema: (alias && String.split(alias, ".") |> Enum.at(-1)) || "",
+      schema: schema,
       through: through
     }
   end
 
   def format(assoc) do
+    through_alias = assoc.through |> String.split(".") |> Enum.at(-1)
+
     through =
-      (assoc.assoc_fun == :many_to_many && [join_through: inspect(assoc.through)]) ||
-        [through: assoc.through]
+      (assoc.assoc_fun == :many_to_many && [join_through: through_alias]) ||
+        [through: through_alias]
 
     args =
       format_args(
@@ -130,6 +140,7 @@ defmodule Punkix.Schema.Assoc do
   defp format_args(args) do
     args
     |> Enum.filter(fn
+      {_k, "nil"} -> false
       {_k, nil} -> false
       _ -> true
     end)

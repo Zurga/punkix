@@ -115,9 +115,11 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
         %{assoc_fun: :many_to_many, field: field, plural: plural, schema: assoc_schema} ->
           singular = String.downcase(assoc_schema)
+
           input = """
           MultipleSelect options={@#{plural} |> Enum.with_index(1) |> Enum.map(fn {#{singular}, index} -> {"#{assoc_schema} \#{index}", #{singular}} end)}
           """
+
           wrap_input(field, input)
       end)
 

@@ -17,6 +17,7 @@ defmodule Punkix.SchemaTest do
         |> Schema.set_assocs()
     ]
   end
+
   describe "assoc_aliases" do
     test "assoc aliases", %{schema: schema} do
       assert Schema.assoc_aliases(schema) == "Article.Category, Article.Tag, Tags, Label"

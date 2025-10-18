@@ -9,11 +9,29 @@ defmodule Punkix.Schema do
     Enum.map_join(schema.assocs, "\n", &Assoc.format/1)
   end
 
+  def new_assocs(schema) do
+    ones =
+      schema
+      |> one_assocs()
+      |> Enum.map_join(", ", &"#{&1.field}: nil")
+
+    many =
+      schema
+      |> many_assocs()
+      |> Enum.map_join(", ", &"#{&1.field}: []")
+
+    [ones, many]
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.join(", ")
+  end
+
   def assoc_aliases(schema) do
-    Enum.flat_map(schema.assocs, fn %{assoc_fun: :many_to_many} = assoc ->
-      [assoc.alias, assoc.through]
+    Enum.flat_map(schema.assocs, fn
+      %{assoc_fun: :many_to_many} = assoc ->
+        [assoc.alias, assoc.through]
+
       assoc ->
-      [assoc.alias]
+        [assoc.alias]
     end)
     |> Enum.uniq()
     |> Enum.join(", ")
@@ -50,11 +68,11 @@ defmodule Punkix.Schema do
   end
 
   def one_assocs(schema) do
-    Enum.filter(schema.assocs, & &1.assoc_fun in ~w/belongs_to has_one/a)
+    Enum.filter(schema.assocs, &(&1.assoc_fun in ~w/belongs_to has_one/a))
   end
 
   def many_assocs(schema) do
-    Enum.filter(schema.assocs, & &1.assoc_fun in ~w/many_to_many has_many/a)
+    Enum.filter(schema.assocs, &(&1.assoc_fun in ~w/many_to_many has_many/a))
   end
 
   def optional_fields(schema) do
