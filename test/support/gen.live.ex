@@ -3,13 +3,13 @@ defmodule Punkix.Test.Support.Gen.Live do
 
   defmacro gen_live(project_path, project_name) do
     person_schema =
-      "Persons Person persons name:string description:string articles:references:articles,reverse:Articles.Article.writer,foreign_key:writer_id"
+      "Persons Person persons name:string description:string articles:references:articles,reverse:Articles.Article.writer,foreign_key:writer_id,type:has_many"
 
     article_schema =
-      "Articles Article articles name:string description:string writer_id:references:persons,reverse:Persons.Person.articles,required:true comments:references:comments,reverse:Articles.Comment.article"
+      "Articles Article articles name:string description:string writer_id:references:persons,reverse:Persons.Person.articles,required:true,type:belongs_to comments:references:comments,reverse:Articles.Comment.article,type:has_many"
 
     comment_schema =
-      "Articles Comment comments text:string writer_id:references:persons,reverse:Persons.Person.articles,required:true article_id:references:articles,reverse:Articles.Article.comments,required:true"
+      "Articles Comment comments text:string writer_id:references:persons,reverse:Persons.Person.articles,required:true,type:belongs_to article_id:references:articles,reverse:Articles.Article.comments,required:true,type:belongs_to"
 
     quote bind_quoted: [
             project_path: project_path,

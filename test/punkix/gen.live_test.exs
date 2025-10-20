@@ -18,7 +18,7 @@ defmodule Punkix.GenLiveTest do
     app_name = "Test"
 
     schema =
-      "Persons Person persons name:string description:string articles:references:articles,reverse:Articles.Article.writer,foreign_key:writer_id"
+      "Persons Person persons name:string description:string articles:references:articles,reverse:Articles.Article.writer,foreign_key:writer_id,type:belongs_to"
       |> String.split(" ")
       |> Mix.Tasks.Phx.Gen.Context.build([])
       |> then(&(elem(&1, 1) |> Map.put(:web_namespace, app_name <> "Web")))
