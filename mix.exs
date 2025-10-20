@@ -40,6 +40,7 @@ defmodule Punkix.MixProject do
       {:mneme, "~> 0.10.2"},
       # {:ecto_watch, "~> 0.12.2"},
       {:ecto_sql, "~> 3.11"},
+      {:patches, "~> 0.1.0"},
       {:cachex, "~> 4.0.3"},
       {:postgrex, "~> 0.19"},
       {:plug_cowboy, "~> 2.0", only: :dev},
