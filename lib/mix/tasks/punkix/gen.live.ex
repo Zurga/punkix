@@ -113,7 +113,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
           wrap_input(key, input)
 
-        %{assoc_fun: :many_to_many, field: field, plural: plural, schema: assoc_schema} ->
+        %{assoc_fun: many, field: field, plural: plural, schema: assoc_schema} when many in ~w/has_many many_to_many/a ->
           singular = String.downcase(assoc_schema)
 
           input = """
