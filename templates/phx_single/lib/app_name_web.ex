@@ -10,7 +10,7 @@ defmodule <%= @web_namespace %> do
     quote do
       # HTML escaping functionality
       import Phoenix.HTML
-      <%= if @gettext do %>use Gettext, backend: <%= @web_namespace %><% end %>
+      <%= if @gettext do %>use Gettext, backend: <%= @web_namespace %>.Gettext<% end %>
       import Punkix.Web, only: [sigil_a: 2, on_create: 1, on_update: 1, maybe_patch_and_flash: 3]
 
       # Shortcut for generating JS commands

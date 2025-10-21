@@ -67,19 +67,20 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         <#slot {@default} />
       {#else}
         <dl><%= for {k, _} <- schema.attrs do %>
-          <dt><%= Phoenix.Naming.humanize(Atom.to_string(k)) %></dt>
+          <dt>{gettext("<%= Phoenix.Naming.humanize(Atom.to_string(k)) %>")}</dt>
           <dd>@<%= schema.singular %>.<%= k %></dd><% end %>
         </dl>
       {/if}
       <div :if={slot_assigned?(@buttons)} class="buttons">
         <#slot {@buttons} />
-        <a :on-click="delete" data-confirm="Are you sure?">
-          Delete
+        <a :on-click="delete" data-confirm={gettext("Are you sure?")}>
+          {gettext("Delete")}
         </a>
       </div>
     </div>
     """
   end
+
   @impl true
   def render(%{presentation: :table} = assigns) do
     ~F"""
@@ -90,8 +91,8 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       <td>
         <div :if={slot_assigned?(@buttons)} class="buttons">
           <#slot {@buttons} />
-          <a :on-click="delete" data-confirm="Are you sure?">
-            Delete
+          <a :on-click="delete" data-confirm={gettext("Are you sure?")}>
+            {gettext("Delete")}
           </a>
         </div>
       </td>
@@ -111,7 +112,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
         opts={"phx-target": @myself}
       >
         <%= Mix.Tasks.Phx.Gen.Html.indent_inputs(inputs, 2) %>
-        <button phx-disable-with="Saving...">Save <%= schema.human_singular %></button>
+        <button phx-disable-with={gettext("Saving...")}>{gettext("Save <%= schema.human_singular %>")}</button>
       </Form>
     </div>
     """

@@ -1,7 +1,7 @@
 <header>
-  Listing <%= schema.human_plural %>
+  {gettext("Listing <%= schema.human_plural %>")}
   <.link href={~p"<%= schema.route_prefix %>/new"} role="button">
-    New <%= schema.human_singular %>
+    {gettext("New <%= schema.human_singular %>")}
   </.link>
 </header>
 
@@ -15,8 +15,8 @@
       {=<%= schema.singular %>}
       {=id}>
       <:buttons>
-        <.link patch={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}/edit"}>Edit</.link>
-        <.link to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}"}>Show</.link>
+        <.link patch={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}/edit"}>{gettext("Edit")}</.link>
+        <.link to={~p"<%= schema.route_prefix %>/#{<%= schema.singular %>.id}"}>{gettext("Show")}</.link>
       </:buttons>
     </<%= inspect context.web_module %>.<%= inspect Module.concat(schema.web_namespace, schema.alias) %>Live.<%= inspect(schema.alias) %>Component>
   </Table>

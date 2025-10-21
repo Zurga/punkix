@@ -32,14 +32,14 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
      |> assign(:<%= schema.singular %>, <%= schema.singular %>)}
   end
 
-  defp page_title(:show), do: "Show <%= schema.human_singular %>"
-  defp page_title(:edit), do: "Edit <%= schema.human_singular %>"
+  defp page_title(:show), do: gettext("Show <%= schema.human_singular %>")
+  defp page_title(:edit), do: gettext("Edit <%= schema.human_singular %>")
 
   @impl true
   def handle_info({%<%= inspect(schema.alias) %>{} = <%= schema.singular %>, :updated}, socket) do
     {:noreply,
      socket
-     |> put_flash(~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> updated successfully")
+     |> put_flash(~p"<%= schema.route_prefix %>", gettext("<%= schema.human_singular %> updated successfully"))
      |> assign(:<%= schema.singular%>, <%= schema.singular %>)}
   end
 

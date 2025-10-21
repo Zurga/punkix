@@ -33,19 +33,19 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   defp apply_action(socket, :edit, %{"id" => id}) do
     {:ok, <%= schema.singular %>} = <%= inspect context.alias %>.get_<%= schema.singular %>(id)
     socket
-    |> assign(:page_title, "Edit <%= schema.human_singular %>")
+    |> assign(:page_title, gettext("Edit <%= schema.human_singular %>"))
     |> assign(:<%= schema.singular %>, <%= schema.singular %>)
   end
 
   defp apply_action(socket, :new, _params) do
     socket
-    |> assign(:page_title, "New <%= schema.human_singular %>")
+    |> assign(:page_title, gettext("New <%= schema.human_singular %>"))
     |> assign(:<%= schema.singular %>, %<%= inspect schema.alias %>{<%= Punkix.Schema.new_assocs(schema) %>})
   end
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Listing <%= schema.human_plural %>")
+    |> assign(:page_title, gettext("Listing <%= schema.human_plural %>"))
     |> assign(:<%= schema.singular %>, nil)
   end
 
@@ -54,7 +54,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     {:noreply,
      socket
      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
-     |> maybe_patch_and_flash(~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> created successfully")}
+     |> maybe_patch_and_flash(~p"<%= schema.route_prefix %>", gettext("<%= schema.human_singular %> created successfully"))}
   end
 
   @impl true
@@ -62,7 +62,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     {:noreply,
      socket
      |> stream_insert(:<%= schema.collection %>, <%= schema.singular %>)
-     |> maybe_patch_and_flash(~p"<%= schema.route_prefix %>", "<%= schema.human_singular %> updated successfully")}
+     |> maybe_patch_and_flash(~p"<%= schema.route_prefix %>", gettext("<%= schema.human_singular %> updated successfully"))}
   end
 
   @impl true

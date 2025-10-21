@@ -1,15 +1,15 @@
 <header>
-  <%= schema.human_singular %> { @<%= schema.singular %>.id }
-  <p>This is a <%= schema.singular %> record from your database.</p>
+  {gettext("<%= schema.human_singular %>")} { @<%= schema.singular %>.id }
+  <p>{gettext("This is a <%= schema.singular %> record from your database.")}</p>
   <footer>
     <.link patch={~p"<%= schema.route_prefix %>/#{@<%= schema.singular %>}/show/edit"} phx-click={JS.push_focus()} role="button">
-      Edit <%= schema.singular %>
+      {gettext("Edit <%= schema.singular %>")}
     </.link>
   </footer>
 </header>
 
 <ul><%= for {k, _} <- schema.attrs do %>
-  <li title="<%= Phoenix.Naming.humanize(Atom.to_string(k)) %>">{ @<%= schema.singular %>.<%= k %> }</li><% end %>
+  <li title={gettext("<%= Phoenix.Naming.humanize(Atom.to_string(k)) %>")}>{ @<%= schema.singular %>.<%= k %> }</li><% end %>
 </ul>
 
 <.link href={~p"<%= schema.route_prefix %>"}>Back to <%= schema.plural %></.link>
