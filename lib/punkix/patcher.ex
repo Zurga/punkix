@@ -15,6 +15,7 @@ defmodule Punkix.Patcher do
   end
 
   defmacro __before_compile__(env) do
+    IO.inspect(env.module, label: "_----------------------------------")
     wrappers = Module.get_attribute(env.module, :wrappers)
     replacers = Module.get_attribute(env.module, :replacers)
     exports = Module.get_attribute(env.module, :exports)
@@ -38,15 +39,18 @@ defmodule Punkix.Patcher do
         {module, %{wrap: wrappers, replace: replacers, export: exports}}
       end)
       |> Enum.into(Map.from_keys(module_patches, %{}))
+      |> IO.inspect(label: :modules_and_modifications)
 
     namespaced_modules =
       for {module, _} <- modules_and_modifications, into: %{} do
         {module, namespace(module, env.module)}
       end
-      |> IO.inspect()
+      |> IO.inspect(label: :namespaced_modules)
 
     modules_and_binary =
       for {module, modifications} <- modules_and_modifications, into: %{} do
+        IO.inspect(module, label: :doing_module)
+
         {module,
          abstract_code(module)
          |> wrap_function(modifications[:wrap], env.module)
@@ -72,7 +76,7 @@ defmodule Punkix.Patcher do
           Punkix.Patcher.namespace(module, unquote(env.module))
         end
       end
-    ] ++ wrappers(modules_and_modifications)
+    ] ++ wrappers(modules_and_modifications, namespaced_modules)
   end
 
   defmacro patch(module) do
@@ -169,17 +173,17 @@ defmodule Punkix.Patcher do
     Enum.reduce(mfws, code, &wrap_function(&2, &1, wrapping_module))
   end
 
-  def wrap_function(code, {_module, function, _}, wrapping_module) do
-    do_wrap_function(code, function, nil, wrapping_module)
+  def wrap_function(code, {module, function, _}, wrapping_module) do
+    do_wrap_function(code, module, function, nil, wrapping_module)
   end
 
-  def wrap_function(code, {_module, function, arity, _}, wrapping_module) do
-    do_wrap_function(code, function, arity, wrapping_module)
+  def wrap_function(code, {module, function, arity, _}, wrapping_module) do
+    do_wrap_function(code, module, function, arity, wrapping_module)
   end
 
-  defp do_wrap_function(code, function, arity, wrapping_module) do
+  defp do_wrap_function(code, module, function, arity, wrapping_module) do
     code
-    |> modify_function(function, arity, &wrap_abstract_function(&1, wrapping_module))
+    |> modify_function(function, arity, &wrap_abstract_function(&1, module, wrapping_module))
   end
 
   defp modify_function(code, function, arity, func) do
@@ -194,14 +198,17 @@ defmodule Punkix.Patcher do
     |> Enum.reverse()
   end
 
-  defp wrap_abstract_function(function_tuple, wrapping_module) do
+  defp wrap_abstract_function(function_tuple, module_to_wrap, wrapping_module) do
+    IO.inspect(wrapping_module, label: :wrapping_module)
+
     {:function, line, function, arity, [{:clause, clause_line, args, guards, body}]} =
       function_tuple
 
     body = [
       {:call, line, {:remote, line, {:atom, line, wrapping_module}, {:atom, line, :wrap}},
        [
-         {:tuple, line, [{:atom, line, function}, {:integer, line, arity}]},
+         {:tuple, line,
+          [{:atom, line, module_to_wrap}, {:atom, line, function}, {:integer, line, arity}]},
          {:fun, line, {:clauses, [{:clause, line, [], [], body}]}}
        ]}
     ]
@@ -277,25 +284,29 @@ defmodule Punkix.Patcher do
     end
   end
 
-  defp wrappers(module_map) do
-    for {_module, %{wrap: modifications}} <- module_map do
-      Enum.map(modifications, fn
-        {_, function, arity, wrapper} ->
-          quote do
-            def wrap({unquote(function), unquote(arity)}, fun) do
-              result = unquote(wrapper)(fun.())
-              result
+  defp wrappers(module_map, namespaces) do
+    code =
+      for {module, %{wrap: modifications}} <- module_map do
+        Enum.map(modifications, fn
+          {_module, function, arity, wrapper} ->
+            quote do
+              def wrap({unquote(namespaces[module]), unquote(function), unquote(arity)}, fun) do
+                result = unquote(wrapper)(fun.())
+                result
+              end
             end
-          end
 
-        {_, function, wrapper} ->
-          quote do
-            def wrap({unquote(function)}, fun) do
-              result = unquote(wrapper)(fun.())
-              result
+          {_module, function, wrapper} ->
+            quote do
+              def wrap({unquote(namespaces[module]), unquote(function)}, fun) do
+                result = unquote(wrapper)(fun.())
+                result
+              end
             end
-          end
-      end)
-    end
+        end)
+      end
+
+    Enum.map(code, &(Sourceror.to_string(&1) |> IO.puts()))
+    code
   end
 end

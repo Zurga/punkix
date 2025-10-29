@@ -6,15 +6,26 @@ defmodule Punkix.ContextTest do
   alias Punkix.Context
   alias Mix.Tasks.Phx.Gen
 
+  @schema ~w"Shop.Article articles name:string description:string category_id:references:article_categories,type:belongs_to,required:true,reverse:Article.Category.articles"
+
+  @schema_with_auth @schema ++
+                      ~w/user_id:references:users,type:belongs_to,is_current_user:true,reverse:Accounts.User,required:true/
+
   setup do
     [
-      schema:
-        Gen.Schema.build(
-          ~w"Article articles name:string description:string category_id:references:article_categories,type:belongs_to,required:true,reverse:Article.Category.articles",
-          []
-        )
-        |> Punkix.Schema.set_assocs()
+      schema: Gen.Schema.build(@schema, []) |> Punkix.Schema.set_assocs(),
+      schema_with_user: Gen.Schema.build(@schema_with_auth, []) |> Punkix.Schema.set_assocs()
     ]
+  end
+
+  describe "assoc_fixtures/1" do
+    test "without auth", %{schema: schema} do
+    end
+
+    test "with auth", %{schema_with_user: schema} do
+      IO.inspect(schema)
+      assert Context.assoc_fixtures(schema) == "\n  import Punkix.AccountsFixtures"
+    end
   end
 
   describe "context_fun_spec/1" do
@@ -35,7 +46,8 @@ defmodule Punkix.ContextTest do
 
   describe "*_args/1" do
     test "create_args", %{schema: schema} do
-      assert Context.create_args(schema) == "article_attrs, preloads \\\\ nil"
+      assert Context.create_args(schema) ==
+               "%{category: category} = article_attrs, preloads \\\\ nil"
     end
 
     test "update_args", %{schema: schema} do

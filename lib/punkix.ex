@@ -1,6 +1,8 @@
 defmodule Punkix do
   defmacro __using__(_) do
     quote do
+      import Punkix
+      # use Punkix.Patcher
       use Patches
       patch(Mix.Phoenix)
       wrap(Mix.Phoenix, :generator_paths, 0, :add_punkix)
@@ -22,6 +24,7 @@ defmodule Punkix do
 
       def add_watchers(context) do
         application_path = Mix.Phoenix.context_lib_path(context.context_app, "application.ex")
+        IO.inspect("add_watchers")
 
         with {:ok, application_source} <- File.read(application_path) do
           patched_source =
@@ -94,4 +97,64 @@ defmodule Punkix do
   end
 
   defdelegate spec_alias(alias), to: Punkix.Context
+
+  def inject_after_module_definition(to_inject, file_path) do
+    inject_code(to_inject, file_path, fn
+      {:defmodule, module_meta,
+       [alias, [{{:__block__, do_block_meta, [:do]}, {:__block__, block_meta, block_ast}}]]},
+      {method, _, args} ->
+        {:defmodule, module_meta,
+         [
+           alias,
+           [
+             {{:__block__, do_block_meta, [:do]},
+              {:__block__, block_meta, [{method, block_meta, args} | block_ast]}}
+           ]
+         ]}
+
+      _, _ ->
+        nil
+    end)
+  end
+
+  def inject_code(content, file_path, patch_fun) do
+    to_add = Sourceror.parse_string!(content)
+
+    to_patch = File.read!(file_path)
+
+    {_, patches} =
+      to_patch
+      |> Sourceror.parse_string!()
+      |> Macro.postwalk([], fn quoted, patches ->
+        if replacement = patch_fun.(quoted, to_add) do
+          range = Sourceror.get_range(quoted)
+          patch = %{range: range, change: replacement |> Sourceror.to_string()}
+          {quoted, [patch | patches]}
+        else
+          {quoted, patches}
+        end
+      end)
+
+    patched = Sourceror.patch_string(to_patch, patches)
+    File.write(file_path, patched)
+  end
+
+  def maybe_merge_blocks(tuple, {:__block__, meta, other_content}) when is_tuple(tuple) do
+    {:__block__, meta, [tuple | other_content]}
+  end
+
+  def maybe_merge_blocks({:__block__, meta, other_content}, other) when is_tuple(other) do
+    {:__block__, meta, other_content ++ [other]}
+  end
+
+  def maybe_merge_blocks({:__block__, meta, content}, list) when is_list(list) do
+    {:__block__, meta, content ++ list}
+  end
+
+  def maybe_merge_blocks(
+        {:__block__, meta, content} = block,
+        {:__block__, _meta, other_content} = other_block
+      ) do
+    {:__block__, meta, content ++ other_content}
+  end
 end

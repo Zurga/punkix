@@ -25,7 +25,7 @@ defmodule <%= inspect auth_module %>Test do
       assert token = get_session(conn, :<%= schema.singular %>_token)
       assert get_session(conn, :live_socket_id) == "<%= schema.plural %>_sessions:#{Base.url_encode64(token)}"
       assert redirected_to(conn) == ~p"/"
-      assert <%= inspect context.alias %>.get_<%= schema.singular %>_by_session_token(token)
+      assert {:ok, _} == <%= inspect context.alias %>.get_<%= schema.singular %>_by_session_token(token)
     end
 
     test "clears everything previously stored in the session", %{conn: conn, <%= schema.singular %>: <%= schema.singular %>} do
@@ -63,7 +63,7 @@ defmodule <%= inspect auth_module %>Test do
       refute conn.cookies[@remember_me_cookie]
       assert %{max_age: 0} = conn.resp_cookies[@remember_me_cookie]
       assert redirected_to(conn) == ~p"/"
-      refute <%= inspect context.alias %>.get_<%= schema.singular %>_by_session_token(<%= schema.singular %>_token)
+      refute {:ok, _} == <%= inspect context.alias %>.get_<%= schema.singular %>_by_session_token(<%= schema.singular %>_token)
     end
 
     test "broadcasts to the given live_socket_id", %{conn: conn} do

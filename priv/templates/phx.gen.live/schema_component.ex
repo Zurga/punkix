@@ -7,40 +7,42 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   <%= Mix.Tasks.Punkix.Gen.Live.input_aliases(schema) %>
 
   defmodule <%= inspect(schema.alias) %>Form do
-    use Ecto.Schema
+    use Ecto.Schema <%= if schema.assocs != [] do %>
+    <%= Punkix.Schema.assoc_aliases(schema) %><% end %>
     import Ecto.Changeset
 
     @optional ~w/<%= Enum.join(Punkix.Schema.optional_fields(schema), " ") %>/a
     @required ~w/<%= Enum.join(Punkix.Schema.required_fields(schema), " ") %>/a
-    @all @optional ++ @required
+    @fields @optional ++ @required
+    @assocs ~w/<%= Enum.join(Punkix.Live.assocs_as_fields(schema), " ") %>/a
   
     embedded_schema do
       <%= for {key, type} <- schema.attrs, type != :map and is_atom(type) == true do %>
-      field <%= inspect(key) %>, <%= inspect(type) %>
-      <% end %>
+      field <%= inspect(key) %>, <%= inspect(type) %> <% end %>
       <%= for assoc <- Punkix.Schema.one_assocs(schema) do %>
-      field <%= inspect(assoc.key) %>, :integer
-      <% end %>
+      embeds_one <%= inspect(assoc.key) %>, <%= assoc.alias %> <% end %>
       <%= for assoc <- Punkix.Schema.many_assocs(schema) do %>
-      field <%= inspect(assoc.field) %>, {:array, :integer}
-      <% end %>
+      embeds_many <%= inspect(assoc.field) %>, <%= assoc.alias %><% end %>
     end
 
-    def changeset(<%= schema.singular %>, attrs \\ %{}) do
+    def changeset(<%= schema.singular %>, attrs \\ %{}, socket) do
       <%= schema.singular %>
-      |> to_form_struct(__MODULE__, @all)
-      |> cast(attrs, @all)
+      |> cast(attrs, @fields)
+      <%= for assoc <- Punkix.Schema.normal_assocs(schema) do %>
+      |> put_form_embed(<%= inspect assoc.field %>, attrs["<%= assoc.field %>"], ~a|<%= assoc.field %>|)<% end %>
       |> validate_required(@required)
     end
 
-    def change(<%= schema.singular %>, attrs, socket) do
-      assocs = [<%= Enum.map_join(Punkix.Schema.many_assocs(schema), ", ", &inspect(&1.field)) %>] 
-      with {:ok, <%= schema.singular %>} <- changeset(<%= schema.singular %>, attrs) |> apply_action(~a[action]) do
-         <%= schema.singular %> = Enum.reduce(assocs, <%= schema.singular %>, fn key, acc ->
-           Map.update!(acc, key, &Punkix.Web.find_by_id(socket, key, &1))
-         end)
+    def prepare(<%= schema.singular %>, attrs, socket) do
+      with {:ok, <%= schema.singular %>} <- changeset(<%= schema.singular %>, attrs, socket) |> apply_action(~a[action]) do
+        prepared = <%= schema.singular %>
+        |> Map.take(@fields ++ @assocs) <%= Punkix.Live.maybe_insert_current_user(schema) %>
+        # <%= for assoc <- Punkix.Schema.one_assocs(schema) do %>
+        # |> resolve_by_id(:<%= assoc.field %>, ~a|<%= assoc.plural %>|, <%= schema.singular %>.<%= assoc.key %>)<% end %>
+        # <%= for assoc <- Punkix.Schema.many_assocs(schema) do %>
+        # |> resolve_by_id(:<%= assoc.field %>, ~a|<%= assoc.plural %>|, <%= schema.singular %>.<%= assoc.key %>_ids)<% end %>
                 
-        {:ok, Map.take(<%= schema.singular %>, @all)}
+        {:ok, prepared}
       end
     end
   end
@@ -48,7 +50,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   prop title, :string
   prop on_create, :fun, default: &on_create/1
   prop on_update, :fun, default: &on_update/1
-  prop <%= schema.singular %>, :any<%= for assoc <- schema.assocs do %>
+  prop <%= schema.singular %>, :any<%= for assoc <- Punkix.Schema.normal_assocs(schema) do %>
   prop <%= assoc.plural %>, :any
   <% end %>
   prop action, :atom, default: :new
@@ -124,7 +126,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
       if ~a|changeset| do
         socket
       else
-        changeset = <%= inspect schema.alias %>Form.changeset(<%= schema.singular %>)
+        changeset = <%= inspect schema.alias %>Form.changeset(<%= schema.singular %>, %{}, socket)
         assign_form(socket, changeset)
       end
       |> assign(assigns)
@@ -134,7 +136,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def handle_event("validate", %{"<%= schema.singular %>_form" => <%= schema.singular %>_params}, socket) do
-    changeset = <%= inspect schema.alias %>Form.changeset(~a[<%= schema.singular %>], <%= schema.singular %>_params)
+    changeset = <%= inspect schema.alias %>Form.changeset(~a[<%= schema.singular %>], <%= schema.singular %>_params, socket)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
@@ -142,7 +144,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def handle_event("create", %{"<%= schema.singular %>_form" => <%= schema.singular %>_params}, socket) do
-    socket = with {:ok, <%= schema.singular %>_params} <- <%= inspect schema.alias %>Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, socket), 
+    socket = with {:ok, <%= schema.singular %>_params} <- <%= inspect schema.alias %>Form.prepare(~a[<%= schema.singular %>], <%= schema.singular %>_params, socket), 
       {:ok, <%= schema.singular %>} <- <%= context.name %>.create_<%= schema.singular %>(<%= schema.singular %>_params) do
         ~a|on_create|.(<%= schema.singular %>)
 
@@ -156,7 +158,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
 
   @impl true
   def handle_event("update", %{"<%= schema.singular %>_form" => <%= schema.singular %>_params}, socket) do
-    socket = with {:ok, <%= schema.singular %>_params} <- <%= inspect schema.alias %>Form.change(~a[<%= schema.singular %>], <%= schema.singular %>_params, socket), 
+    socket = with {:ok, <%= schema.singular %>_params} <- <%= inspect schema.alias %>Form.prepare(~a[<%= schema.singular %>], <%= schema.singular %>_params, socket), 
       {:ok, <%= schema.singular %>} <- <%= context.name %>.update_<%= schema.singular %>(~a[<%= schema.singular %>].id, <%= schema.singular %>_params) do
         ~a|on_update|.(<%= schema.singular %>)
         socket
@@ -175,6 +177,6 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
-    assign(socket, :changeset, to_form(changeset))
+    assign(socket, :changeset, to_form(changeset, as: :<%= schema.singular %>_form))
   end
 end

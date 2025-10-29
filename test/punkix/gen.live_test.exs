@@ -11,6 +11,14 @@ defmodule Punkix.GenLiveTest do
 
     in_tmp("test", fn project_path, project_name ->
       gen_live(project_path, project_name)
+
+      assert {_, 0} = mix_cmd(project_path, "gettext.extract")
+      assert {_, 0} = mix_cmd(project_path, "gettext.merge", "priv/gettext --locale nl")
+      assert_file(Path.join(project_path, "priv/gettext/nl/LC_MESSAGES/default.po"))
+      assert_file(Path.join(project_path, "priv/gettext/nl/LC_MESSAGES/routes.po"))
+      assert {_, 0} = mix_cmd(project_path, "compile", "--force")
+      {routes, 0} = mix_cmd(project_path, "phx.routes", "", into: fn -> "" end)
+      assert routes =~ "nl/"
     end)
   end
 

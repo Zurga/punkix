@@ -11,13 +11,24 @@ defmodule <%= @web_namespace %> do
       # HTML escaping functionality
       import Phoenix.HTML
       <%= if @gettext do %>use Gettext, backend: <%= @web_namespace %>.Gettext<% end %>
-      import Punkix.Web, only: [sigil_a: 2, on_create: 1, on_update: 1, maybe_patch_and_flash: 3]
+      import Punkix.Web, only: [sigil_a: 2, on_create: 1, on_update: 1, maybe_patch_and_flash: 3, resolve_by_id: 4, put_form_embed: 4, assoc_select: 1]
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())
+      unquote(routex_helpers())
+    end
+  end
+
+  defp routex_helpers do
+    quote do
+      import Phoenix.VerifiedRoutes,
+        except: [sigil_p: 2, url: 1, url: 2, url: 3, path: 2, path: 3]
+
+      import unquote(__MODULE__).Router.RoutexHelpers, only: :macros
+      alias unquote(__MODULE__).Router.RoutexHelpers, as: Routes
     end
   end
 

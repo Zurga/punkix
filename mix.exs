@@ -37,15 +37,17 @@ defmodule Punkix.MixProject do
       {:esbuild, "~> 0.2", only: [:dev, :test]},
       {:exflect, "~> 1.0.0"},
       {:map_diff, "~> 1.3.4"},
-      {:mneme, "~> 0.10.2"},
+      # {:mneme, "~> 0.10.2"},
       # {:ecto_watch, "~> 0.12.2"},
       {:ecto_sql, "~> 3.11"},
+      # {:patches, path: "~/git/patches"},
       {:patches, "~> 0.1.0"},
       {:cachex, "~> 4.0.3"},
       {:postgrex, "~> 0.19"},
       {:plug_cowboy, "~> 2.0", only: :dev},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_ecto, "~> 4.6.2", only: :dev}
+      {:phoenix_ecto, "~> 4.6.2", only: :dev},
+      {:nimble_parsec, "~> 1.4.2"}
     ]
   end
 

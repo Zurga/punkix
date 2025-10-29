@@ -19,6 +19,7 @@ defmodule Punkix.Generator.Single do
      "phx_web/config/integration_test.exs": "config/integration_test.exs",
      "phx_single/lib/app_name_web.ex": "lib/:lib_web_name.ex",
      "phx_single/lib/app_name_web/channel.ex": "lib/:lib_web_name/channel.ex",
+     "phx_single/lib/app_name_web/routex_backend.ex": "lib/:lib_web_name/routex_backend.ex",
      "phx_single/lib/app_name_web/controller.ex": "lib/:lib_web_name/controller.ex",
      "phx_single/lib/app_name_web/component.ex": "lib/:lib_web_name/component.ex",
      "phx_single/lib/app_name_web/form_component.ex": "lib/:lib_web_name/form_component.ex",

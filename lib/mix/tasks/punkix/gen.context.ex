@@ -5,5 +5,10 @@ defmodule Mix.Tasks.Punkix.Gen.Context do
   use Punkix.Patches.Schema
   patch(Mix.Tasks.Phx.Gen.Context)
 
-  def run(args), do: patched(Mix.Tasks.Phx.Gen.Context).run(args)
+  def inject_assocs(schema), do: Mix.Tasks.Punkix.Gen.Schema.inject_assocs(schema)
+
+  def run(args) do
+    Mix.Task.run("compile")
+    patched(Mix.Tasks.Phx.Gen.Context).run(args)
+  end
 end

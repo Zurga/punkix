@@ -120,7 +120,12 @@ defmodule Punkix.Context do
       |> Schema.belongs_assocs()
       |> assocs_spec()
 
-    wrap_in_map([schema_spec, belongs_to_assocs])
+    optional_assocs =
+      schema
+      |> Schema.many_assocs()
+      |> assocs_spec(optional: true)
+
+    wrap_in_map([schema_spec, belongs_to_assocs, optional_assocs])
   end
 
   def context_fun_spec(argument, schema) do
@@ -176,7 +181,26 @@ defmodule Punkix.Context do
     args <> ", opts \\\\ [preloads: nil]"
   end
 
-  defp assocs_spec(assocs), do: Enum.map_join(assocs, ", ", &":#{&1.field} => #{&1.schema}.t()")
+  defp assocs_spec(assocs, opts \\ [optional: false]) do
+    key_fun = fn assoc ->
+      if opts[:optional] do
+        "optional(:#{assoc.field})"
+      else
+        ":#{assoc.field}"
+      end
+    end
+
+    Enum.map_join(assocs, ", ", &"#{key_fun.(&1)} => #{assoc_spec_type(&1)}")
+  end
+
+  defp assoc_spec_type(%{schema: schema, assoc_fun: assoc_fun})
+       when assoc_fun in ~w/belongs_to has_one/a do
+    "#{schema}.t()"
+  end
+
+  defp assoc_spec_type(%{schema: schema, assoc_fun: assoc}) do
+    "[#{schema}.t()]"
+  end
 
   defp format_build_assoc(schema, assoc) do
     "#{assoc.reverse}: #{schema_attrs(schema)}[:#{assoc.field}]"

@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Punkix.Gen.Auth do
   use Mix.Task
   use Punkix
-  use Punkix.Patches.Schema
+  # use Punkix.Patches.Schema
   alias Mix.Tasks.Phx.Gen.Auth
   import Punkix.Web.FormUtils
   # Remove this after Phoenix 1.7.13 is available
@@ -9,15 +9,27 @@ defmodule Mix.Tasks.Punkix.Gen.Auth do
   patch(Auth.Injector)
 
   wrap(Auth.Injector, :app_layout_menu_code_to_inject, 3, :menu_code)
+  wrap(Auth.Injector, :router_plug_name, 1, :fetch_current_user)
   wrap(Auth, :generator_paths, 0, :add_punkix)
   wrap(Auth, :files_to_be_generated, 1, :files_to_be_generated)
   replace(Auth, :validate_args!, 1, :validate_args!)
   replace(Auth, :maybe_inject_router_import, 2, :inject_router_import)
   replace(Auth, :maybe_inject_scope_config, 2, :do_nothing)
-  replace(Auth, :maybe_inject_router_plug, 2, :do_nothing)
+  # replace(Auth, :maybe_inject_router_plug, 2, :do_nothing)
   replace(Auth, :maybe_inject_app_layout_menu, 2, :do_nothing)
+  replace(Auth, :inject_routes, 3, :inject_routes)
 
-  def run(args), do: patched(Auth).run(args)
+  wrap(Auth, :copy_new_files, 3, :add_watchers)
+  # replace_module(Mix.Tasks.Phx.Gen.Schema, Mix.Tasks.Punkix.Gen.Schema)
+
+  def run(args) do
+    Mix.Task.run("compile")
+    patched(Auth).run(args)
+  end
+
+  def fetch_current_user(_binding) do
+    ":fetch_current_user"
+  end
 
   def do_nothing(context, _) do
     context
@@ -45,35 +57,27 @@ defmodule Mix.Tasks.Punkix.Gen.Auth do
     file_path = Path.join(web_prefix, "router.ex")
     web_module = :"#{inspect(context.web_module)}"
 
-    with {:ok, source} <- File.read(file_path),
-         {:ok, code} <- Sourceror.parse_string(source) do
-      new_source =
-        Macro.postwalk(code, fn
-          {:defmodule, module_meta,
-           [
-             {:__aliases__, _alias_meta, [^web_module, :Router]} = alias,
-             [{{:__block__, do_block_meta, [:do]}, {:__block__, block_meta, block_ast}}]
-           ]} ->
-            import_line =
-              {:import, block_meta,
-               [{:__aliases__, [alias: false], [:"#{inspect(binding[:auth_module])}"]}]}
+    inject_after_module_definition(file_path, "import #{binding[:auth_module]}")
 
-            {:defmodule, module_meta,
-             [
-               alias,
-               [
-                 {{:__block__, do_block_meta, [:do]},
-                  {:__block__, block_meta, [import_line | block_ast]}}
-               ]
-             ]}
+    context
+  end
 
-          other ->
-            other
-        end)
-        |> Sourceror.to_string()
+  def inject_routes(%{context_app: ctx_app} = context, paths, binding) do
+    web_prefix = Mix.Phoenix.web_path(ctx_app)
+    file_path = Path.join(web_prefix, "router.ex")
 
-      File.write(file_path, new_source)
-    end
+    paths
+    |> Mix.Phoenix.eval_from("priv/templates/phx.gen.auth/routes.ex", binding)
+    |> inject_code(file_path, fn
+      {:preprocess_using, args, [alias, [{{:__block__, meta, [:do]}, routes}]]}, to_add ->
+        new =
+          maybe_merge_blocks(routes, to_add)
+
+        {:preprocess_using, args, [alias, [{{:__block__, meta, [:do]}, new}]]}
+
+      quoted, _ ->
+        nil
+    end)
 
     context
   end

@@ -153,7 +153,7 @@
     context = "change:#{<%= schema.singular %>.email}"
 
     with {:ok, query} <- <%= inspect schema.alias %>Token.verify_change_email_token_query(token, context),
-         %<%= inspect schema.alias %>Token{sent_to: email} <- Repo.one(query),
+         {:ok, %{sent_to: email}} <- Repo.fetch_one(query),
          {:ok, _} <- Repo.transaction(<%= schema.singular %>_email_multi(<%= schema.singular %>, email, context)) do
       :ok
     else
@@ -246,7 +246,7 @@
   """
   def get_<%= schema.singular %>_by_session_token(token) do
     {:ok, query} = <%= inspect schema.alias %>Token.verify_session_token_query(token)
-    Repo.one(query)
+    Repo.fetch_one(query)
   end
 
   @doc """
@@ -290,7 +290,7 @@
   """
   def confirm_<%= schema.singular %>(token) do
     with {:ok, query} <- <%= inspect schema.alias %>Token.verify_email_token_query(token, "confirm"),
-         %<%= inspect schema.alias %>{} = <%= schema.singular %> <- Repo.one(query),
+         {:ok, <%= schema.singular %>} <- Repo.fetch_one(query),
          {:ok, %{<%= schema.singular %>: <%= schema.singular %>}} <- Repo.transaction(confirm_<%= schema.singular %>_multi(<%= schema.singular %>)) do
       {:ok, <%= schema.singular %>}
     else
@@ -336,7 +336,7 @@
   """
   def get_<%= schema.singular %>_by_reset_password_token(token) do
     with {:ok, query} <- <%= inspect schema.alias %>Token.verify_email_token_query(token, "reset_password"),
-         %<%= inspect schema.alias %>{} = <%= schema.singular %> <- Repo.one(query) do
+         {:ok, <%= schema.singular %>} <- Repo.fetch_one(query) do
       <%= schema.singular %>
     else
       _ -> nil

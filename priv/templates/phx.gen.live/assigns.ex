@@ -4,7 +4,7 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
   <%= Punkix.Context.assocs_context_aliases(schema) %>
   <%= Punkix.Context.assocs_schema_aliases(schema) %>
 
-<%= for %{plural: assign} = assoc <- schema.assocs do %>
+<%= for %{plural: assign} = assoc <- Punkix.Schema.normal_assocs(schema) do %>
   def on_mount(:<%= assign %>, _params, _session, socket) do
     <%= assign %> = <%= assoc.context %>.list_<%= assign %>()
     if connected?(socket) do
@@ -18,9 +18,9 @@ defmodule <%= inspect context.web_module %>.<%= inspect Module.concat(schema.web
     {:cont, socket}
   end
 <% end %>
-<%= for %{plural: assign} = assoc <- schema.assocs do %>
+<%= for %{plural: assign} = assoc <- Punkix.Schema.normal_assocs(schema) do %>
   def handle_info({EctoSync, {<%= assoc.schema %>, _event, _} = sync_config}, socket) do
-    {:halt, update(socket, :<%= assign %>, &EctoSync.sync(&1, sync_config))}
+    {:cont, update(socket, :<%= assign %>, &EctoSync.sync(&1, sync_config))}
   end
 <% end %>
 

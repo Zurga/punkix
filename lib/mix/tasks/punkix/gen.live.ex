@@ -13,6 +13,7 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
   replace(Mix.Tasks.Phx.Gen.Live, :live_route_instructions, 1)
 
   replace(Mix.Tasks.Phx.Gen.Live, :inputs, 1, :inputs)
+  replace(Mix.Tasks.Phx.Gen.Live, :print_shell_instructions, 1, :inject_routes)
   wrap(Mix.Tasks.Phx.Gen.Live, :copy_new_files, 3, :add_watchers)
 
   @type_input_map %{
@@ -25,7 +26,10 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     ~w[string]a => "TextInput"
   }
 
-  def run(args), do: IO.inspect(patched(Mix.Tasks.Phx.Gen.Live)).run(args)
+  def run(args) do
+    Mix.Task.run("compile")
+    patched(Mix.Tasks.Phx.Gen.Live).run(args |> IO.inspect(label: :args))
+  end
 
   def files_to_be_generated(%Context{schema: schema, context_app: context_app}) do
     web_prefix = Mix.Phoenix.web_path(context_app)
@@ -51,16 +55,45 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
     ]
   end
 
+  def inject_routes(context) do
+    web_prefix = Mix.Phoenix.web_path(context.context_app)
+    file_path = Path.join(web_prefix, "router.ex")
+    web_module = :"#{inspect(context.web_module)}"
+
+    # Check if the live generation requires access to the current user
+    live_session_to_match =
+      case Enum.filter(context.schema.assocs, & &1.is_current_user) do
+        [] -> :default
+        _ -> :require_authenticated_user
+      end
+
+    routes =
+      live_route_instructions(context.schema)
+      |> inject_code(file_path, fn
+        {:live_session, live_meta,
+         [{:__block__, block_meta, [:require_authenticated_user]} = authenticated | inner]},
+        to_add ->
+          [[{{:__block__, inner_meta, [:do]}, scopes}] | middle] = Enum.reverse(inner)
+          new = maybe_merge_blocks(scopes, to_add)
+
+          {:live_session, live_meta,
+           [authenticated] ++ middle ++ [[{{:__block__, inner_meta, [:do]}, new}]]}
+
+        _, _ ->
+          nil
+      end)
+  end
+
   def live_route_instructions(schema) do
-    [
-      ~s|scope "/#{schema.plural}" do\n|,
-      ~s|  live "/", #{inspect(schema.alias)}Live.Index, :index\n|,
-      ~s|  live "/new", #{inspect(schema.alias)}Live.Index, :new\n|,
-      ~s|  live "/:id/edit", #{inspect(schema.alias)}Live.Index, :edit\n|,
-      ~s|  live "/:id", #{inspect(schema.alias)}Live.Show, :show\n|,
-      ~s|  live "/:id/show/edit", #{inspect(schema.alias)}Live.Show, :edit\n|,
-      ~s|end|
-    ]
+    """
+    scope "/#{schema.plural}" do
+      live "/", #{inspect(schema.alias)}Live.Index, :index
+      live "/new", #{inspect(schema.alias)}Live.Index, :new
+      live "/:id/edit", #{inspect(schema.alias)}Live.Index, :edit
+      live "/:id", #{inspect(schema.alias)}Live.Show, :show
+      live "/:id/show/edit", #{inspect(schema.alias)}Live.Show, :edit
+    end
+    """
   end
 
   def input_aliases(schema) do
@@ -113,14 +146,13 @@ defmodule Mix.Tasks.Punkix.Gen.Live do
 
           wrap_input(key, input)
 
-        %{assoc_fun: many, field: field, plural: plural, schema: assoc_schema} when many in ~w/has_many many_to_many/a ->
-          singular = String.downcase(assoc_schema)
-
-          input = """
-          MultipleSelect options={@#{plural} |> Enum.with_index(1) |> Enum.map(fn {#{singular}, index} -> {"#{assoc_schema} \#{index}", #{singular}} end)}
+        %{assoc_fun: many, field: field, plural: plural, schema: assoc_schema}
+        when many in ~w/has_many many_to_many/a ->
+          """
+          <.assoc_select field={@changeset[:#{field}]} options={@#{plural}} />
           """
 
-          wrap_input(field, input)
+          # wrap_input(key, input)
       end)
 
     attr_inputs(schema) ++ assoc_inputs

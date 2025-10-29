@@ -183,12 +183,12 @@ defmodule MixHelper do
     end
   end
 
-  def mix_cmd(path, cmd, args \\ []),
+  def mix_cmd(path, cmd, args \\ [], opts \\ [into: &IO.stream/0]),
     do:
       System.shell("echo yes | mix #{cmd} #{args}",
         env: [{"MIX_ENV", "test"}],
         cd: path,
-        into: IO.stream()
+        into: opts[:into].()
       )
 
   def put_cache(project_path) do

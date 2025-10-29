@@ -7,6 +7,8 @@ defmodule <%= inspect auth_module %> do
   import Plug.Conn
   import Phoenix.Controller
 
+  alias Phoenix.Component
+  alias Surface.Components.Context
   alias <%= inspect context.module %>
 
   # Make the remember me cookie valid for 60 days.
@@ -93,7 +95,7 @@ defmodule <%= inspect auth_module %> do
   """
   def fetch_current_<%= schema.singular %>(conn, _opts) do
     {<%= schema.singular %>_token, conn} = ensure_<%= schema.singular %>_token(conn)
-    <%= schema.singular %> = <%= schema.singular %>_token && <%= inspect context.alias %>.get_<%= schema.singular %>_by_session_token(<%= schema.singular %>_token)
+    {:ok, <%= schema.singular %>} = <%= schema.singular %>_token && <%= inspect context.alias %>.get_<%= schema.singular %>_by_session_token(<%= schema.singular %>_token)
     assign(conn, :current_<%= schema.singular %>, <%= schema.singular %>)
   end
 
@@ -147,40 +149,64 @@ defmodule <%= inspect auth_module %> do
       end
   """
   def on_mount(:mount_current_<%= schema.singular %>, _params, session, socket) do
-    {:cont, mount_current_<%= schema.singular %>(socket, session)}
+    {_, socket} = mount_current_<%= schema.singular %>(socket, session)
+    {:cont, socket}
   end
 
   def on_mount(:ensure_authenticated, _params, session, socket) do
-    socket = mount_current_<%= schema.singular %>(socket, session)
+    case mount_current_<%= schema.singular %>(socket, session) do
+      {:ok, socket} ->
+        {:cont, socket}
+      {:error, socket} -> 
+        socket =
+          socket
+          |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
+          |> Phoenix.LiveView.redirect(to: ~p"<%= schema.route_prefix %>/log_in")
 
-    if socket.assigns.current_<%= schema.singular %> do
-      {:cont, socket}
-    else
-      socket =
-        socket
-        |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
-        |> Phoenix.LiveView.redirect(to: ~p"<%= schema.route_prefix %>/log_in")
-
-      {:halt, socket}
+        {:halt, socket}
     end
   end
 
   def on_mount(:redirect_if_<%= schema.singular %>_is_authenticated, _params, session, socket) do
-    socket = mount_current_<%= schema.singular %>(socket, session)
-
-    if socket.assigns.current_<%= schema.singular %> do
-      {:halt, Phoenix.LiveView.redirect(socket, to: signed_in_path(socket))}
-    else
-      {:cont, socket}
+    case mount_current_<%= schema.singular %>(socket, session) do
+      {:ok, socket} ->
+        {:halt, Phoenix.LiveView.redirect(socket, to: signed_in_path(socket))}
+      {:error, socket} -> {:cont, socket}
     end
   end
 
-  defp mount_current_<%= schema.singular %>(socket, session) do
-    Phoenix.Component.assign_new(socket, :current_<%= schema.singular %>, fn ->
-      if <%= schema.singular %>_token = session["<%= schema.singular %>_token"] do
-        <%= inspect context.alias %>.get_<%= schema.singular %>_by_session_token(<%= schema.singular %>_token)
-      end
-    end)
+  defp mount_current_<%= schema.singular %>(socket, %{"<%= schema.singular %>_token" => <%= schema.singular %>_token} = session) when not is_nil(<%= schema.singular %>_token) do
+    case <%= inspect context.alias %>.get_<%= schema.singular %>_by_session_token(<%= schema.singular %>_token) do
+  {:ok, <%= schema.singular %>} ->
+      EctoSync.subscribe(<%= schema.singular %>)
+      socket = socket
+      |> assign_user(user)
+       |> Context.put(<%= inspect(web_namespace) %>, current_user: user)
+       |> Phoenix.LiveView.attach_hook(:users, :handle_info, fn
+         {EctoSync, {User, _event, _} = sync_config}, socket ->
+           {:cont, socket
+             |> Context.put(socket, <%= inspect(web_namespace) %>, current_user: user)
+             |> assign_user(user)}
+
+         _, socket ->
+           {:cont, socket}
+      end)
+      {:ok, socket}
+    _ ->
+      {:error, assign_user(socket, nil)}
+    end
+  end
+
+  defp mount_current_<%= schema.singular %>(socket, _) do
+    {:error, assign_user(socket, nil)}
+  end
+
+  defp assign_user(socket_or_conn, user) do
+    assign_fun = case socket_or_conn do
+      %Phoenix.LiveView.Socket{} -> &Component.assign/3
+      %Plug.Conn{} -> &assign/3
+    end
+    assign_fun.(socket_or_conn, :current_<%= schema.singular %>)
   end
 
   @doc """

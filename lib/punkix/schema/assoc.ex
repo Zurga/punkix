@@ -35,7 +35,9 @@ defmodule Punkix.Schema.Assoc do
     :required,
     :reverse,
     :schema,
-    :through
+    :through,
+    :is_current_user,
+    :path
   ]
 
   def new({field, key, _plural, s}) do
@@ -90,7 +92,7 @@ defmodule Punkix.Schema.Assoc do
       raise "A many to many must set a through option"
     end
 
-    schema =  (alias && String.split(alias, ".") |> Enum.at(-1)) || ""
+    schema = (alias && String.split(alias, ".") |> Enum.at(-1)) || ""
     required = !!Schema.find_key(opts, :required, false)
 
     plural =
@@ -99,6 +101,13 @@ defmodule Punkix.Schema.Assoc do
         :has_many -> field
         _ -> assoc_table
       end
+
+    path =
+      alias
+      |> to_string()
+      |> String.split(".")
+      |> Enum.map_join("/", &Macro.underscore/1)
+      |> then(&"schemas/#{&1}.ex")
 
     %__MODULE__{
       alias: alias,
@@ -113,16 +122,26 @@ defmodule Punkix.Schema.Assoc do
       required: required,
       reverse: reverse,
       schema: schema,
-      through: through
+      through: through,
+      path: path,
+      is_current_user:
+        Schema.find_key(opts, :is_current_user, "false") |> String.to_existing_atom()
     }
   end
 
   def format(assoc) do
-    through_alias = assoc.through |> String.split(".") |> Enum.at(-1)
-
     through =
-      (assoc.assoc_fun == :many_to_many && [join_through: through_alias]) ||
-        [through: through_alias]
+      case assoc.assoc_fun do
+        :many_to_many ->
+          through_alias = assoc.through |> String.split(".") |> Enum.at(-1)
+          [join_through: through_alias]
+
+        :belongs_to ->
+          []
+
+        _ ->
+          [through: assoc.through]
+      end
 
     args =
       format_args(
@@ -135,6 +154,17 @@ defmodule Punkix.Schema.Assoc do
       )
 
     "#{assoc.assoc_fun} #{args}"
+  end
+
+  def reverse_format(assoc, schema) do
+    assoc_fun =
+      case assoc.assoc_fun do
+        :belongs_to -> :"has_#{one_or_many(assoc.reverse)}"
+        has when has in ~w/has_many has_one/a -> :belongs_to
+        _ -> :many_to_many
+      end
+
+    "#{assoc_fun} :#{assoc.reverse}, #{inspect(schema.alias)}"
   end
 
   defp format_args(args) do
@@ -172,28 +202,28 @@ defmodule Punkix.Schema.Assoc do
 
   def defaults(:has_one, option) do
     case option do
-      :on_replace -> "update"
+      :on_replace -> "nilify"
       :on_delete -> "nothing"
     end
   end
 
   def defaults(:has_many, option) do
     case option do
-      :on_replace -> "delete"
+      :on_replace -> "nilify"
       :on_delete -> "nothing"
     end
   end
 
   def defaults(:many_to_many, option) do
     case option do
-      :on_replace -> "delete"
+      :on_replace -> "nilify"
       :on_delete -> "nothing"
     end
   end
 
   def defaults(:belongs_to, option) do
     case option do
-      :on_replace -> "update"
+      :on_replace -> "nilify"
       :on_delete -> raise "belongs_to does not have an on_delete option"
     end
   end

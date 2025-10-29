@@ -13,7 +13,7 @@ defmodule Punkix.GenContextTest do
                mix_cmd(
                  project_path,
                  "punkix.gen.context",
-                 "Persons Person persons name:string description:string articles:references:articles,reverse:Articles.Article.writer,foreign_key:writer_id"
+                 "Persons Person persons name:string description:string articles:references:articles,type:has_many,reverse:Articles.Article.writer,foreign_key:writer_id"
                )
 
       Process.sleep(1000)
@@ -22,7 +22,7 @@ defmodule Punkix.GenContextTest do
                mix_cmd(
                  project_path,
                  "punkix.gen.context",
-                 "Articles Article articles name:string description:string writer_id:references:persons,reverse:Persons.Person.articles,required:true comments:references:comments,reverse:Articles.Comment.article"
+                 "Articles Article articles name:string description:string writer_id:references:persons,type:belongs_to,reverse:Persons.Person.articles,required:true comments:references:comments,type:has_many,reverse:Articles.Comment.article"
                )
 
       Process.sleep(1000)
@@ -31,7 +31,7 @@ defmodule Punkix.GenContextTest do
                mix_cmd(
                  project_path,
                  "punkix.gen.context",
-                 "Articles Comment comments text:string writer_id:references:persons,reverse:Persons.Person.articles,required:true article_id:references:articles,reverse:Articles.Article.comments,required:true"
+                 "Articles Comment comments text:string writer_id:references:persons,type:belongs_to,reverse:Persons.Person.articles,required:true article_id:references:articles,type:belongs_to,reverse:Articles.Article.comments,required:true"
                )
 
       schemas_path = Path.join(project_path, "lib/#{project_name}/schemas")
@@ -42,10 +42,11 @@ defmodule Punkix.GenContextTest do
         "belongs_to :writer, Person"
       )
 
-      # assert_file(
-      #   Path.join([contexts_path, "articles.ex"]),
-      #   "Repo.with_assocs(articles: article_attrs[:writer])"
-      # )
+      context_file = Path.join([contexts_path, "articles.ex"])
+
+      assert_file(context_file, "Repo.with_assocs(articles: article_attrs[:writer])")
+
+      assert_file(context_file, "optional(:comments) => [Comment.t()]")
 
       assert_file(
         Path.join([schemas_path, "persons", "person.ex"]),

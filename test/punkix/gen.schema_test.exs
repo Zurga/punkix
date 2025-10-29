@@ -4,10 +4,12 @@ defmodule Punkix.GenSchemaTest do
   use ExUnit.Case, async: true
   import MixHelper
 
+  setup do
+    Application.put_env(:punkix, :dep, ~s[path: "../../../"])
+  end
+
   @tag timeout: :infinity
   test "new_schema" do
-    Application.put_env(:punkix, :dep, ~s[path: "../../../"])
-
     in_tmp("test", fn project_path, project_name ->
       assert {_, 0} =
                mix_cmd(
@@ -25,9 +27,26 @@ defmodule Punkix.GenSchemaTest do
   end
 
   @tag timeout: :infinity
-  test "new_schema with belongs_to assocs" do
-    Application.put_env(:punkix, :dep, ~s[path: "../../../"])
+  describe "inject_assocs" do
+    test "assocs are injected properly when schema exists" do
+      in_tmp("test", fn project_path, project_name ->
+        assert {_, 0} = mix_cmd(project_path, "punkix.gen.schema", "Article articles name:string")
 
+        assert {_, 0} =
+                 mix_cmd(
+                   project_path,
+                   "punkix.gen.schema",
+                   "Comment comments name:string article:references:articles,type:belongs_to,reverse:Articles.comments"
+                 )
+
+        schemas_path = Path.join(project_path, "lib/#{project_name}/schemas")
+        assert_file(Path.join(schemas_path, "article.ex"), "comments")
+      end)
+    end
+  end
+
+  @tag timeout: :infinity
+  test "new_schema with belongs_to assocs" do
     in_tmp("test", fn project_path, project_name ->
       app_name = Phoenix.Naming.camelize(project_name)
 

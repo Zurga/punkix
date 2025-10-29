@@ -1,11 +1,11 @@
 defmodule <%= @web_namespace %>.Router do
+  use Routex.Router
   use Phoenix.Router, helpers: false
 
   # Import common connection and controller functions to use in pipelines
   import Plug.Conn
   import Phoenix.Controller
   import Phoenix.LiveView.Router
-  import Surface.Catalogue.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -14,24 +14,20 @@ defmodule <%= @web_namespace %>.Router do
     plug :put_root_layout, html: {<%= @web_namespace %>.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :routex
   end
 
   pipeline :api do
     plug :accepts, ["json"]
   end
 
-  live_session :default do
-    scope "/", <%= @web_namespace %> do
-      pipe_through :browser
-      live "/", IndexLive, :index
-      # TODO add your routes here
-    end
-  end
-
-  if Mix.env() == :dev do
-    scope "/" do
-      pipe_through :browser
-      surface_catalogue "/catalogue"
+  preprocess_using <%= @web_namespace %>.RoutexBackend do
+    live_session :default do
+      scope "/", <%= @web_namespace %> do
+        pipe_through :browser
+        live "/", IndexLive, :index
+        # TODO add your routes here
+      end
     end
   end
 

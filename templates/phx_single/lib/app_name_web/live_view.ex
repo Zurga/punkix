@@ -6,6 +6,7 @@ defmodule <%= @web_namespace %>.LiveView do
         layout: {<%= @web_namespace %>.Layouts, :app}
 
       unquote(<%= @web_namespace %>.html_helpers())
+      on_mount(unquote(<%= @web_namespace %>.Router.RoutexHelpers))
     end
   end
 end

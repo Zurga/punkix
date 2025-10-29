@@ -55,26 +55,26 @@ defmodule Punkix.Web.Components.InteractionRecorder do
   @impl true
   def render(assigns) do
     ~F"""
-      <div id="interaction_recorder" :hook>
-        <div class="toolbar">
-           <Form :let={form: form} for={@form} submit={@recording? && "stop-recording" || "start-recording"} change="change">
-            <Field name={:name}>
+    <div id="interaction_recorder" :hook>
+      <div class="toolbar">
+        <Form for={@form} submit={(@recording? && "stop-recording") || "start-recording"} change="change">
+          <Field name={:name}>
+            <TextInput />
+          </Field>
+          <Field name={:url}>
+            <Select options={@routes} />
+          </Field>
+          <Inputs for={:url_params} :let={form: param_form}>
+            <label>{param_form[:label].value}</label>
+            <HiddenInput field={:selector} />
+            <Field name={:value}>
               <TextInput />
             </Field>
-            <Field name={:url}>
-              <Select options={@routes} />
-            </Field>
-            <Inputs for={:url_params} :let={form: param_form}>
-                <label>{param_form[:label].value}</label>
-                <HiddenInput field={:selector} />
-                <Field name={:value}>
-                  <TextInput />
-                </Field>
-            </Inputs>
-            <button type="submit">{@recording? && "Stop" || "Start"} recording</button>
-           </Form>
-        </div>
+          </Inputs>
+          <button type="submit">{(@recording? && "Stop") || "Start"} recording</button>
+        </Form>
       </div>
+    </div>
     """
   end
 
@@ -115,7 +115,7 @@ defmodule Punkix.Web.Components.InteractionRecorder do
         URI.append_path(URI.parse(endpoint.url()), url) |> URI.to_string()
       end)
 
-    recordings = socket.assigns.recordings
+    # recordings = socket.assigns.recordings
     # |> Map.put(module, %{
 
     {:noreply,

@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Punkix.Init do
   def run(argv) do
     IO.inspect(argv)
 
-    {generators, _, _} =
+    {_generators, _, _} =
       OptionParser.parse(argv,
         switches: [live: :keep, html: :keep, context: :keep, schema: :keep]
       )

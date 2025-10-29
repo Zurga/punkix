@@ -10,7 +10,7 @@
 
   def <%= schema.singular %>_fixture(attrs \\ %{}) do
     attrs = valid_<%= schema.singular %>_attributes(attrs)
-    {:ok, <%= schema.singular %>} =
+    {:ok, <%= schema.singular %>} = attrs
       |> <%= inspect context.module %>.register_<%= schema.singular %>()
 
     Map.merge(<%= schema.singular %>, attrs)
