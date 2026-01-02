@@ -34,7 +34,6 @@ defmodule Punkix.MixProject do
       {:typed_ecto_schema, "~> 0.4.1"},
       {:sourceror, "~> 1.7.0"},
       {:surface, "~> 0.12.1"},
-      {:surface_formatter, "~> 0.7.5"},
       {:surface_form_helpers, "~> 0.2.0"},
       {:esbuild, "~> 0.2", only: [:dev, :test]},
       # {:exflect, "~> 1.0.0"},
