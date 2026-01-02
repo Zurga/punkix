@@ -28,11 +28,13 @@ defmodule Punkix.MixProject do
     [
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
-      {:phoenix, "~> 1.8.0"},
+      {:phoenix, "~> 1.7.0"},
+      {:phoenix_live_view, "~> 1.1.0"},
       {:phx_new, "~> 1.8.0"},
       {:typed_ecto_schema, "~> 0.4.1"},
       {:sourceror, "~> 1.7.0"},
       {:surface, "~> 0.12.1"},
+      {:surface_formatter, "~> 0.7.5"},
       {:surface_form_helpers, "~> 0.2.0"},
       {:esbuild, "~> 0.2", only: [:dev, :test]},
       {:exflect, "~> 1.0.0"},
