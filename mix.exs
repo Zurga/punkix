@@ -37,7 +37,7 @@ defmodule Punkix.MixProject do
       {:surface_formatter, "~> 0.7.5"},
       {:surface_form_helpers, "~> 0.2.0"},
       {:esbuild, "~> 0.2", only: [:dev, :test]},
-      {:exflect, "~> 1.0.0"},
+      # {:exflect, "~> 1.0.0"},
       {:map_diff, "~> 1.3.4"},
       # {:mneme, "~> 0.10.2"},
       # {:ecto_watch, "~> 0.12.2"},
